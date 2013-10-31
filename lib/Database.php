@@ -86,7 +86,8 @@ class Database
 
         try {
             $this->_oPdo = new \PDO($sDsn, $aDsn['user'], $aDsn['password'], $aOptions);
-        } catch (\PDOException $oEx) {
+        } catch (\PDOException $oEx)
+		{
             throw Exception::sqlException($oEx);
         }
 
