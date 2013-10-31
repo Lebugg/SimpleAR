@@ -1,0 +1,81 @@
+<?php
+namespace SimpleAR;
+
+/**
+ * This file contains the ApiException class.
+ *
+ * @author Damien Launay
+ */
+
+/**
+ * This class extends Exception class.
+ *
+ * The main goal is to provides a default status code. Also, it allows us to 
+ * distinguish our exceptions of classic system's exceptions.
+ *
+ * It is also able to handle PDO exceptions.
+ * @package core
+ */
+class Exception extends \Exception
+{
+    /**
+     * Contains a possible SQL error.
+     * @var string 
+     */
+    protected $_sSQLError;
+    protected $_sSQLQuery;
+
+    /**
+     * Instantiates an ApiException from an PDOException.
+     *
+     * You can use it this way:
+     *
+     *  } catch (PDOException $oEx) {
+     *      throw ApiException::sqlException($oEx, 'Database error!');
+     *  }
+     *
+     * @param PDOException $oEx The PDO exception.
+     * @param string $sMessage A message to explain error.
+     *
+     * @return ApiException The resulting ApiException.
+     */
+    public static function sqlException(\Exception $oEx, $sQuery = '', $sMessage = 'A database error occured.')
+    {
+		return DatabaseException::construct($oEx->getMessage(), $sQuery);
+    }
+
+    /**
+     * Is it an SQL error?
+     *
+     * @return True if this ApiException is constrcuted from a PDOException, 
+     * false otherwise.
+     */
+    public function isSqlError()
+    {
+        return !empty($this->_sSQLError);
+    }
+
+    /**
+     * Getter/Setter.
+     * If parameter is not given, return the SQL error message, that is 
+     * PDOException::getMessage().
+     * If parameter is given, it sets the SQL error message.
+     *
+     * @param string $sError The SQL error message.
+     * @return string|NULL The SQL error message, or nothing. It depends if it 
+     * is used as a getter or as a setter.
+     */
+    public function sqlError($sError = NULL)
+    {
+        if ($sError) {
+            $this->_sSQLError = $sError;
+        } else {
+            return $this->_sSQLError;
+        }
+    }
+
+    public function sqlQuery()
+    {
+        return $this->_sSQLQuery;
+    }
+}

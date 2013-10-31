@@ -1,0 +1,15 @@
+<?php
+namespace SimpleAR;
+
+/**
+ * This file contains the ApiDuplicateKeyException class.
+ *
+ * @author Damien Launay
+ */
+
+/**
+ * This class extends ApiException class.
+ *
+ * @package core
+ */
+class DuplicateKeyException extends Exception {}
