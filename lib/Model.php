@@ -632,6 +632,11 @@ abstract class Model
         return $oModel;
     }
 
+	public static function findBySql($sSql, $aParams = array(), $aOptions = array())
+	{
+        return self::_processSqlQuery($sSql, $aParams, 'several', $aOptions);
+	}
+
     public static function first($aOptions = array())
     {
         return self::find('first', $aOptions);
@@ -995,7 +1000,7 @@ abstract class Model
         // entries of static::$_aOrder will be overwritten.
         foreach (array_merge(static::$_aOrder, $aOrder) as $sField => $sOrder)
         {
-            $aRes[] = $sAlias.'.'. $oTable->columnRealName($sField) . ' ' . $sOrder;
+            $aRes[] = $sAlis.'.'. $oTable->columnRealName($sField) . ' ' . $sOrder;
         }
 
         return $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
