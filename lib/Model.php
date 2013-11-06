@@ -365,7 +365,7 @@ abstract class Model
 
     public function __set($sName, $mValue)
     {
-        $aColumns = static::table()->columns();
+        $aColumns = static::table()->columns;
 
         if (isset($aColumns[$sName])
             || isset(static::$_aRelations[$sName])
@@ -762,6 +762,38 @@ abstract class Model
     public static function tableName()
     {
         return static::table()->name();
+    }
+
+    public function toArray()
+    {
+        $aRes = $this->_aAttributes;
+
+        return self::_arrayToArray($aRes);
+    }
+
+    private static function _arrayToArray($aArray)
+    {
+        // It is faster to iterate this way instead using a foreach when
+        // altering the array.
+        $aHash  = array_keys($aArray);
+        $iCount = count($aArray);
+
+        for ($i = 0 ; $i < $iCount ; ++$i)
+        {
+            if (is_object($aArray[$aHash[$i]]))
+            {
+                $aArray[$aHash[$i]] = $aArray[$aHash[$i]]->toArray();
+                continue;
+            }
+
+            if (is_array($aArray[$aHash[$i]]))
+            {
+                $aArray[$aHash[$i]] = self::_arrayToArray($aArray[$aHash[$i]]);
+                continue;
+            }
+        }
+
+        return $aArray;
     }
 
     protected function _attr($sAttributeName)
