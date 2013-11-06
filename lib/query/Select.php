@@ -1,11 +1,10 @@
 <?php
 namespace SimpleAR\Query;
 
-class Select extends Query
+class Select extends \SimpleAR\Query
 {
 	private $_aArborescence = array();
 	private $_aSelects		= array();
-	private $_aAnds   		= array();
 	private $_sOrderBy;
 	private $_aGroupBy		= array();
 
@@ -51,7 +50,24 @@ class Select extends Query
 			$this->_sQuery .= ' OFFSET ' . $aOptions['offset'];
 		}
 
-		var_dump($this->_sQuery);
+		return array($this->_sQuery, $this->_aValues);
+	}
+
+	public function buildCount($aOptions)
+	{
+		$sRootModel = $this->_sRootModel;
+		$sRootAlias = $this->_oRootTable->alias;
+
+		if (isset($aOptions['conditions']))
+		{
+			$this->_analyzeConditions($aOptions['conditions']);
+			$this->_processConditions($this->_aConditions);
+		}
+
+		$this->_sQuery  = 'SELECT COUNT(*)';
+		$this->_sQuery .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
+		$this->_sQuery .= $this->_where();
+
 		return array($this->_sQuery, $this->_aValues);
 	}
 
@@ -108,7 +124,7 @@ class Select extends Query
 
 	private function _analyzeOrderBy($aOrderBy)
 	{
-        $aRes   	= array();
+        $aRes		= array();
 		$sRootAlias = $this->_oRootTable->alias;
 
         // If there are common keys between static::$_aOrder and $aOrder, 

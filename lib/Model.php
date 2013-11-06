@@ -295,7 +295,7 @@ abstract class Model
 
 		if ($aAttributes)
 		{
-        	$this->_fill($aAttributes);
+			$this->_fill($aAttributes);
 		}
     }
 
@@ -408,7 +408,7 @@ abstract class Model
         return $this->_aAttributes;
     }
 
-    public static function count($aOptions)
+    public static function count($aOptions = array())
     {
         return self::find('count', $aOptions);
     }
@@ -685,8 +685,8 @@ abstract class Model
                     if ( ($bSimplePrimaryKey && $s !== $mPrimaryKey)
                         || (!$bSimplePrimaryKey && !in_array($s, $mPrimaryKey))
                     ) {
-    					// If a column is renamed, take the new name.
-    				    $sKey = isset(static::$_aTranslations[$s]) ? static::$_aTranslations[$s] : $s;
+						// If a column is renamed, take the new name.
+						$sKey = isset(static::$_aTranslations[$s]) ? static::$_aTranslations[$s] : $s;
                         $aColumns[$sKey] = $s;
                     }
 				}
@@ -725,6 +725,27 @@ abstract class Model
     {
         return $this->_mId === NULL ? $this->_insert() : $this->_update();
     }
+
+	/**
+	 * This function makes pagination easier.
+	 *
+	 * @param $iPage int Page number. Min: 1.
+	 * @param $iNbItems int Number of items. Min: 1.
+	 */
+	public static function search($aOptions, $iPage, $iNbItems)
+	{
+		$iPage    = $iPage    >= 1 ? $iPage    : 1;
+		$iNbItems = $iNbItems >= 1 ? $iNbItems : 1;
+
+		$aOptions['limit']  = $iNbItems;
+		$aOptions['offset'] = $iPage * $iNbItems;
+
+		$aRes          = array();
+		$aRes['count'] = static::count($aOptions);
+		$aRes['rows']  = static::all($aOptions);
+
+		return $aRes;
+	}
 
     public static function table()
     {
@@ -1041,7 +1062,7 @@ abstract class Model
             {
                 $iRes = $sLMClass::count(array(
 					'conditions' => array_merge(array('id' => $this->{$oRelation->keyFrom()}), $oRelation->conditions()),
-					'filter' 	 => $oRelation->filter(),
+					'filter'	 => $oRelation->filter(),
 				));
             }
             // Prevent exception bubbling.
@@ -1364,7 +1385,7 @@ abstract class Model
 
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
-        $mRes 	  = null;
+        $mRes	  = null;
 		$sLMClass = $oRelation->linkedModelClass();
 
         if ($oRelation instanceof BelongsTo)
@@ -1373,7 +1394,7 @@ abstract class Model
             {
                 $mRes = $sLMClass::findByPK($this->{$oRelation->keyFrom()}, array(
 					'conditions' => $oRelation->conditions(),
-					'filter' 	 => $oRelation->filter(),
+					'filter'	 => $oRelation->filter(),
 				));
                 // We don't need LM ID twice.
                 $this->exclude($oRelation->keyFrom());

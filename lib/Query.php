@@ -1,6 +1,9 @@
 <?php
 namespace SimpleAR;
 
+require 'query/Delete.php';
+require 'query/Select.php';
+
 abstract class Query
 {
 	protected $_sRootModel;
@@ -10,6 +13,7 @@ abstract class Query
 	protected $_aValues = array();
 
 	protected $_aConditions	= array();
+	protected $_aAnds       = array();
 
 	public function __construct($sRootModel)
 	{
