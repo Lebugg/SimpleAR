@@ -1023,31 +1023,6 @@ abstract class Model
         return array('from' => $sFrom, 'ands' => implode(' AND ', $aAndClauses), 'values' => $aValuesToBind);
     }
 
-    private static function _constructSqlCountQuery($aOptions)
-    {
-		$oTable = static::table();
-
-        $sTableName  = $oTable->name;
-        $sTableAlias = $oTable->alias;
-
-        $sSelect = 'SELECT COUNT(*)';
-        $sFrom   = ' FROM ' . $sTableName . ' ' . $sTableAlias;
-        $sWhere  = '';
-
-        $aParams = array();
-
-        if (isset($aOptions['conditions']))
-        {
-            $a = self::_conditionsToSql($aOptions['conditions']);
-
-            $sFrom  .= $a['from'];
-            $sWhere  = ' WHERE ' . $a['ands'];
-            $aParams = $a['values'];
-        }
-
-        return array('sql' => $sSelect . $sFrom . $sWhere, 'params' => $aParams);
-    }
-
     /**
      * Construct a SQL ORDER BY clause according to static::$_aOrder array.
      *
@@ -1098,7 +1073,7 @@ abstract class Model
 				));
             }
             // Prevent exception bubbling.
-            catch (ResourceNotFoundException $oEx) {}
+            catch (RecordNotFoundException $oEx) {}
         }
         elseif ($oRelation instanceof HasOne)
         {
