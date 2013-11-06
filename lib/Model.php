@@ -582,8 +582,8 @@ abstract class Model
     public static function find($mFirst, $aOptions = array())
     {
         // Find by primary key. It can be an array when using compound primary 
-        // keys (@TODO).
-        if (is_int($mFirst) || is_array($mFirst))
+        // keys.
+        if (ctype_digit($mFirst) || is_array($mFirst))
         {
             return self::findByPK($mFirst, $aOptions);
         }
