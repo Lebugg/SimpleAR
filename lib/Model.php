@@ -515,8 +515,6 @@ abstract class Model
      * Very useful function to get an array of the attributes to select from
      * database. Attributes are values of $_aColumns.
      *
-     * Here is a way to use it:
-     *      'SELECT ' . implode(',', static::columnsToSelect()) . ' FROM ' . static::tableName();
      *
      * @param string $mFilter Optional filter set for the current model. It
      * prevents us to fetch all attribute from the table.
@@ -596,7 +594,6 @@ abstract class Model
         {
             case 'all':
                 list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
-				//self::_constructSqlSelectQuery($aOptions);
                 $sMultiplicity = 'several';
                 break;
             case 'count':
@@ -1022,56 +1019,6 @@ abstract class Model
         return $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
     }
 
-    private static function _constructSqlSelectClause($sFilter, $sTableAlias = null)
-    {
-        return $sTableAlias
-            ? 'SELECT ' . $sTableAlias . '.' . implode(', ' . $sTableAlias . '.', static::columnsToSelect($sFilter))
-            : 'SELECT ' . implode(',', static::columnsToSelect($sFilter))
-            ;
-    }
-
-    private static function _constructSqlSelectQuery($aOptions)
-    {
-		$oTable = static::table();
-
-        $sTableName  = $oTable->name;
-        $sTableAlias = $oTable->alias;
-        $sFilter     = isset($aOptions['filter']) ? $aOptions['filter'] : null;
-
-        $sSelect = self::_constructSqlSelectClause($sFilter, $sTableAlias);
-        $sFrom   = ' FROM ' . $sTableName . ' ' . $sTableAlias;
-        $sWhere  = '';
-        $sOrder  = '';
-        $sLimit  = '';
-        $sOffset = '';
-
-        $aParams = array();
-
-        if (isset($aOptions['conditions']))
-        {
-            $a = self::_conditionsToSql($aOptions['conditions']);
-
-            $sFrom  .= $a['from'];
-            $sWhere  = ' WHERE ' . $a['ands'];
-            $aParams = $a['values'];
-        }
-
-        $aOrder = isset($aOptions['order']) ? $aOptions['order'] : array();
-        $sOrder = self::_constructSqlOrderClause($aOrder, $sTableAlias);
-
-        if (isset($aOptions['limit']))
-        {
-            $sLimit = ' LIMIT ' . $aOptions['limit'];
-        }
-
-        if (isset($aOptions['offset']))
-        {
-            $sOrder = ' OFFSET ' . $aOptions['offset'];
-        }
-
-        return array('sql' => $sSelect . $sFrom . $sWhere . $sOrder . $sLimit . $sOffset, 'params' => $aParams);
-    }
-   
     private function _countLinkedModel($sRelationName)
     {
         $oRelation = static::relation($sRelationName);
