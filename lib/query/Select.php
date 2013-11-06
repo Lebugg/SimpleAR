@@ -50,6 +50,7 @@ class Select extends \SimpleAR\Query
 			$this->_sQuery .= ' OFFSET ' . $aOptions['offset'];
 		}
 
+        var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
 	}
 
@@ -86,19 +87,14 @@ class Select extends \SimpleAR\Query
                 throw new Exception('Invalid condition attribute: attribute is empty.');
             }
 
-			// Attribute of root model.
-			if ($iCount === 1)
-			{
-				$this->_aConditions[] = $this->_normalizeCondition($sAttribute, $mValue, $sOperator, 'or', null);
-				continue;
-			}
-
 			// Attribute of a related model.
-			$sAttribute = array_pop($aPieces);
+			$sAttribute    = array_pop($aPieces);
+            $sArborescence = strrpos($sAttribute, '/') ? substr($sAttribute, 0, strrpos($sAttribute, '/') + 1) : '';
 
 			// Add related model(s) in join arborescence.
 			$aArborescence =& $this->_aArborescence;
 			$sCurrentModel =  $this->_sRootModel;
+            $oRelation     =  null;
 			foreach ($aPieces as $sRelation)
 			{
 				$oRelation = $sCurrentModel::relation($sRelation);
@@ -114,8 +110,20 @@ class Select extends \SimpleAR\Query
 
 			$oCondition = $this->_normalizeCondition($sAttribute, $mValue, $sOperator, 'or', $oRelation);
 
-			// Add actual attribute to arborescence.
-			$aArborescence['@'][] = $oCondition;
+            // Call a user method to deal with complex attributes.
+            $sToConditionsMethod = 'to_conditions_' . $sAttribute;
+            if (method_exists($sCurrentModel, $sToConditionsMethod))
+            {
+                $aConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
+                $this->_analyzeConditions($aConditions);
+                continue;
+            }
+
+            if ($oRelation !== null)
+            {
+                // Add actual attribute to arborescence.
+                $aArborescence['@'][] = $oCondition;
+            }
 
 			// And, of course, add condition to the list of conditions.
 			$this->_aConditions[] = $oCondition;
