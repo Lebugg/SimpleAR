@@ -49,15 +49,15 @@ abstract class Relationship
         $this->_oCM = new \StdClass();
         $this->_oCM->class     = $sCMClass;
         $this->_oCM->t         = $sCMClass::table();
-        $this->_oCM->table     = $this->_oCM->t->name();
-        $this->_oCM->alias     = $this->_oCM->t->alias();
+        $this->_oCM->table     = $this->_oCM->t->name;
+        $this->_oCM->alias     = $this->_oCM->t->alias;
 
         $this->_oLM = new \StdClass();
         $this->_oLM->class = $s = $a['model'] . self::$_oConfig->modelClassSuffix;
         $this->_oLM->t     = $s::table();
-        $this->_oLM->table = $this->_oLM->t->name();
-        $this->_oLM->alias = $this->_oLM->t->alias();
-        $this->_oLM->pk    = $this->_oLM->t->primaryKey();
+        $this->_oLM->table = $this->_oLM->t->name;
+        $this->_oLM->alias = $this->_oLM->t->alias;
+        $this->_oLM->pk    = $this->_oLM->t->primaryKey;
 
         if (isset($a['on_delete_cascade'])) { $this->_bOnDeleteCascade = $a['on_delete_cascade']; }
         if (isset($a['filter']))            { $this->_sFilter          = $a['filter']; }
@@ -108,6 +108,20 @@ abstract class Relationship
             : '?';
     }
 
+    public function currentModelPrimaryKey()
+    {
+        return $this->_oCM->pk;
+    }
+
+    public function currentModelTable()
+    {
+        return $this->_oCM->table;
+    }
+
+    public function currentModelTableAlias()
+    {
+        return $this->_oCM->table;
+    }
 
     public function deleteLinkedModel($mValue)
     {
@@ -129,18 +143,14 @@ abstract class Relationship
 
     public abstract function insert($oCM, $oLM);
 
-    public function joinLinkedModel(&$aTablesIn)
+    public function joinLinkedModel()
     {
-        if (!in_array($this->_oLM->table, $aTablesIn))
-        {
-            $aTablesIn[] = $this->_oLM->table;
-            return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oLM->alias}.{$this->_oLM->column}";
-        }
+		return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oLM->alias}.{$this->_oLM->column}";
     }
 
-    public function joinAsLast(&$aTablesIn, $oData)
+    public function joinAsLast($aAttributes)
     {
-        return $this->joinLinkedModel($aTablesIn);
+        return $this->joinLinkedModel();
     }
 
     public function keyFrom($bColumnName = false)
@@ -161,6 +171,11 @@ abstract class Relationship
     public function linkedModelTable()
     {
         return $this->_oLM->table;
+    }
+
+    public function linkedModelTableAlias()
+    {
+        return $this->_oLM->alias;
     }
 
     public static function loadMode($aRelation)
@@ -234,7 +249,7 @@ class BelongsTo extends Relationship
 			}
 		}
         $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey();
+        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
 
         $this->_oLM->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
         $this->_oLM->column    = $this->_oLM->t->columnRealName($this->_oLM->attribute);
@@ -309,18 +324,21 @@ class BelongsTo extends Relationship
     {
     }
 
-    public function joinAsLast(&$aTablesIn, $o)
+    public function joinAsLast($aAttributes)
     {
-        if ($o->attribute != 'id') {
-            return $this->joinLinkedModel($aTablesIn);
-        }
+		foreach ($aAttributes as $o)
+		{
+			if (!$o->attribute === 'id') {
+				return $this->joinLinkedModel();
+			}
+		}
     }
 
     protected static function _checkConditionValidity($o)
     {
         parent::_checkConditionValidity($o);
 
-        if ($o->logic == 'and' && $o->valueCount > 1)
+        if ($o->logic === 'and' && !$o->valueCount === 1)
         {
             throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
@@ -336,7 +354,7 @@ class HasOne extends Relationship
 
         $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey();
+        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
 
         $sLMClass = $this->_oLM->class;
 		if (isset($a['key_to']))
@@ -418,7 +436,7 @@ class HasMany extends Relationship
         
         $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey();
+        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
 
         $sLMClass = $this->_oLM->class;
 		
@@ -555,11 +573,14 @@ class HasMany extends Relationship
     {
     }
 
-    public function joinAsLast(&$aTablesIn, $o)
+    public function joinAsLast($aAttributes)
     {
-        if ($o->logic != 'or') {
-            return $this->joinLinkedModel($aTablesIn);
-        }
+		foreach ($aAttributes as $o)
+		{
+			if ($o->logic !== 'or') {
+				return $this->joinLinkedModel();
+			}
+		}
     }
 
 }
@@ -574,7 +595,7 @@ class ManyMany extends Relationship
 
         $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey();
+        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
 
         $sLMClass = $this->_oLM->class;
         $this->_oLM->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
@@ -586,7 +607,7 @@ class ManyMany extends Relationship
         {
             $this->_oJM->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
             $this->_oJM->t     = $s::table();
-            $this->_oJM->table = $this->_oJM->t->name();
+            $this->_oJM->table = $this->_oJM->t->name;
             $this->_oJM->from  = $this->_oJM->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
             $this->_oJM->to    = $this->_oJM->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
         }
@@ -742,24 +763,34 @@ class ManyMany extends Relationship
         }
     }
 
-    public function joinLinkedModel(&$aTablesIn)
+    public function joinLinkedModel()
     {
-        return $this->_joinJM($aTablesIn) . ' ' .  $this->_joinLM($aTablesIn);
+        return $this->_joinJM() . ' ' .  $this->_joinLM();
     }
 
-    public function joinAsLast(&$aTablesIn, $o)
+    public function joinAsLast($aAttributes)
     {
         $sRes = '';
 
         // We always want to join the middle table.
-        $sRes .= $this->_joinJM($aTablesIn);
+        $sRes .= $this->_joinJM();
 
-        // And, under certain conditions, the linked table.
-        if (!$o->logic == 'or' || $o->attribute != 'id') {
-            $sRes .= $this->_joinLM($aTablesIn);
-        }
+		foreach ($aAttributes as $o)
+		{
+			// And, under certain conditions, the linked table.
+			if (!$o->logic === 'or' || !$o->attribute === 'id')
+			{
+				$sRes .= $this->_joinLM();
+				break;
+			}
+		}
 
         return $sRes;
+    }
+
+    public function joinTableAlias()
+    {
+        return $this->_oJM->alias;
     }
 
     public function joinKeyFrom()
@@ -777,20 +808,14 @@ class ManyMany extends Relationship
         return $this->_oJM->table;
     }
 
-    private function _joinJM(&$aTablesIn)
+    private function _joinJM()
     {
-        if (!in_array($this->_oJM->table, $aTablesIn)) {
-            $aTablesIn[] = $this->_oJM->table;
-            return " JOIN {$this->_oJM->table} {$this->_oJM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oJM->alias}.{$this->_oJM->from}";
-        }
+		return " JOIN {$this->_oJM->table} {$this->_oJM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oJM->alias}.{$this->_oJM->from}";
     }
 
-    private function _joinLM(&$aTablesIn)
+    private function _joinLM()
     {
-        if (!in_array($this->_oLM->table, $aTablesIn)) {
-            $aTablesIn[] = $this->_oLM->table;
-            return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oJM->alias}.{$this->_oJM->to} = {$this->_oLM->alias}.{$this->_oLM->pk}";
-        }
+		return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oJM->alias}.{$this->_oJM->to} = {$this->_oLM->alias}.{$this->_oLM->pk}";
     }
 
 }

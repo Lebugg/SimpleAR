@@ -310,6 +310,12 @@ abstract class Model
      */
     public function __get($s)
     {
+		$bCount = ($s[0] === '#');
+		if ($bCount)
+		{
+			$s = substr($s, 1);
+		}
+
         if ($s == 'id')
         {
             return $this->_mId;
@@ -322,7 +328,7 @@ abstract class Model
                 return call_user_method('get_' . $s, $this);
             }
          
-            return $this->_aAttributes[$s];
+            return $bCount ? count($this->_aAttributes[$s]) : $this->_aAttributes[$s];
         }
 
         // Will arrive here maximum once per relation because when a relation is
@@ -330,6 +336,11 @@ abstract class Model
         // So, it would return it right above.
         if (isset(static::$_aRelations[$s]))
         {
+			if ($bCount)
+			{
+				return $this->_countLinkedModel($s);
+			}
+
             $this->_aAttributes[$s] = $this->_loadLinkedModel($s);
 
             if (method_exists($this, 'get_' . $s))
@@ -432,7 +443,7 @@ abstract class Model
 
         $a = self::_conditionsToSql(array('id' => $this->_mId), false);
 
-        $sQuery = 'DELETE FROM ' . $oTable->name() . ' WHERE ' . $a['ands'];
+        $sQuery = 'DELETE FROM ' . $oTable->name . ' WHERE ' . $a['ands'];
         $iCount = self::$_oDb->query($sQuery, $a['values'])->rowCount();
 
         if ($iCount == 0)
@@ -519,12 +530,12 @@ abstract class Model
      *
      * @return array
      */
-    public static function columnsToSelect($sFilter = null)
+    public static function columnsToSelect($sFilter = null, $sAlias = null)
     {
         $oTable = static::table();
 
-        $aColumns    = $oTable->columns();
-        $mPrimaryKey = $oTable->primaryKey();
+        $aColumns    = $oTable->columns;
+        $mPrimaryKey = $oTable->primaryKey;
 
         $aRes = ($sFilter && isset(static::$_aFilters[$sFilter]))
             ? $aRes = array_values(array_intersect_key($aColumns, array_flip(static::$_aFilters[$sFilter])))
@@ -532,7 +543,7 @@ abstract class Model
             ;
 
         // Include primary key to  columns to fetch.
-        if ($oTable->isSimplePrimaryKey())
+        if ($oTable->isSimplePrimaryKey)
         {
             $aRes[] = $mPrimaryKey;
         }
@@ -540,6 +551,15 @@ abstract class Model
         {
             $aRes = array_merge($aRes, $mPrimaryKey);
         }
+
+		if ($sAlias)
+		{
+			$iCount = count($aRes);
+			for ($i = 0 ; $i < $iCount ; ++$i)
+			{
+				$aRes[$i] = $sAlias . '.' . $aRes[$i];
+			}
+		}
 
         return $aRes;
     }
@@ -575,21 +595,21 @@ abstract class Model
         }
 
         // $mFirst is a string. It can be "count", "first", "last" or "all".
-        $aQuery        = null;
         $sMultiplicity = null;
         switch ($mFirst)
         {
             case 'all':
-                $aQuery        = self::_constructSqlSelectQuery($aOptions);
+                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+				//self::_constructSqlSelectQuery($aOptions);
                 $sMultiplicity = 'several';
                 break;
             case 'count':
-                $aQuery        = self::_constructSqlCountQuery($aOptions);
+                list($sQuery, $aValues) = Sql::count($aOptions, get_called_class());
                 $sMultiplicity = 'count';
                 break;
             case 'first':
 				$aOptions['limit'] = 1;
-                $aQuery        = self::_constructSqlSelectQuery($aOptions);
+                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             case 'last':
@@ -606,7 +626,7 @@ abstract class Model
 				{
 					$aOptions['order'] = array('id' => 'DESC');
 				}
-                $aQuery        = self::_constructSqlSelectQuery($aOptions);
+                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             default:
@@ -614,7 +634,7 @@ abstract class Model
                 break;
         }
 
-        return self::_processSqlQuery($aQuery['sql'], $aQuery['params'], $sMultiplicity, $aOptions);
+        return self::_processSqlQuery($sQuery, $aValues, $sMultiplicity, $aOptions);
     }
 
     public static function findByPK($mId, $aOptions = array())
@@ -623,8 +643,8 @@ abstract class Model
         $aOptions['conditions'] = array('id' => $mId);
 
         // Fetch model.
-        $aQuery      = self::_constructSqlSelectQuery($aOptions);
-        if (!$oModel = self::_processSqlQuery($aQuery['sql'], $aQuery['params'], 'one', $aOptions))
+		list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+        if (!$oModel = self::_processSqlQuery($sQuery, $aValues, 'one', $aOptions))
         {
             throw new RecordNotFoundException($mId);
         }
@@ -683,7 +703,7 @@ abstract class Model
                 $aColumns = static::$_aColumns;
             }
 
-            self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns);
+            self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns, static::$_aOrder);
 		}
     }
 
@@ -817,7 +837,7 @@ abstract class Model
 
 		if ($mUseAlias !== false)
 		{
-			$sRootAlias = $mUseAlias === true ? $oTable->alias() : $mUseAlias;
+			$sRootAlias = $mUseAlias === true ? $oTable->alias : $mUseAlias;
 			$mUseAlias  = true;
 		}
 
@@ -940,7 +960,7 @@ abstract class Model
             // $sCurrentModelClass. It would throw an exception otherwise.
             foreach ($aPieces as $sPiece)
             {
-                $oRelation          = $sCurrentModelClass::_relation($sPiece);
+                $oRelation          = $sCurrentModelClass::relation($sPiece);
                 $sFrom             .= $oRelation->joinLinkedModel($aTablesIn);
 
                 // Go forward through relations arborescence.
@@ -948,7 +968,7 @@ abstract class Model
             }
 
             // We now process the last relation.
-            $oRelation     = $sCurrentModelClass::_relation($sLastRelationName);
+            $oRelation     = $sCurrentModelClass::relation($sLastRelationName);
             $sFrom        .= $oRelation->joinAsLast($aTablesIn, $o); // <-- Here is $o var!
             $aAndClauses[] = $oRelation->condition($o);
             $aValuesToBind = array_merge($aValuesToBind, (array) $o->value); // @todo: flatten value array.
@@ -961,8 +981,8 @@ abstract class Model
     {
 		$oTable = static::table();
 
-        $sTableName  = $oTable->name();
-        $sTableAlias = $oTable->alias();
+        $sTableName  = $oTable->name;
+        $sTableAlias = $oTable->alias;
 
         $sSelect = 'SELECT COUNT(*)';
         $sFrom   = ' FROM ' . $sTableName . ' ' . $sTableAlias;
@@ -1018,8 +1038,8 @@ abstract class Model
     {
 		$oTable = static::table();
 
-        $sTableName  = $oTable->name();
-        $sTableAlias = $oTable->alias();
+        $sTableName  = $oTable->name;
+        $sTableAlias = $oTable->alias;
         $sFilter     = isset($aOptions['filter']) ? $aOptions['filter'] : null;
 
         $sSelect = self::_constructSqlSelectClause($sFilter, $sTableAlias);
@@ -1056,9 +1076,78 @@ abstract class Model
         return array('sql' => $sSelect . $sFrom . $sWhere . $sOrder . $sLimit . $sOffset, 'params' => $aParams);
     }
    
+    private function _countLinkedModel($sRelationName)
+    {
+        $oRelation = static::relation($sRelationName);
+
+        // Current object is not saved in database yet. It does not
+        // have an ID, so we cannot retrieve linked models from Db.
+        if ($this->id === null)
+        {
+			return 0;
+        }
+
+        // Our object is already saved. It has an ID. We are going to
+        // fetch potential linked objects from DB.
+		$iRes     = 0;
+		$sLMClass = $oRelation->linkedModelClass();
+
+        if ($oRelation instanceof BelongsTo)
+        {
+            try
+            {
+                $iRes = $sLMClass::count(array(
+					'conditions' => array_merge(array('id' => $this->{$oRelation->keyFrom()}), $oRelation->conditions()),
+					'filter' 	 => $oRelation->filter(),
+				));
+            }
+            // Prevent exception bubbling.
+            catch (ResourceNotFoundException $oEx) {}
+        }
+        elseif ($oRelation instanceof HasOne)
+        {
+            $iRes = $sLMClass::count(array(
+                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
+				'order'		 => $oRelation->order(),
+                'filter'     => $oRelation->filter(),
+            ));
+        }
+        elseif ($oRelation instanceof HasMany)
+        {
+            $iRes = $sLMClass::count(array(
+                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
+				'order'		 => $oRelation->order(),
+                'filter'     => $oRelation->filter(),
+            ));
+        }
+        else // ManyMany
+        {
+            $sQuery = 'SELECT COUNT(*) FROM ' . $oRelation->linkedModelTable() . ' lt'
+                    . ' JOIN ' . $oRelation->joinTable() . ' jt ON jt.' . $oRelation->joinKeyTo() . ' = lt.' . $oRelation->keyTo(true)
+                    . ' WHERE jt.' . $oRelation->joinKeyFrom() . ' = ?';
+
+			$aValues = is_string($this->_mId) ? array($this->_mId) : $this->_mId;
+			
+			// Use relation's conditions.
+			$aSqlConditions = $sLMClass::_conditionsToSql($oRelation->conditions(), 'lt');
+			if ($aSqlConditions['ands'])
+			{
+				$sQuery .= ' AND ' . $aSqlConditions['ands'];
+				$aValues = array_merge($aValues, $aSqlConditions['values']);
+			}
+
+			// Use relation's ORDER BY clause.
+			$sQuery .= $sLMClass::_constructSqlOrderClause($oRelation->order(), 'lt');
+
+            $iRes = $sLMClass::_processSqlQuery($sQuery, $aValues, 'count', array('filter' => $oRelation->filter()));
+        }
+
+        return $iRes;
+    }
+
     private function _deleteLinkedModel($sRelationName)
     {
-        $oRelation = static::_relation($sRelationName);
+        $oRelation = static::relation($sRelationName);
 
         if ($oRelation instanceof ManyMany)
         {
@@ -1084,7 +1173,7 @@ abstract class Model
     {
         foreach (static::$_aRelations as $sName => $m)
         {
-            $oRelation = static::_relation($sName);
+            $oRelation = static::relation($sName);
 
             if ($oRelation instanceof ManyMany)
             {
@@ -1136,8 +1225,8 @@ abstract class Model
         $this->_checkUniqueConstraints();
 
         $oTable = static::table();
-        $sTableName  = $oTable->name();
-        $aColumns    = $oTable->columns();
+        $sTableName  = $oTable->name;
+        $aColumns    = $oTable->columns;
 
         $aInsertColumns = array();
         $aValues        = array();
@@ -1157,7 +1246,7 @@ abstract class Model
             // Handle linked models.
             if (isset(static::$_aRelations[$sKey]))
             {
-                $oRelation = static::_relation($sKey);
+                $oRelation = static::relation($sKey);
 
                 if ($oRelation instanceof BelongsTo)
                 {
@@ -1184,7 +1273,7 @@ abstract class Model
                 }
                 else
                 {
-                    $aLinkedModels[] = array('relation' => static::_relation($sKey), 'object' => $mValue);
+                    $aLinkedModels[] = array('relation' => static::relation($sKey), 'object' => $mValue);
                 }
             }
         }
@@ -1266,10 +1355,10 @@ abstract class Model
         $this->_onBeforeLoad();
 
         $oTable      = static::table();
-        $mPrimaryKey = $oTable->primaryKey();
+        $mPrimaryKey = $oTable->primaryKey;
 
         // We set our object ID.
-        if ($oTable->isSimplePrimaryKey())
+        if ($oTable->isSimplePrimaryKey)
         {
             $this->_mId = $aRow[$mPrimaryKey];
             unset($aRow[$mPrimaryKey]);
@@ -1286,7 +1375,7 @@ abstract class Model
         }
 
         // We fill the class members.
-        $aMap = array_flip($oTable->columns());
+        $aMap = array_flip($oTable->columns);
         foreach ($aRow as $sKey => $sValue)
 		{
             // $aMap[$sKey] gives us the class member name associated to the
@@ -1314,7 +1403,7 @@ abstract class Model
      */
     private function _loadLinkedModel($sRelationName)
     {
-        $oRelation = static::_relation($sRelationName);
+        $oRelation = static::relation($sRelationName);
 
         // Current object is not saved in database yet. It does not
         // have an ID, so we cannot retrieve linked models from Db.
@@ -1437,7 +1526,7 @@ abstract class Model
      * @param $sRelationName The name of the relation.
      * @return object A Relationship object.
      */
-    private static function _relation($sRelationName)
+    public static function relation($sRelationName)
     {
         $a = static::$_aRelations;
 
@@ -1479,7 +1568,7 @@ abstract class Model
         $this->_onBeforeUpdate();
 
         $oTable   = static::table();
-        $aColumns = $oTable->columns();
+        $aColumns = $oTable->columns;
 
         $aSets   = array();
         $aValues = array();
@@ -1498,7 +1587,7 @@ abstract class Model
 
             if (isset(static::$_aRelations[$sKey]))
             {
-                $oRelation = static::_relation($sKey);
+                $oRelation = static::relation($sKey);
 
                 if ($oRelation instanceof BelongsTo)
                 {
@@ -1525,14 +1614,14 @@ abstract class Model
                 }
                 else
                 {
-                    $aLinkedModels[] = array('relation' => static::_relation($sKey), 'object' => $mValue);
+                    $aLinkedModels[] = array('relation' => static::relation($sKey), 'object' => $mValue);
                 }
             }
         }
 
         $a = self::_conditionsToSql(array('id' => $this->_mId));
 
-        $sQuery = 'UPDATE ' . $oTable->name() . ' ' . $oTable->alias()
+        $sQuery = 'UPDATE ' . $oTable->name . ' ' . $oTable->alias
                 . ' SET '. implode(',', $aSets)
                 . ' WHERE ' . $a['ands'];
 

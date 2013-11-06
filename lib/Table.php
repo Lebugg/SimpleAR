@@ -3,35 +3,28 @@ namespace SimpleAR;
 
 class Table
 {
-    private $_sName;
-    private $_mPrimaryKey;
-    private $_aColumns;
+    public $name;
+    public $primaryKey;
+    public $columns;
+    public $orderBy;
 
-	private $_sAlias;
-    private $_bIsSimplePrimaryKey;
+	// Constructed.
+	public $alias;
+    public $isSimplePrimaryKey;
 
-    public function __construct($sName, $mPrimaryKey, $aColumns)
+    public function __construct($sName, $mPrimaryKey, $aColumns, $aOrderBy)
     {
-        $this->_sName       = $sName;
-        $this->_mPrimaryKey = $mPrimaryKey;
-        $this->_aColumns    = $aColumns;
+        $this->name       = $sName;
+        $this->primaryKey = $mPrimaryKey;
+        $this->columns    = $aColumns;
+        $this->orderBy    = $aOrderBy;
 
-		$this->_sAlias				= '_' . strtolower($sName);
-        $this->_bIsSimplePrimaryKey = is_string($mPrimaryKey);
-    }
-
-	public function alias()
-	{
-		return $this->_sAlias;
-	}
-
-    public function columns()
-    {
-        return $this->_aColumns;
+		$this->alias		      = '_' . strtolower($sName);
+        $this->isSimplePrimaryKey = is_string($mPrimaryKey);
     }
 
     /**
-     * Gives a DB field name according to its key aka a class member name.
+     * Gives a column name according to its key that is a class member name.
      *
      * @param string|array $mKey The key of $_aColumns. If $mKey is equal to "id", it
      * will return the model primary key.
@@ -40,32 +33,17 @@ class Table
      */
     public function columnRealName($mKey)
     {
-        if ($mKey === 'id') { return $this->_mPrimaryKey; }
+        if ($mKey === 'id') { return $this->primaryKey; }
 
         return is_string($mKey)
-            ? $this->_aColumns[$mKey]
-            : array_intersect_key($this->_aColumns, array_flip($mKey))
+            ? $this->columns[$mKey]
+            : array_intersect_key($this->columns, array_flip($mKey))
             ;
 
     }
 
     public function hasColumn($s)
     {
-        return $s == 'id' || isset($this->_aColumns[$s]);
-    }
-
-    public function name()
-    {
-        return $this->_sName;
-    }
-
-    public function primaryKey()
-    {
-        return $this->_mPrimaryKey;
-    }
-
-    public function isSimplePrimaryKey()
-    {
-        return $this->_bIsSimplePrimaryKey;
+        return $s == 'id' || isset($this->columns[$s]);
     }
 }
