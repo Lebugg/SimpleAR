@@ -439,12 +439,8 @@ abstract class Model
 
         $this->_onBeforeDelete();
 
-        $oTable = static::table();
-
-        $a = self::_conditionsToSql(array('id' => $this->_mId), false);
-
-        $sQuery = 'DELETE FROM ' . $oTable->name . ' WHERE ' . $a['ands'];
-        $iCount = self::$_oDb->query($sQuery, $a['values'])->rowCount();
+        list($sQuery, $aValues) = Sql::delete(array('conditions' => array('id' => $this->_mId)), get_called_class());
+        $iCount = self::$_oDb->query($sQuery, $aValues)->rowCount();
 
         if ($iCount == 0)
         {
@@ -1656,7 +1652,8 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-                    self::$_oDb->query('DELETE FROM ' . $a['relation']->joinTable() . ' WHERE ' . $a['relation']->joinKeyFrom() . ' = ?', $this-id);
+					list($sQuery, $aValues) = Sql::delete(array('conditions' => array($a['relation']->joinKeyFrom() => $this->id)), $a['relation']->joinTable());
+					self::$_oDb->query($sQuery, $aValues);
 
                     $sQuery = 'INSERT INTO ' . $a['relation']->joinTable() . '(`' . $a['relation']->joinKeyFrom() . '`,`' . $a['relation']->joinKeyTo() . '`)'
                             . ' VALUES (?,?)';
