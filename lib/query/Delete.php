@@ -23,14 +23,20 @@ class Delete extends \SimpleAR\Query
 	{
 		if (isset($aOptions['conditions']))
 		{
-			$this->_analyzeConditions($aOptions['conditions']);
-			$this->_processConditions($this->_aConditions);
+            $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
+			$aConditions = $this->_analyzeConditions($aConditions);
+            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
 		}
 
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 
 		$this->_sQuery .= 'DELETE FROM ' . $sTable;
-		$this->_sQuery .= $this->_where();
+        $sWhere = $this->_where();
+        if ($sWhere == '')
+        {
+            throw new \SimpleAR\Exception('Cannot execute a DELETE query without condition.');
+        }
+		$this->_sQuery .= $sWhere;
 
 		var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
@@ -38,72 +44,42 @@ class Delete extends \SimpleAR\Query
 
 	private function _analyzeConditions($aConditions)
 	{
-		foreach ($aConditions as $mConditionKey => $mConditionValue)
-		{
-			list($sAttribute, $mValue, $sOperator) = $this->_parseCondition($mConditionKey, $mConditionValue);
-			$this->_aConditions[] = $this->_normalizeCondition($sAttribute, $mValue, $sOperator);
+        for ($i = 0, $iCount = count($aConditions) ; $i < $iCount ; ++$i)
+        {
+            $sLogicalOperator = $aConditions[$i][0];
+            $mItem            = $aConditions[$i][1];
+
+            // Group of conditions.
+            if (is_array($mItem))
+            {
+                $aConditions[$i][1] = $this->_analyzeConditions($mItem);
+                continue;
+            }
+
+            // It necessarily is a Condition instance.
+
+            $oCondition = $mItem;
+            $sAttribute = $oCondition->attribute;
+            $sOperator  = $oCondition->operator;
+            $mValue     = $oCondition->value;
+
+            if ($this->_bUseModel)
+            {
+                $oCondition->table = $this->_oRootTable;
+
+                // Call a user method in order to deal with complex/custom attributes.
+                $sToConditionsMethod = 'to_conditions_' . $sAttribute;
+                $sModel = $this->_sRootModel;
+                if (method_exists($sModel, $sToConditionsMethod))
+                {
+                    $aSubConditions = $sModel::$sToConditionsMethod($oCondition, $sArborescence);
+                    $aSubConditions = \SimpleAR\Condition::parseConditionArray($aSubConditions);
+                    $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
+                    continue;
+                }
+            }
 		}
-	}
 
-	private function _processConditions($aConditions)
-	{
-		foreach ($aConditions as $oCondition)
-		{
-			$oTable		= $this->_oRootTable;
-			$mAttribute = $oCondition->attribute;
-			$mValue		= $oCondition->value;
-
-			$mAttribute = explode(',', $mAttribute);
-
-			// We check if given attribute is a compound attribute (a couple, for example).
-			if (count($mAttribute) === 1) // Simple attribute.
-			{
-				$mAttribute = $mAttribute[0];
-
-				// Construct right hand part of the condition.
-				if (is_array($mValue))
-				{
-					$sConditionValueString = '(' . str_repeat('?,', $oCondition->valueCount - 1) . '?)';
-				}
-				else
-				{
-					$sConditionValueString = '?';
-				}
-
-				$sColumn = $this->_bUseModel ?  $oTable->columnRealName($mAttribute) : $mAttribute;
-				$this->_aAnds[] = $sColumn . ' ' .  $oCondition->operator . ' ' . $sConditionValueString;
-
-				if ($oCondition->valueCount === 1)
-				{
-					$this->_aValues[] = $mValue;
-				}
-				else
-				{
-					$this->_aValues = array_merge($this->_aValues, $mValue);
-				}
-			}
-			else // Compound attribute;
-			{
-				$aTmp      = array();
-				$aTmp2     = array();
-
-				foreach ($mValue as $aTuple)
-				{
-					foreach ($mAttribute as $i => $sAttribute)
-					{
-						$sColumn = $this->_bUseModel ?  $oTable->columnRealName($mAttribute) : $mAttribute;
-
-						$aTmp[] = $sColumn . ' ' . $oCondition->operator . ' ?';
-						$this->_aValues[] = $aTuple[$i];
-					}
-
-					$aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-					$aTmp    = array();
-				}
-
-				// The 'OR' simulates a IN statement for compound keys.
-				$this->_aAnds[] = '(' . implode(' OR ', $aTmp2) . ')';
-			}
-		}
+        return $aConditions;
 	}
 }

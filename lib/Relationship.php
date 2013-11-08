@@ -70,7 +70,7 @@ abstract class Relationship
     {
         $o->originalOperator = $o->operator;
 
-        if ($o->valueCount <= 1)
+        if (!isset($o->value[1]))
         {
             return;
         }
@@ -125,15 +125,8 @@ abstract class Relationship
 
     public function deleteLinkedModel($mValue)
     {
-        // It handles both cases: simple and compound keys.
-        if (is_string($this->_oLM->column))
-        {
-            self::$_oDb->query('DELETE FROM ' . $this->_oLM->table . ' WHERE ' . $this->_oLM->column . ' = ?', $mValue);
-        }
-        else
-        {
-            self::$_oDb->query('DELETE FROM ' . $this->_oLM->table . ' WHERE ' . implode(' = ? AND ', $this->_oLM->column) . ' = ?', $mValue);
-        }
+        list($sQuery, $aValues) = Query::delete(array('conditions' => array($this->_oLM->attribute => $mValue)), $this->_oLM->class);
+        self::$_oDb->query($sQuery, $aValues);
     }
 
     public function filter()
@@ -210,7 +203,7 @@ abstract class Relationship
 
     protected static function _checkConditionValidity($o)
     {
-        if ($o->valueCount > 1 && !isset(self::$_aArrayOperators[$o->operator]))
+        if (isset($o->value[1]) && !isset(self::$_aArrayOperators[$o->operator]))
         {
             throw new Exception('Operator "' . $o->operator . '" is not valid for multiple values.');
         }
@@ -260,64 +253,22 @@ class BelongsTo extends Relationship
         static::_checkConditionValidity($o);
         self::arrayfy($o);
 
-        if ($o->attribute == 'id') // Condition is made on LM ID. We just have to
-                                   // make the condition on the CM field that link on LM pk.
+        // Get attribute column name.
+        if ($o->attribute === 'id')
         {
-            if (is_string($this->_oLM->pk)) // Classic case: simple primary key.
-            {
-                $sRightHandSide = self::constructConditionRightHandSide($o->valueCount);
-                return "{$this->_oCM->alias}.{$this->_oCM->column} {$o->operator} $sRightHandSide";
-            }
-            else // LM pk is an array. It means that on CM side, condition is made with several columns.
-            {
-                $aTmp  = array();
-                $aTmp2 = array();
-
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-                    foreach ($this->_oCM->column as $sColumn)
-                    {
-                        $aTmp[] = "{$this->_oCM->alias}.{$sColumn} {$o->originalOperator} ?";
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                return '(' . implode(' OR ', $aTmp2) . ')';
-            }
+            $mColumn = $this->_oCM->column;
+            $oTable  = $this->_oCM->t;
         }
-        else // Condition is made on a LM attribute (not the primary key).
+        else
         {
-            if (is_string($o->attribute))
-            {
-                $sColumn        = $this->_oLM->t->columnRealName($o->attribute);
-                $sRightHandSide = self::constructConditionRightHandSide($o->valueCount);
-                return "{$this->_oLM->alias}.$sColumn $o->operator $sRightHandSide";
-            }
-            else
-            {
-                $aTmp  = array();
-                $aTmp2 = array();
-
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-					$aColumns = $this->_oLM->t->columnRealName($o->attribute);
-
-                    foreach ($aColumns as $sColumn)
-                    {
-                        $aTmp[] = "{$this->_oLM->alias}.{$sColumn} {$o->originalOperator} ?";
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                return '(' . implode(' OR ', $aTmp2) . ')';
-            }
+            $mColumn = $this->_oLM->t->columnRealName($o->attribute);
+            $oTable  = $this->_oLM->t;
         }
+
+        $sLHS = self::leftHandSide($mColumn, $oTable, false);
+        $sRHS = Condition::rightHandSide($o->value);
+
+        return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
     }
 
     public function insert($oCM, $oLM)
@@ -338,7 +289,7 @@ class BelongsTo extends Relationship
     {
         parent::_checkConditionValidity($o);
 
-        if ($o->logic === 'and' && !$o->valueCount === 1)
+        if ($o->logic === 'and' && isset($o->value[1]))
         {
             throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
@@ -382,33 +333,10 @@ class HasOne extends Relationship
         static::_checkConditionValidity($o);
         self::arrayfy($o);
 
-		$mColumn = $this->_oLM->t->columnRealName($o->attribute);
+        $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t);
+        $sRHS = Condition::rightHandSide($o->value);
 
-        if (is_string($mColumn))
-        {
-            $sRightHandSide = self::constructConditionRightHandSide($o->valueCount);
-
-            return "{$this->_oLM->alias}.$mColumn $o->operator $sRightHandSide";
-        }
-        else
-        {
-            $aTmp  = array();
-            $aTmp2 = array();
-
-            for ($i = 0 ; $i < $o->valueCount ; ++$i)
-            {
-                foreach ($mColumn as $sColumn)
-                {
-                    $aTmp[] = "{$this->_oLM->alias}.{$sColumn} {$o->originalOperator} ?";
-                }
-
-                $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                $aTmp    = array();
-            }
-
-            // The 'OR' simulates a IN statement for compound primary keys.
-            return '(' . implode(' OR ', $aTmp2) . ')';
-        }
+        return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
     }
 
     public function insert($oCM, $oLM)
@@ -419,7 +347,7 @@ class HasOne extends Relationship
     {
         parent::_checkConditionValidity($o);
 
-        if ($o->logic == 'and' && $o->valueCount > 1)
+        if ($o->logic === 'and' && isset($o->value[1]))
         {
             throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
@@ -466,55 +394,46 @@ class HasMany extends Relationship
         self::_checkConditionValidity($o);
         self::arrayfy($o);
 
-        $sValue = self::constructConditionRightHandSide($o->valueCount);
- 
-
         $oLM     = $this->_oLM;
         $oCM     = $this->_oCM;
-		$mColumn = $oLM->t->columnRealName($o->attribute);
 
-        if ($o->logic == 'or')
+        if ($o->logic === 'or')
         {
-            if (is_string($mColumn))
-            {
-                return "EXISTS (
-                            SELECT NULL
-                            FROM $oLM->table {$oLM->alias}2
-                            WHERE {$oLM->alias}2.$oLM->column = {$oCM->alias}.{$oCM->column}
-                            AND   {$oLM->alias}2.$mColumn $o->operator $sValue
-                        )";
-            }
-            else
-            {
-                $aTmp  = array();
-                $aTmp2 = array();
+            $sLHS = Condition::leftHandSide($o->attribute, $oLM->t, true, '2');
+            $sRHS = Condition::rightHandSide($o->value);
 
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-                    foreach ($mColumn as $sColumn)
-                    {
-                        $aTmp[] = "{$oLM->alias}2.{$sColumn} {$o->originalOperator} ?";
-                    }
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t, false, '2');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t, false);
 
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                $sCondition = '(' . implode(' OR ', $aTmp2) . ')';
-
-                return "EXISTS (
-                    SELECT NULL
-                    FROM $oLM->table {$oLM->alias}2
-                    WHERE {$oLM->alias}2.$oLM->column = {$oCM->alias}.{$oCM->column}
-                    AND   $sCondition
-                )";
-            }
+            return "EXISTS (
+                        SELECT NULL
+                        FROM $oLM->table {$oLM->alias}2
+                        WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
+                        AND   {$sLHS} {$o->operator} {$sRHS}
+                    )";
         }
         else // logic == 'and'
         {
-            if (is_string($mColumn))
-            {
+            $sLHS2 = Condition::leftHandSide($o->attribute, $oLM->t, true, '2');
+            $sLHS3 = Condition::leftHandSide($o->attribute, $oLM->t, true, '3');
+            $sRHS  = Condition::rightHandSide($o->value);
+
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t, false, '3');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t, false);
+
+            return "NOT EXISTS (
+                        SELECT NULL
+                        FROM $oLM->table {$oLM->alias}2
+                        WHERE {$sLHS2} {$o->operator} {$sRHS}
+                        AND {$sLHS2} NOT IN (
+                            SELECT {$sLHS3}
+                            FROM $oLM->table {$oLM->alias}3
+                            WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
+                            AND   {$sLHS3}         = {$sLHS2}
+                        )
+                    )";
+
+                /*
                 return "NOT EXISTS (
                             SELECT NULL
                             FROM $oLM->table {$oLM->alias}2
@@ -526,34 +445,8 @@ class HasMany extends Relationship
                                 AND   {$oLM->alias}3.$mColumn     = {$oLM->alias}2.$mColumn
                             )
                         )";
-            }
-            else
-            {
-                $aTmp  = array();
-                $aTmp2 = array();
-
-                $aOtherTmp  = array();
-                $aOtherTmp2 = array();
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-                    foreach ($mColumn as $sColumn)
-                    {
-                        $aTmp[]      = "{$oLM->alias}2.{$sColumn} {$o->originalOperator} ?";
-                        $aOtherTmp[] = "{$oLM->alias}3.{$sColumn} = {$oLM->alias}2.{$sColumn}";
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-
-                    $aOtherTmp2[] = '(' . implode(' AND ', $aOtherTmp) . ')';
-                    $aOtherTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                $sCondition      = '(' . implode(' OR ', $aTmp2) . ')';
-                $sOtherCondition = '(' . implode(' OR ', $aOtherTmp2) . ')';
-
-                // I don't think it's correct.
+                */
+                /*
                 return "NOT EXISTS (
                             SELECT NULL
                             FROM {$oLM->table} {$oLM->alias}2
@@ -565,7 +458,7 @@ class HasMany extends Relationship
                                 WHERE {$oLM->alias}3.{$oLM->column} = {$oCM->alias}.{$oCM->column}
                             )
                         )";
-            }
+                */
         }
     }
 
@@ -630,45 +523,43 @@ class ManyMany extends Relationship
 
 		$mColumn = $this->_oLM->t->columnRealName($o->attribute);
 
-        if ($o->logic == 'or')
+        if ($o->logic === 'or')
         {
-            if (is_string($mColumn))
+            $sRHS = Condition::rightHandSide($o->value);
+            if ($o->attribute === 'id')
             {
-                $sRightHandSide = self::constructConditionRightHandSide($o->valueCount);
-
-                return $o->attribute == 'id'
-                    ? "{$this->_oJM->alias}.{$this->_oJM->to} $o->operator $sRightHandSide"
-                    : "{$this->_oLM->alias}.{$mColumn}        $o->operator $sRightHandSide";
+                $sLHS = Condition::leftHandSide($this->_oJM->to, $this->_oJM->alias, false);
             }
             else
             {
-                $aTmp  = array();
-                $aTmp2 = array();
-
-                $oM = $o->attribute == 'id' ? $this->_oJM : $this->_oLM;
-
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-                    foreach ($this->_oCM->column as $sColumn)
-                    {
-                        $aTmp[] = "{$oM->alias}.{$sColumn} {$o->originalOperator} ?";
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                return '(' . implode(' OR ', $aTmp2) . ')';
+                $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, false);
             }
+
+            return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
         }
-
-        if ($o->logic == 'and')
+        else // $o->logic === 'and'
         {
-            if (is_string($mColumn))
-            {
-                $sRightHandSide = self::constructConditionRightHandSide($o->valueCount);
+            $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, false);
+            $sRHS = Condition::rightHandSide($o->value);
 
+            $sCond_JMFrom  = Condition::leftHandSide($this->_oJM->from,   $this->_oJM->alias, false);
+            $sCond_JMFrom2 = Condition::leftHandSide($this->_oJM->from,   $this->_oJM->alias, false, '2');
+            $sCond_JMTo2   = Condition::leftHandSide($this->_oJM->to,     $this->_oJM->alias, false, '2');
+            $sCond_LM2     = Condition::leftHandSide($this->_oLM->column, $this->_oLM->alias, false, '2');
+
+            return "NOT EXISTS (
+                        SELECT NULL
+                        FROM {$this->_oLM->table} {$this->_oLM->alias}2
+                        WHERE {$sLHS} {$o->operator} {$sRHS}
+                        AND NOT EXISTS (
+                            SELECT NULL
+                            FROM {$this->_oJM->table} {$this->_oJM->alias}2
+                            WHERE {$sCond_JMFrom} = {$sCond_JMFrom2}
+                            AND   {$sCond_JMTo2}  = {$sCond_LM2}
+                        )
+                    )";
+
+                /*
                 return "NOT EXISTS (
                             SELECT NULL
                             FROM {$this->_oLM->table} {$this->_oLM->alias}2
@@ -680,67 +571,21 @@ class ManyMany extends Relationship
                                 AND   {$this->_oJM->alias}2.{$this->_oJM->to}  = {$this->_oLM->alias}2.{$this->_oLM->column}
                             )
                         )";
-            }
-            else
-            {
-                $aTmp  = array();
-                $aTmp2 = array();
-
-                $oM = $o->attribute == 'id' ? $this->_oJM : $this->_oLM;
-
-                for ($i = 0 ; $i < $o->valueCount ; ++$i)
-                {
-                    foreach ($this->_oCM->column as $sColumn)
-                    {
-                        $aTmp[] = " {$this->_oLM->alias}2.{$sColumn} {$o->originalOperator} ?";
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound primary keys.
-                $sCondition = '(' . implode(' OR ', $aTmp2) . ')';
-                
-                return "NOT EXISTS (
-                            SELECT NULL
-                            FROM {$this->_oLM->table} {$this->_oLM->alias}2
-                            WHERE $sCondition
-                            AND NOT EXISTS (
-                                SELECT NULL
-                                FROM {$this->_oJM->table} {$this->_oJM->alias}2
-                                WHERE {$this->_oJM->alias}.{$this->_oJM->from} = {$this->_oJM->alias}2.{$this->_oJM->from}
-                                AND   {$this->_oJM->alias}2.{$this->_oJM->to}  = {$this->_oLM->alias}2.{$this->_oLM->column}
-                            )
-                        )";
-            }
+                */
         }
     }
 
     public function deleteJoinModel($mValue)
     {
-        self::$_oDb->query('DELETE FROM ' . $this->_oJM->table . ' WHERE ' . implode(' = ? AND ', $this->_oJM->from) . ' = ?', $mValue);
+        list($sQuery, $aValues) = Query::delete(array('conditions' => array($this->_oJM->from => $mValue)), $this->_oJM->table);
+        self::$_oDb->query($sQuery, $aValues);
     }
 
     public function deleteLinkedModel($mValue)
     {
-        if (is_string($this->_oLM->pk))
-        {
-            $sCondition = "a.{$this->_oLM->pk} = b.{$this->_oJM->to}";
-        }
-        else
-        {
-            $aTmp  = array();
-
-            $oM = $o->attribute == 'id' ? $this->_oJM : $this->_oLM;
-
-			foreach ($this->_oLM->pk as $i => $sKey)
-			{
-				$aTmp[] = "a.{$sKey} = b.{$this->_oJM->to[$i]}";
-			}
-
-			$sCondition = '(' . implode(' AND ', $aTmp) . ')';
-        }
+        $sLHS = Condition::leftHandSide($this->_oLM->pk, 'a', false);
+        $sRHS = Condition::leftHandSide($this->_oJM->to, 'b', false);
+        $sCondition = $sLHS . ' = ' . $sRHS;
 
         $sQuery =  "DELETE FROM {$this->_oLM->table} a
                     WHERE EXISTS (

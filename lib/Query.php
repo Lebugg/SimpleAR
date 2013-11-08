@@ -1,6 +1,7 @@
 <?php
 namespace SimpleAR;
 
+require 'Condition.php';
 require 'query/Delete.php';
 require 'query/Select.php';
 
@@ -14,6 +15,7 @@ abstract class Query
 
 	protected $_aConditions	= array();
 	protected $_aAnds       = array();
+    protected $_sAnds       = '';
 
 	public function __construct($sRootModel)
 	{
@@ -23,51 +25,26 @@ abstract class Query
 
 	public abstract function build($aOptions);
 
-	protected function _normalizeCondition($sAttribute, $mValue, $sOperator = '=', $sLogic = 'or', $oRelation = null)
+	public static function count($aOptions, $oTable)
 	{
-		$o = new \StdClass();
-
-		$aAttribute = explode(',', $sAttribute);
-		$o->attribute = (count($aAttribute) === 1)
-			? $sAttribute
-			: $aAttribute
-			;
-
-		$o->value      = $mValue;
-		$o->valueCount = is_array($mValue) ? count($mValue) : 1;
-		$o->operator   = $sOperator ?: ($o->valueCount === 1 ? '=' : 'IN');
-
-		$o->logic      = $sLogic;
-		$o->relation   = $oRelation;
-
-		return $o;
+		$oBuilder = new Query\Select($oTable);
+		return $oBuilder->buildCount($aOptions);
 	}
 
-	/**
-	 * We accept two forms of conditions:
-	 * 1) Basic conditions:
-	 *      array(
-	 *          'my/attribute' => 'myValue',
-	 *          ...
-	 *      )
-	 * 2) Conditions with operator:
-	 *      array(
-	 *          array('my/attribute', 'myOperator', 'myValue'),
-	 *          ...
-	 *      )
-	 *
-	 * Operator: =, !=, IN, NOT IN, >, <, <=, >=.
-	 */
-	protected function _parseCondition($mKey, $mValue)
+	public static function delete($aOptions, $oTable)
 	{
-		return is_string($mKey)
-			? array($mKey,      $mValue,    null)
-			: array($mValue[0], $mValue[2], $mValue[1])
-			;
+		$oBuilder = new Query\Delete($oTable);
+		return $oBuilder->build($aOptions);
+	}
+
+	public static function select($aOptions, $oTable)
+	{
+		$oBuilder = new Query\Select($oTable);
+		return $oBuilder->build($aOptions);
 	}
 
 	protected function _where()
 	{
-		return ($this->_aAnds) ? ' WHERE ' . implode(' AND ', $this->_aAnds) : '';
+		return ($this->_sAnds) ? ' WHERE ' . $this->_sAnds : '';
 	}
 }

@@ -11,7 +11,7 @@ define('PHP_SIMPLEAR_VERSION_ID', '1.0');
 require 'Config.php';
 require 'Database.php';
 require 'Table.php';
-require 'Sql.php';
+require 'Query.php';
 require 'Model.php';
 require 'Relationship.php';
 require 'exceptions/Exception.php';

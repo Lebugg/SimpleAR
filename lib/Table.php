@@ -33,13 +33,24 @@ class Table
      */
     public function columnRealName($mKey)
     {
-        if ($mKey === 'id') { return $this->primaryKey; }
+        if (is_string($mKey))
+        {
+            return $mKey === 'id'
+                ? $this->primaryKey
+                : $this->columns[$mKey]
+                ;
+        }
 
-        return is_string($mKey)
-            ? $this->columns[$mKey]
-            : array_intersect_key($this->columns, array_flip($mKey))
-            ;
-
+        // Else it is an array.
+        $aRes = array();
+        foreach ($mKey as $sKey)
+        {
+            $aRes[] = $sKey === 'id'
+                ? $this->primaryKey
+                : $this->columns[$sKey]
+                ;
+        }
+        return $aRes;
     }
 
     public function hasColumn($s)

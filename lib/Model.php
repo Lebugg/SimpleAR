@@ -439,7 +439,7 @@ abstract class Model
 
         $this->_onBeforeDelete();
 
-        list($sQuery, $aValues) = Sql::delete(array('conditions' => array('id' => $this->_mId)), get_called_class());
+        list($sQuery, $aValues) = Query::delete(array('conditions' => array('id' => $this->_mId)), get_called_class());
         $iCount = self::$_oDb->query($sQuery, $aValues)->rowCount();
 
         if ($iCount == 0)
@@ -593,16 +593,16 @@ abstract class Model
         switch ($mFirst)
         {
             case 'all':
-                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'several';
                 break;
             case 'count':
-                list($sQuery, $aValues) = Sql::count($aOptions, get_called_class());
+                list($sQuery, $aValues) = Query::count($aOptions, get_called_class());
                 $sMultiplicity = 'count';
                 break;
             case 'first':
 				$aOptions['limit'] = 1;
-                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             case 'last':
@@ -619,7 +619,7 @@ abstract class Model
 				{
 					$aOptions['order'] = array('id' => 'DESC');
 				}
-                list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             default:
@@ -636,7 +636,7 @@ abstract class Model
         $aOptions['conditions'] = array('id' => $mId);
 
         // Fetch model.
-		list($sQuery, $aValues) = Sql::select($aOptions, get_called_class());
+		list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
         if (!$oModel = self::_processSqlQuery($sQuery, $aValues, 'one', $aOptions))
         {
             throw new RecordNotFoundException($mId);
@@ -804,7 +804,7 @@ abstract class Model
         }
         else
         {
-            $this->_aAttributes[$sAttributeName] = func_get_arg(2);
+            $this->_aAttributes[$sAttributeName] = func_get_arg(1);
         }
     }
 
@@ -1627,7 +1627,7 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-					list($sQuery, $aValues) = Sql::delete(array('conditions' => array($a['relation']->joinKeyFrom() => $this->id)), $a['relation']->joinTable());
+					list($sQuery, $aValues) = Query::delete(array('conditions' => array($a['relation']->joinKeyFrom() => $this->id)), $a['relation']->joinTable());
 					self::$_oDb->query($sQuery, $aValues);
 
                     $sQuery = 'INSERT INTO ' . $a['relation']->joinTable() . '(`' . $a['relation']->joinKeyFrom() . '`,`' . $a['relation']->joinKeyTo() . '`)'

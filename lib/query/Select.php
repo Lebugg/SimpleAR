@@ -20,8 +20,9 @@ class Select extends \SimpleAR\Query
 
 		if (isset($aOptions['conditions']))
 		{
-			$this->_analyzeConditions($aOptions['conditions']);
-			$this->_processConditions($this->_aConditions);
+            $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
+			$aConditions = $this->_analyzeConditions($aConditions);
+            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions);
 		}
 
 		if (isset($aOptions['order_by']))
@@ -61,37 +62,51 @@ class Select extends \SimpleAR\Query
 
 		if (isset($aOptions['conditions']))
 		{
-			$this->_analyzeConditions($aOptions['conditions']);
-			$this->_processConditions($this->_aConditions);
+            $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
+			$aConditions = $this->_analyzeConditions($aConditions);
+            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions);
 		}
 
 		$this->_sQuery  = 'SELECT COUNT(*)';
 		$this->_sQuery .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
 		$this->_sQuery .= $this->_where();
 
+        var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
 	}
 
 	private function _analyzeConditions($aConditions)
 	{
-		foreach ($aConditions as $mConditionKey => $mConditionValue)
-		{
-			list($sAttribute, $mValue, $sOperator) = $this->_parseCondition($mConditionKey, $mConditionValue);
+        for ($i = 0, $iCount = count($aConditions) ; $i < $iCount ; ++$i)
+        {
+            $sLogicalOperator = $aConditions[$i][0];
+            $mItem            = $aConditions[$i][1];
 
-            $aPieces = explode('/', $sAttribute);
-            $iCount  = count($aPieces);
-
-            // Empty string.
-            if ($iCount === 0)
+            // Group of conditions.
+            if (is_array($mItem))
             {
-                throw new Exception('Invalid condition attribute: attribute is empty.');
+                $aConditions[$i][1] = $this->_analyzeConditions($mItem);
+                continue;
             }
 
-			// Attribute of a related model.
-			$sAttribute    = array_pop($aPieces);
+            // It necessarily is a Condition instance.
+
+            $oCondition = $mItem;
+            $sAttribute = $oCondition->attribute;
+            $sOperator  = $oCondition->operator;
+            $mValue     = $oCondition->value;
+
+            // We want to save arborescence without attribute name for later
+            // use.
             $sArborescence = strrpos($sAttribute, '/') ? substr($sAttribute, 0, strrpos($sAttribute, '/') + 1) : '';
 
-			// Add related model(s) in join arborescence.
+            // Explode relation arborescence.
+            $aPieces = explode('/', $sAttribute);
+
+            // Attribute name only.
+			$sAttribute = array_pop($aPieces);
+
+			// Add related model(s) into join arborescence.
 			$aArborescence =& $this->_aArborescence;
 			$sCurrentModel =  $this->_sRootModel;
             $oRelation     =  null;
@@ -108,14 +123,19 @@ class Select extends \SimpleAR\Query
 				$sCurrentModel =  $oRelation->linkedModelClass();
 			}
 
-			$oCondition = $this->_normalizeCondition($sAttribute, $mValue, $sOperator, 'or', $oRelation);
+            // Let the condition know which relation it is associated with.
+			$oCondition->relation  = $oRelation;
+            $oCondition->table     = $sCurrentModel::table();
+            // Remove arborescence from Condition attribute string.
+            $oCondition->attribute = $sAttribute;
 
-            // Call a user method to deal with complex attributes.
+            // Call a user method in order to deal with complex/custom attributes.
             $sToConditionsMethod = 'to_conditions_' . $sAttribute;
             if (method_exists($sCurrentModel, $sToConditionsMethod))
             {
-                $aConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
-                $this->_analyzeConditions($aConditions);
+                $aSubConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
+                $aSubConditions = \SimpleAR\Condition::parseConditionArray($aSubConditions);
+                $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
                 continue;
             }
 
@@ -124,10 +144,9 @@ class Select extends \SimpleAR\Query
                 // Add actual attribute to arborescence.
                 $aArborescence['@'][] = $oCondition;
             }
-
-			// And, of course, add condition to the list of conditions.
-			$this->_aConditions[] = $oCondition;
 		}
+
+        return $aConditions;
 	}
 
 	private function _analyzeOrderBy($aOrderBy)
@@ -141,12 +160,6 @@ class Select extends \SimpleAR\Query
         {
             $aPieces = explode('/', $sAttribute);
             $iCount  = count($aPieces);
-
-            // Empty string.
-            if ($iCount === 0)
-            {
-                throw new Exception('Invalid ORDER BY attribute: attribute is empty.');
-            }
 
 			// Attribute of root model.
 			if ($iCount === 1)
@@ -230,8 +243,8 @@ class Select extends \SimpleAR\Query
 
 	private function _orderByCount($sRelation, $sOrder, $sClass, &$aArborescence)
 	{
-		$sCountAlias = 'COUNT_' . $sRelation;
 		$sRelation   = substr($sRelation, 1);
+		$sCountAlias = 'COUNT_' . $sRelation;
 
 		$oRelation   = $sClass::relation($sRelation);
 		$oTable		 = $sClass::table();
@@ -243,28 +256,28 @@ class Select extends \SimpleAR\Query
 		// Go forward in arborescence.
 		$aArborescence =& $aArborescence[$sRelation];
 
-		if ($oRelation instanceof HasMany)
+		if ($oRelation instanceof \SimpleAR\HasMany)
 		{
 			$sTableAlias = $oRelation->linkedModelTableAlias();
 			$sKey		 = $oRelation->keyTo(TRUE);
 
-			$aArborescence['@'][] = $this->_normalizeCondition('id', null, null, 'and', null);
+			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'and');
 		}
-		elseif ($oRelation instanceof ManyMany)
+		elseif ($oRelation instanceof \SimpleAR\ManyMany)
 		{
 			$sTableAlias = $oRelation->joinTableAlias();
 			$sKey		 = $oRelation->joinKeyFrom();
 
-			$aArborescence['@'][] = $this->_normalizeCondition('id', null, null, 'or', null);
+			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'or');
 		}
-		elseif ($oRelation instanceof HasOne)
+		elseif ($oRelation instanceof \SimpleAR\HasOne)
 		{
 			$sTableAlias = $oRelation->linkedModelTableAlias();
 			$sKey		 = $oRelation->keyTo(TRUE);
 
-			$aArborescence['@'][] = $this->_normalizeCondition('id', null, null, null, null);
+			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null);
 		}
-		elseif ($oRelation instanceof BelongsTo)
+		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
 		{
 			unset($aArborescence);
 			$sTableAlias = $oRelation->currentModelTableAlias();
@@ -279,9 +292,11 @@ class Select extends \SimpleAR\Query
 
 	private function _processConditions($aConditions)
 	{
-		foreach ($aConditions as $oCondition)
+		foreach ($aConditions as $aItem)
 		{
-			
+            $sLogicalOperator = $aItem[0];
+            $mItem            = $aItem[1];
+
 			// Condition is made on a root model attribute.
 			if ($oCondition->relation === null)
 			{
@@ -304,60 +319,6 @@ class Select extends \SimpleAR\Query
 
 	private function _processConditionOnRootModelAttribute($oCondition)
 	{
-		$oTable		= $this->_oRootTable;
-		$mAttribute = $oCondition->attribute;
-		$mValue		= $oCondition->value;
-
-		$mAttribute = explode(',', $mAttribute);
-
-		// We check if given attribute is a compound attribute (a couple, for example).
-		if (count($mAttribute) === 1) // Simple attribute.
-		{
-			$mAttribute = $mAttribute[0];
-
-			// Construct right hand part of the condition.
-			if (is_array($mValue))
-			{
-				$sConditionValueString = '(' . str_repeat('?,', $oCondition->valueCount - 1) . '?)';
-			}
-			else
-			{
-				$sConditionValueString = '?';
-			}
-
-			$this->_aAnds[] = $oTable->alias . '.' .  $oTable->columnRealName($mAttribute) . ' ' .  $oCondition->operator . ' ' . $sConditionValueString;
-
-			if ($oCondition->valueCount === 1)
-			{
-				$this->_aValues[] = $mValue;
-			}
-			else
-			{
-				$this->_aValues = array_merge($this->_aValues, $mValue);
-			}
-		}
-		else // Compound attribute;
-		{
-			$aTmp      = array();
-			$aTmp2     = array();
-
-			foreach ($mValue as $aTuple)
-			{
-				foreach ($mAttribute as $i => $sAttribute)
-				{
-					$sColumn = $oTable->columnRealName($sAttribute);
-
-					$aTmp[] = "{$oTable->alias}.{$sColumn} {$oCondition->operator} ?";
-					$this->_aValues[] = $aTuple[$i];
-				}
-
-				$aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-				$aTmp    = array();
-			}
-
-			// The 'OR' simulates a IN statement for compound keys.
-			$this->_aAnds[] = '(' . implode(' OR ', $aTmp2) . ')';
-		}
 	}
 
 }
