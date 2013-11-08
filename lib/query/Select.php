@@ -51,7 +51,6 @@ class Select extends \SimpleAR\Query
 			$this->_sQuery .= ' OFFSET ' . $aOptions['offset'];
 		}
 
-        var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
 	}
 
@@ -71,7 +70,6 @@ class Select extends \SimpleAR\Query
 		$this->_sQuery .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
 		$this->_sQuery .= $this->_where();
 
-        var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
 	}
 

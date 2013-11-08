@@ -38,7 +38,6 @@ class Delete extends \SimpleAR\Query
         }
 		$this->_sQuery .= $sWhere;
 
-		var_dump($this->_sQuery);
 		return array($this->_sQuery, $this->_aValues);
 	}
 
