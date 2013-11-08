@@ -405,7 +405,7 @@ abstract class Model
      */
     public function attributes()
     {
-        return $this->_aAttributes + array('id' => $this->_mId);
+        return array('id' => $this->_mId) + $this->_aAttributes;
     }
 
     public static function count($aOptions = array())
@@ -766,7 +766,7 @@ abstract class Model
 
     public function toArray()
     {
-        $aRes = $this->_aAttributes;
+        $aRes = $this->attributes();
 
         return self::_arrayToArray($aRes);
     }
