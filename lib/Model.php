@@ -738,7 +738,7 @@ abstract class Model
 		$iNbItems = $iNbItems >= 1 ? $iNbItems : 1;
 
 		$aOptions['limit']  = $iNbItems;
-		$aOptions['offset'] = $iPage * $iNbItems;
+		$aOptions['offset'] = ($iPage - 1) * $iNbItems;
 
 		$aRes          = array();
 		$aRes['count'] = static::count($aOptions);
