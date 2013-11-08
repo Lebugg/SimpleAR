@@ -507,7 +507,7 @@ abstract class Model
         }
         else
         {
-            return (bool) static::find('one', array('conditions' => $m));
+            return (bool) static::find('first', array('conditions' => $m));
         }
     }
 
@@ -1294,10 +1294,14 @@ abstract class Model
                         if ($o instanceof Model && $o->id === null)
                         {
                             $o->save();
-                        }
 
-                        // Does not handle compound keys.
-                        $oSth->execute(array($this->id, $o->id));
+                            // Does not handle compound keys.
+                            $oSth->execute(array($this->id, $o->id));
+                        }
+                        elseif (is_int($o))
+                        {
+                            $oSth->execute(array($this->id, $o));
+                        }
                     }
                 }
             }
