@@ -405,7 +405,7 @@ abstract class Model
      */
     public function attributes()
     {
-        return $this->_aAttributes;
+        return $this->_aAttributes + array('id' => $this->_mId);
     }
 
     public static function count($aOptions = array())
