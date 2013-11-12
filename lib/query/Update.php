@@ -1,37 +1,29 @@
 <?php
 namespace SimpleAR\Query;
 
-class Delete extends \SimpleAR\Query
+class Update extends \SimpleAR\Query
 {
-	private $_bUseModel  = true;
-	private $_sRootTable = '';
-
-	public function __construct($sRootModel)
+	public function build($aOptions)
 	{
-		if (class_exists($sRootModel))
+		$sRootModel = $this->_sRootModel;
+		$sRootAlias = $this->_oRootTable->alias;
+
+		if (isset($aOptions['conditions']))
 		{
-			parent::__construct($sRootModel);
+            $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
+			$aConditions = $this->_analyzeConditions($aConditions);
+            list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions);
 		}
-		else
-		{
-			$this->_bUseModel  = false;
-			$this->_sRootTable = $sRootModel;
-		}
-	}
 
-	public function build($aConditions)
-	{
-        $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
-        $aConditions = $this->_analyzeConditions($aConditions);
-        list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
+        $this->_aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
+        $this->values  = $aOptions['values'];
 
-		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
-
-		$this->sql .= 'DELETE FROM ' . $sTable;
+		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
+        $this->sql .= implode(' = ?, ', $this->_aColumns) . ' = ?';
         $sWhere = $this->_where();
         if ($sWhere == '')
         {
-            throw new \SimpleAR\Exception('Cannot execute a DELETE query without condition.');
+            throw new \SimpleAR\Exception('Cannot execute a UPDATE query without condition.');
         }
 		$this->sql .= $sWhere;
 

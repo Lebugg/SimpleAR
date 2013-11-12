@@ -439,8 +439,8 @@ abstract class Model
 
         $this->_onBeforeDelete();
 
-        list($sQuery, $aValues) = Query::delete(array('id' => $this->_mId), get_called_class());
-        $iCount = self::$_oDb->query($sQuery, $aValues)->rowCount();
+        $oQuery = Query::delete(array('id' => $this->_mId), get_called_class());
+        $iCount = $oQuery->run()->rowCount();
 
         if ($iCount == 0)
         {
@@ -594,16 +594,16 @@ abstract class Model
         switch ($mFirst)
         {
             case 'all':
-                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
+                $oQuery = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'several';
                 break;
             case 'count':
-                list($sQuery, $aValues) = Query::count($aOptions, get_called_class());
+                $oQuery = Query::count($aOptions, get_called_class());
                 $sMultiplicity = 'count';
                 break;
             case 'first':
 				$aOptions['limit'] = 1;
-                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
+                $oQuery = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             case 'last':
@@ -620,7 +620,7 @@ abstract class Model
 				{
 					$aOptions['order'] = array('id' => 'DESC');
 				}
-                list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
+                $oQuery = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
                 break;
             default:
@@ -628,7 +628,7 @@ abstract class Model
                 break;
         }
 
-        return self::_processSqlQuery($sQuery, $aValues, $sMultiplicity, $aOptions);
+        return self::_processSqlQuery($oQuery->sql, $oQuery->values, $sMultiplicity, $aOptions);
     }
 
     public static function findByPK($mId, $aOptions = array())
@@ -637,8 +637,8 @@ abstract class Model
         $aOptions['conditions'] = array('id' => $mId);
 
         // Fetch model.
-		list($sQuery, $aValues) = Query::select($aOptions, get_called_class());
-        if (!$oModel = self::_processSqlQuery($sQuery, $aValues, 'one', $aOptions))
+		$oQuery = Query::select($aOptions, get_called_class());
+        if (!$oModel = self::_processSqlQuery($oQuery->sql, $oQuery->values, 'one', $aOptions))
         {
             throw new RecordNotFoundException($mId);
         }
@@ -1066,30 +1066,12 @@ abstract class Model
 
         if ($oRelation instanceof BelongsTo)
         {
-            try
-            {
-                $iRes = $sLMClass::count(array(
-					'conditions' => array_merge(array('id' => $this->{$oRelation->keyFrom()}), $oRelation->conditions()),
-					'filter'	 => $oRelation->filter(),
-				));
-            }
-            // Prevent exception bubbling.
-            catch (RecordNotFoundException $oEx) {}
+            return $this->{$oRelation->keyFrom()} === NULL ? 0 : 1;
         }
-        elseif ($oRelation instanceof HasOne)
+        elseif ($oRelation instanceof HasOne || $oRelation instanceof HasMany)
         {
             $iRes = $sLMClass::count(array(
                 'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
-				'order'		 => $oRelation->order(),
-                'filter'     => $oRelation->filter(),
-            ));
-        }
-        elseif ($oRelation instanceof HasMany)
-        {
-            $iRes = $sLMClass::count(array(
-                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
-				'order'		 => $oRelation->order(),
-                'filter'     => $oRelation->filter(),
             ));
         }
         else // ManyMany
@@ -1250,13 +1232,11 @@ abstract class Model
             }
         }
 
-        $sQuery = 'INSERT INTO '. $sTableName
-                . ' (' . implode(',', $aInsertColumns) . ') VALUES'
-                . ' (?' . str_repeat(',?', count($aInsertColumns) - 1) . ')';
 
         try
         {
-            self::$_oDb->query($sQuery, $aValues);
+            $oQuery = Query::insert(array('fields' => $aInsertColumns, $aValues), get_called_class());
+            $oQuery->run();
 
             // We fetch the ID.
             $this->_mId = (int) self::$_oDb->lastInsertId();
@@ -1285,25 +1265,26 @@ abstract class Model
                 }
                 else // ManyMany
                 {
-                    $sQuery = 'INSERT INTO ' . $a['relation']->joinTable() . '(`' . $a['relation']->joinKeyFrom() . '`,`' . $a['relation']->joinKeyTo() . '`)'
-                            . ' VALUES (?,?)';
-
-                    $oSth = self::$_oDb->prepare($sQuery);
-
+                    $aValues = array();
                     foreach ($a['object'] as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
                             $o->save();
-
-                            // Does not handle compound keys.
-                            $oSth->execute(array($this->id, $o->id));
+                            $aValues[] = array($this->id, $o->id);
                         }
                         elseif (is_int($o))
                         {
-                            $oSth->execute(array($this->id, $o));
+                            $aValues[] = array($this->id, $o);
                         }
                     }
+
+					$oQuery = Query::insert(array(
+                        'fields' => array($a['relation']->joinKeyFrom(), $a['relation']->joinKeyTo()),
+                        'values' => $aValues
+                    ), $a['relation']->joinTable());
+
+                    $oQuery->run();
                 }
             }
         }
@@ -1408,8 +1389,6 @@ abstract class Model
 					'conditions' => $oRelation->conditions(),
 					'filter'	 => $oRelation->filter(),
 				));
-                // We don't need LM ID twice.
-                $this->exclude($oRelation->keyFrom());
             }
             // Prevent exception bubbling.
             catch (RecordNotFoundException $oEx) {}
@@ -1523,14 +1502,8 @@ abstract class Model
 
     public static function remove($aConditions = array())
     {
-        list($sQuery, $aValues) = Query::delete($aConditions, get_called_class());
-
-        if (! $aValues)
-        {
-            throw new Exception('Cannot execute a DELETE query without conditions');
-        }
-
-        return self::$_oDb->query($sQuery, $aValues)->rowCount();
+        $oQuery = Query::delete($aConditions, get_called_class());
+        return $oQuery->run()->rowCount();
     }
 
     private function _setDefaultValues()
@@ -1539,10 +1512,6 @@ abstract class Model
 		{
             $this->_aAttributes[$sKey] = $sValue;
         }
-    }
-
-    private function _sqlWhere($aConditions)
-    {
     }
 
     /**
@@ -1558,7 +1527,7 @@ abstract class Model
         $oTable   = static::table();
         $aColumns = $oTable->columns;
 
-        $aSets   = array();
+        $aFields = array();
         $aValues = array();
 
         $aLinkedModels = array();
@@ -1568,7 +1537,7 @@ abstract class Model
             // Handles actual columns.
             if (isset($aColumns[$sKey]))
             {
-                $aSets[]   = $oTable->columnRealName($sKey) . ' = ?';
+                $aFields[] = $sKey;
                 $aValues[] = $mValue;
                 continue;
             }
@@ -1587,14 +1556,14 @@ abstract class Model
                     $mKeyFrom = $oRelation->keyFrom(true);
                     if (is_string($mKeyFrom))
                     {
-                        $aSets[]   = '`' . $oRelation->keyFrom(true) . '`';
+                        $aFields[] = $oRelation->keyFrom();
                         $aValues[] = $mValue->id;
                     }
                     else
                     {
                         foreach ($mKeyFrom as $sKey)
                         {
-                            $aSets[] = '`' . $sKey . '`';
+                            $aFields[] = $sKey;
                         }
 
                         $aValues = array_merge($aValues, $mValue->id);
@@ -1607,17 +1576,14 @@ abstract class Model
             }
         }
 
-        $a = self::_conditionsToSql(array('id' => $this->_mId));
-
-        $sQuery = 'UPDATE ' . $oTable->name . ' ' . $oTable->alias
-                . ' SET '. implode(',', $aSets)
-                . ' WHERE ' . $a['ands'];
-
-        $aValues = array_merge($aValues, $a['values']);
-
         try
         {
-            self::$_oDb->query($sQuery, $aValues);
+            $oQuery = Query::update(array(
+                'fields' => $aFields,
+                'values' => array_merge($aValues, $a['values']),
+                'conditions' => array('id' => $this->_mId)
+            ));
+            $oQuery->run();
 
             // Process linked models.
             foreach ($aLinkedModels as $a)
@@ -1644,14 +1610,10 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-					list($sQuery, $aValues) = Query::delete(array($a['relation']->joinKeyFrom() => $this->id), $a['relation']->joinTable());
-					self::$_oDb->query($sQuery, $aValues);
+					$oQuery = Query::delete(array($a['relation']->joinKeyFrom() => $this->id), $a['relation']->joinTable());
+                    return $oQuery->run();
 
-                    $sQuery = 'INSERT INTO ' . $a['relation']->joinTable() . '(`' . $a['relation']->joinKeyFrom() . '`,`' . $a['relation']->joinKeyTo() . '`)'
-                            . ' VALUES (?,?)';
-
-                    self::$_oDb->prepare($sQuery);
-
+                    $aValues = array();
                     foreach ($a['object'] as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
@@ -1660,8 +1622,14 @@ abstract class Model
                         }
 
                         // Does not handle compound keys.
-                        self::$_oDb->execute(array($this->id, $o->id));
+                        $aValues[] = array($this->id, $o->id);
                     }
+
+					$oQuery = Query::insert(array(
+                        'fields' => array($a['relation']->joinKeyFrom(), $a['relation']->joinKeyTo()),
+                        'values' => $aValues
+                    ), $a['relation']->joinTable());
+                    $oQuery->run();
                 }
             }
 

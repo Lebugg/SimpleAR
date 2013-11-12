@@ -22,7 +22,7 @@ class Select extends \SimpleAR\Query
 		{
             $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
 			$aConditions = $this->_analyzeConditions($aConditions);
-            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions);
+            list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions);
 		}
 
 		if (isset($aOptions['order_by']))
@@ -35,23 +35,23 @@ class Select extends \SimpleAR\Query
 			$this->_analyzeCounts($aOptions['counts']);
 		}
 
-		$this->_sQuery  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->_sQuery .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
-		$this->_sQuery .= $this->_where();
-		$this->_sQuery .= $this->_groupBy();
-		$this->_sQuery .= $this->_sOrderBy;
+		$this->sql  = 'SELECT ' . implode(', ', $this->_aSelects);
+		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
+		$this->sql .= $this->_where();
+		$this->sql .= $this->_groupBy();
+		$this->sql .= $this->_sOrderBy;
 
 		if (isset($aOptions['limit']))
 		{
-			$this->_sQuery .= ' LIMIT ' . $aOptions['limit'];
+			$this->sql .= ' LIMIT ' . $aOptions['limit'];
 		}
 
 		if (isset($aOptions['offset']))
 		{
-			$this->_sQuery .= ' OFFSET ' . $aOptions['offset'];
+			$this->sql .= ' OFFSET ' . $aOptions['offset'];
 		}
 
-		return array($this->_sQuery, $this->_aValues);
+		return array($this->sql, $this->values);
 	}
 
 	public function buildCount($aOptions)
@@ -63,14 +63,14 @@ class Select extends \SimpleAR\Query
 		{
             $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
 			$aConditions = $this->_analyzeConditions($aConditions);
-            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions);
+            list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions);
 		}
 
-		$this->_sQuery  = 'SELECT COUNT(*)';
-		$this->_sQuery .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
-		$this->_sQuery .= $this->_where();
+		$this->sql  = 'SELECT COUNT(*)';
+		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias . ' ' . $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
+		$this->sql .= $this->_where();
 
-		return array($this->_sQuery, $this->_aValues);
+		return array($this->sql, $this->values);
 	}
 
 	private function _analyzeConditions($aConditions)
@@ -286,37 +286,6 @@ class Select extends \SimpleAR\Query
 		$this->_aGroupBy[] = $oTable->alias . '.' . $oTable->primaryKey;
 
 		return $sCountAlias . ' ' . $sOrder;
-	}
-
-	private function _processConditions($aConditions)
-	{
-		foreach ($aConditions as $aItem)
-		{
-            $sLogicalOperator = $aItem[0];
-            $mItem            = $aItem[1];
-
-			// Condition is made on a root model attribute.
-			if ($oCondition->relation === null)
-			{
-				$this->_processConditionOnRootModelAttribute($oCondition);
-				continue;
-			}
-
-			$this->_aAnds[] = $oCondition->relation->condition($oCondition);
-
-			if (is_array($oCondition->value))
-			{
-				$this->_aValues = array_merge($this->_aValues, $oCondition->value);
-			}
-			else
-			{
-				$this->_aValues[] = $oCondition->value;
-			}
-		}
-	}
-
-	private function _processConditionOnRootModelAttribute($oCondition)
-	{
 	}
 
 }

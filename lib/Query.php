@@ -28,19 +28,48 @@ abstract class Query
 	public static function count($aOptions, $oTable)
 	{
 		$oBuilder = new Query\Select($oTable);
-		return $oBuilder->buildCount($aOptions);
+        $oBuilder->buildCount($aOptions);
+
+		return $oBuilder;
 	}
 
 	public static function delete($aConditions, $oTable)
 	{
 		$oBuilder = new Query\Delete($oTable);
-		return $oBuilder->build($aConditions);
+        $oBuilder->build($aConditions);
+
+		return $oBuilder;
 	}
+
+	public static function insert($aOptions, $oTable)
+	{
+		$oBuilder = new Query\Insert($oTable);
+        $oBuilder->build($aConditions);
+
+		return $oBuilder;
+	}
+
+    public function run()
+    {
+        static $oDb = Database::instance();
+
+        return $oDb->query($this->_sQuery, $this->_aValues);
+    }
 
 	public static function select($aOptions, $oTable)
 	{
 		$oBuilder = new Query\Select($oTable);
-		return $oBuilder->build($aOptions);
+        $oBuilder->build($aConditions);
+
+		return $oBuilder;
+	}
+
+	public static function update($aOptions, $oTable)
+	{
+		$oBuilder = new Query\Update($oTable);
+        $oBuilder->build($aConditions);
+
+		return $oBuilder;
 	}
 
 	protected function _where()
