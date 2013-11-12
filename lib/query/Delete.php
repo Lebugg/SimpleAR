@@ -19,14 +19,11 @@ class Delete extends \SimpleAR\Query
 		}
 	}
 
-	public function build($aOptions)
+	public function build($aConditions)
 	{
-		if (isset($aOptions['conditions']))
-		{
-            $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
-			$aConditions = $this->_analyzeConditions($aConditions);
-            list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
-		}
+        $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
+        $aConditions = $this->_analyzeConditions($aConditions);
+        list($this->_sAnds, $this->_aValues) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
 
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 

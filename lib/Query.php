@@ -31,10 +31,10 @@ abstract class Query
 		return $oBuilder->buildCount($aOptions);
 	}
 
-	public static function delete($aOptions, $oTable)
+	public static function delete($aConditions, $oTable)
 	{
 		$oBuilder = new Query\Delete($oTable);
-		return $oBuilder->build($aOptions);
+		return $oBuilder->build($aConditions);
 	}
 
 	public static function select($aOptions, $oTable)

@@ -3,7 +3,7 @@ namespace SimpleAR;
 
 class DatabaseException extends Exception
 {
-	public static function construct($sMessage, $sQuery = null)
+    public function __construct($sMessage, $sQuery, \Exception $oPrevious = null)
 	{
 		$s  = 'A database error occured' . "\n";
 		$s .= 'Error: ' . $sMessage . "\n";
@@ -13,6 +13,6 @@ class DatabaseException extends Exception
 			$s .= 'SQL query: ' . $sQuery . "\n";
 		}
 
-		return (new DatabaseException($s));
+        parent::__construct($s, 0, $oPrevious);
 	}
 }

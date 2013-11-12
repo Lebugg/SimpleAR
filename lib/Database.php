@@ -88,7 +88,7 @@ class Database
             $this->_oPdo = new \PDO($sDsn, $aDsn['user'], $aDsn['password'], $aOptions);
         } catch (\PDOException $oEx)
 		{
-            throw Exception::sqlException($oEx);
+            throw new DatabaseException($oEx->getMessage(), null, $oEx);
         }
 
         $this->_sDatabase = $aDsn['name'];
@@ -159,7 +159,7 @@ class Database
                 $this->_aSth[$sQuery] = $this->_oSth;
             }
         } catch (\PDOException $oEx) {
-            throw Exception::sqlException($oEx, $sQuery);
+            throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
         }
 
         return $this->_oSth;
@@ -203,7 +203,7 @@ class Database
                 $this->_aQueryTimes[] = (microtime(TRUE) - $time) * 1000;
             }
         } catch (\PDOException $oEx) {
-            throw Exception::sqlException($oEx, $sQuery);
+            throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
         }
 
         return $this->_oSth;

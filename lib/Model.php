@@ -439,7 +439,7 @@ abstract class Model
 
         $this->_onBeforeDelete();
 
-        list($sQuery, $aValues) = Query::delete(array('conditions' => array('id' => $this->_mId)), get_called_class());
+        list($sQuery, $aValues) = Query::delete(array('id' => $this->_mId), get_called_class());
         $iCount = self::$_oDb->query($sQuery, $aValues)->rowCount();
 
         if ($iCount == 0)
@@ -493,21 +493,22 @@ abstract class Model
      */
     public static function exists($m)
     {
-        if (is_int($m))
-        {
-            try
-            {
-                static::findByPK($m);
-                return true;
-            }
-            catch (RecordNotFoundException $oEx)
-            {
-                return false;
-            }
-        }
-        else
+        // It is an associative array. We want to test record existence by an
+        // array of condtitions.
+        if (is_array($m) && !isset($m[0]))
         {
             return (bool) static::find('first', array('conditions' => $m));
+        }
+
+        // Classic exists() (By primary key.)
+        try
+        {
+            static::findByPK($m);
+            return true;
+        }
+        catch (RecordNotFoundException $oEx)
+        {
+            return false;
         }
     }
 
@@ -1411,7 +1412,7 @@ abstract class Model
                 $this->exclude($oRelation->keyFrom());
             }
             // Prevent exception bubbling.
-            catch (ResourceNotFoundException $oEx) {}
+            catch (RecordNotFoundException $oEx) {}
         }
         elseif ($oRelation instanceof HasOne)
         {
@@ -1518,6 +1519,18 @@ abstract class Model
 
         // Return the Relationship object.
         return $a[$sRelationName];
+    }
+
+    public static function remove($aConditions = array())
+    {
+        list($sQuery, $aValues) = Query::delete($aConditions, get_called_class());
+
+        if (! $aValues)
+        {
+            throw new Exception('Cannot execute a DELETE query without conditions');
+        }
+
+        return self::$_oDb->query($sQuery, $aValues)->rowCount();
     }
 
     private function _setDefaultValues()
@@ -1631,7 +1644,7 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-					list($sQuery, $aValues) = Query::delete(array('conditions' => array($a['relation']->joinKeyFrom() => $this->id)), $a['relation']->joinTable());
+					list($sQuery, $aValues) = Query::delete(array($a['relation']->joinKeyFrom() => $this->id), $a['relation']->joinTable());
 					self::$_oDb->query($sQuery, $aValues);
 
                     $sQuery = 'INSERT INTO ' . $a['relation']->joinTable() . '(`' . $a['relation']->joinKeyFrom() . '`,`' . $a['relation']->joinKeyTo() . '`)'
