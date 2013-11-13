@@ -200,7 +200,7 @@ abstract class Model
      *
      * @var array
      */
-    protected static $_aOrder = array();
+    protected static $_aOrderBy = array();
 
     /**
      * This array allows the creation of link (or relations) with
@@ -697,7 +697,7 @@ abstract class Model
                 $aColumns = static::$_aColumns;
             }
 
-            self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns, static::$_aOrder);
+            self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns, static::$_aOrderBy);
 		}
     }
 
@@ -1040,7 +1040,7 @@ abstract class Model
 
         // If there are common keys between static::$_aOrder and $aOrder, 
         // entries of static::$_aOrder will be overwritten.
-        foreach (array_merge(static::$_aOrder, $aOrder) as $sField => $sOrder)
+        foreach (array_merge(static::$_aOrderBy, $aOrder) as $sField => $sOrder)
         {
             $aRes[] = $sAlias.'.'. $oTable->columnRealName($sField) . ' ' . $sOrder;
         }
