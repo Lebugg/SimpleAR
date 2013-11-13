@@ -41,7 +41,30 @@ class Condition
 
         if (is_array($this->value))
         {
+            if (! $this->value)
+            {
+                throw new Exception('Invalid condition value "' . $this->value . '" for attribtue "' . $this->attribtue . '".');
+            }
+
+            // Concert objects to object ID's.
+            if (is_object($this->value[0]))
+            {
+                for ($i = 0, $iCount = count($this->value) ; $i < $iCount ; ++$i)
+                {
+                    $this->value[$i] = $this->value[$i]->id;
+                }
+
+            }
+
             $this->operator = self::arrayfyOperator($this->operator);
+        }
+        else
+        {
+            // Concert objects to object ID's.
+            if (is_object($this->value))
+            {
+                $this->value = $this->value->id;
+            }
         }
     }
 
