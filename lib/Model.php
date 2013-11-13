@@ -673,7 +673,7 @@ abstract class Model
             $mPrimaryKey = static::$_mPrimaryKey ?: self::$_oConfig->primaryKey;
 
 			// Fetch columns if required.
-			if (self::$_oConfig->autoRetrieveModelColumns)
+			if (! static::$_aColumns)
 			{
                 $aColumns          = array();
 				$aDbColumns        = self::$_oDb->query('SHOW COLUMNS FROM ' . $sTableName)->fetchAll(\PDO::FETCH_COLUMN);
