@@ -125,8 +125,8 @@ abstract class Relationship
 
     public function deleteLinkedModel($mValue)
     {
-        list($sQuery, $aValues) = Query::delete(array('conditions' => array($this->_oLM->attribute => $mValue)), $this->_oLM->class);
-        self::$_oDb->query($sQuery, $aValues);
+        $oQuery = Query::delete(array($this->_oLM->attribute => $mValue), $this->_oLM->class);
+        $oQuery->run();
     }
 
     public function filter()
@@ -577,8 +577,8 @@ class ManyMany extends Relationship
 
     public function deleteJoinModel($mValue)
     {
-        list($sQuery, $aValues) = Query::delete(array('conditions' => array($this->_oJM->from => $mValue)), $this->_oJM->table);
-        self::$_oDb->query($sQuery, $aValues);
+        $oQuery = Query::delete(array($this->_oJM->from => $mValue), $this->_oJM->table);
+        $oQuery->run();
     }
 
     public function deleteLinkedModel($mValue)

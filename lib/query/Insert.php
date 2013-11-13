@@ -31,7 +31,7 @@ class Insert extends \SimpleAR\Query
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 
 		$this->sql .= 'INSERT INTO ' . $sTable . '(`' . implode('`,`', $this->_aColumns) . '`) VALUES';
-		$this->sql .= Condition::rightHandSide($this->values);
+		$this->sql .= \SimpleAR\Condition::rightHandSide($this->values);
 
 		return array($this->sql, $this->values);
 	}

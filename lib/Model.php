@@ -1182,8 +1182,8 @@ abstract class Model
         $sTableName  = $oTable->name;
         $aColumns    = $oTable->columns;
 
-        $aInsertColumns = array();
-        $aValues        = array();
+        $aFields = array();
+        $aValues = array();
 
         $aLinkedModels = array();
 
@@ -1192,8 +1192,8 @@ abstract class Model
             // Handle actual columns.
             if (isset($aColumns[$sKey]))
             {
-                $aInsertColumns[] = '`' . $oTable->columnRealName($sKey) . '`';
-                $aValues[]        = $mValue;
+                $aFields[] = $sKey;
+                $aValues[] = $mValue;
                 continue;
             }
 
@@ -1209,17 +1209,17 @@ abstract class Model
                         $mValue->save();
                     }
 
-                    $mKeyFrom = $oRelation->keyFrom(true);
+                    $mKeyFrom = $oRelation->keyFrom();
                     if (is_string($mKeyFrom))
                     {
-                        $aInsertColumns[] = '`' . $oRelation->keyFrom(true) . '`';
-                        $aValues[]        = $mValue->id;
+                        $aFields[] = $mKeyFrom;
+                        $aValues[] = $mValue->id;
                     }
                     else
                     {
                         foreach ($mKeyFrom as $sKey)
                         {
-                            $aInsertColumns[] = '`' . $sKey . '`';
+                            $aFields[] = $sKey;
                         }
 
                         $aValues = array_merge($aValues, $mValue->id);
@@ -1235,7 +1235,7 @@ abstract class Model
 
         try
         {
-            $oQuery = Query::insert(array('fields' => $aInsertColumns, $aValues), get_called_class());
+            $oQuery = Query::insert(array('fields' => $aFields, 'values' => $aValues), get_called_class());
             $oQuery->run();
 
             // We fetch the ID.
@@ -1580,9 +1580,9 @@ abstract class Model
         {
             $oQuery = Query::update(array(
                 'fields' => $aFields,
-                'values' => array_merge($aValues, $a['values']),
+                'values' => $aValues,
                 'conditions' => array('id' => $this->_mId)
-            ));
+            ), get_called_class());
             $oQuery->run();
 
             // Process linked models.

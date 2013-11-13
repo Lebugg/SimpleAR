@@ -12,11 +12,11 @@ class Update extends \SimpleAR\Query
 		{
             $aConditions = \SimpleAR\Condition::parseConditionArray($aOptions['conditions']);
 			$aConditions = $this->_analyzeConditions($aConditions);
-            list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions);
+            list($this->_sAnds, $aConditionValues) = \SimpleAR\Condition::arrayToSql($aConditions, false);
 		}
 
         $this->_aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
-        $this->values  = $aOptions['values'];
+        $this->values    = array_merge($aOptions['values'], $aConditionValues);
 
 		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
         $this->sql .= implode(' = ?, ', $this->_aColumns) . ' = ?';
@@ -51,20 +51,17 @@ class Update extends \SimpleAR\Query
             $sOperator  = $oCondition->operator;
             $mValue     = $oCondition->value;
 
-            if ($this->_bUseModel)
-            {
-                $oCondition->table = $this->_oRootTable;
+            $oCondition->table = $this->_oRootTable;
 
-                // Call a user method in order to deal with complex/custom attributes.
-                $sToConditionsMethod = 'to_conditions_' . $sAttribute;
-                $sModel = $this->_sRootModel;
-                if (method_exists($sModel, $sToConditionsMethod))
-                {
-                    $aSubConditions = $sModel::$sToConditionsMethod($oCondition, '');
-                    $aSubConditions = \SimpleAR\Condition::parseConditionArray($aSubConditions);
-                    $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
-                    continue;
-                }
+            // Call a user method in order to deal with complex/custom attributes.
+            $sToConditionsMethod = 'to_conditions_' . $sAttribute;
+            $sModel = $this->_sRootModel;
+            if (method_exists($sModel, $sToConditionsMethod))
+            {
+                $aSubConditions = $sModel::$sToConditionsMethod($oCondition, '');
+                $aSubConditions = \SimpleAR\Condition::parseConditionArray($aSubConditions);
+                $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
+                continue;
             }
 		}
 
