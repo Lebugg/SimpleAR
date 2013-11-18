@@ -1389,19 +1389,7 @@ abstract class Model
         $mRes	  = null;
 		$sLMClass = $oRelation->linkedModelClass();
 
-        if ($oRelation instanceof BelongsTo)
-        {
-            try
-            {
-                $mRes = $sLMClass::findByPK($this->{$oRelation->keyFrom()}, array(
-					'conditions' => $oRelation->conditions(),
-					'filter'	 => $oRelation->filter(),
-				));
-            }
-            // Prevent exception bubbling.
-            catch (RecordNotFoundException $oEx) {}
-        }
-        elseif ($oRelation instanceof HasOne)
+        if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
         {
             $mRes = $sLMClass::first(array(
                 'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
