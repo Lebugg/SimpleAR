@@ -1152,7 +1152,7 @@ abstract class Model
 
     private function _fill($aAttributes)
     {
-		$this->_aAttributes = $aAttributes;
+		$this->_aAttributes = $aAttributes + $this->_aAttributes;
 
 		/* Restrictive way of doing it:
         $aColumns = static::table()->columns();
