@@ -33,7 +33,10 @@ class Insert extends \SimpleAR\Query
 		$this->sql .= 'INSERT INTO ' . $sTable . '(`' . implode('`,`', $this->_aColumns) . '`) VALUES';
 		$this->sql .= $this->_valuesStatement($this->values);
 
-        $this->values = call_user_func_array('array_merge', $this->values);
+        if (is_array($this->values[0]))
+        {
+            $this->values = call_user_func_array('array_merge', $this->values);
+        }
 	}
 
     private function _valuesStatement($aValues)
