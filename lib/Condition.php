@@ -73,7 +73,7 @@ class Condition
 
     public static function arrayToSql($aArray, $bUseAliases = true, $bToColumn = true)
     {
-        $sSql    = '(';
+        $sSql    = '';
         $aValues = array();
 
         $bFirst  = true;
@@ -106,8 +106,6 @@ class Condition
                 $aValues = array_merge($aValues, $a);
             }
         }
-
-        $sSql .= ')';
 
         return array($sSql, $aValues);
     }

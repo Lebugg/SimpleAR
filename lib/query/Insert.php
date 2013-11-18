@@ -31,8 +31,31 @@ class Insert extends \SimpleAR\Query
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 
 		$this->sql .= 'INSERT INTO ' . $sTable . '(`' . implode('`,`', $this->_aColumns) . '`) VALUES';
-		$this->sql .= \SimpleAR\Condition::rightHandSide($this->values);
+		$this->sql .= $this->_valuesStatement($this->values);
 
-		return array($this->sql, $this->values);
+        $this->values = call_user_func_array('array_merge', $this->values);
 	}
+
+    private function _valuesStatement($aValues)
+    {
+        $iCount = count($aValues);
+
+        // $aValues is a multidimensional array. Actually it is a array of
+        // tuples.
+        if (is_array($aValues[0]))
+        {
+            // Tuple cardinal.
+            $iTupleSize = count($aValues[0]);
+            
+            $sTuple = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
+            $sRes   = str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
+        }
+        // Simple array.
+        else
+        {
+            $sRes = '(' . str_repeat('?,', $iCount - 1) . '?)';
+        }
+
+        return $sRes;
+    }
 }

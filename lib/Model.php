@@ -1232,7 +1232,6 @@ abstract class Model
             }
         }
 
-
         try
         {
             $oQuery = Query::insert(array('fields' => $aFields, 'values' => $aValues), get_called_class());
@@ -1273,7 +1272,8 @@ abstract class Model
                             $o->save();
                             $aValues[] = array($this->id, $o->id);
                         }
-                        elseif (is_int($o))
+                        // Else we consider this is an ID.
+                        else
                         {
                             $aValues[] = array($this->id, $o);
                         }
@@ -1600,24 +1600,28 @@ abstract class Model
                 {
                     // Remove all rows from join table. (Easier this way.)
 					$oQuery = Query::delete(array($a['relation']->joinKeyFrom() => $this->id), $a['relation']->joinTable());
-                    return $oQuery->run();
+                    $oQuery->run();
 
                     $aValues = array();
                     foreach ($a['object'] as $o)
                     {
-                        if ($o instanceof Model && $o->id === null)
+                        if ($o instanceof Model)
                         {
                             $o->save();
+                            $aValues[] = array($this->id, $o->id);
                         }
-
-                        // Does not handle compound keys.
-                        $aValues[] = array($this->id, $o->id);
+                        // Else we consider this is an ID.
+                        else
+                        {
+                            $aValues[] = array($this->id, $o);
+                        }
                     }
 
 					$oQuery = Query::insert(array(
                         'fields' => array($a['relation']->joinKeyFrom(), $a['relation']->joinKeyTo()),
                         'values' => $aValues
                     ), $a['relation']->joinTable());
+
                     $oQuery->run();
                 }
             }
