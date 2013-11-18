@@ -672,29 +672,22 @@ abstract class Model
             $sTableName  = static::$_sTableName  ?: call_user_func(self::$_oConfig->classToTable, $sCurrentClass);
             $mPrimaryKey = static::$_mPrimaryKey ?: self::$_oConfig->primaryKey;
 
-			// Fetch columns if required.
-			if (! static::$_aColumns)
+            // Columns are defined in model, perfect!
+			if (static::$_aColumns)
 			{
-                $aColumns          = array();
-				$aDbColumns        = self::$_oDb->query('SHOW COLUMNS FROM ' . $sTableName)->fetchAll(\PDO::FETCH_COLUMN);
-                $bSimplePrimaryKey = is_string($mPrimaryKey);
-
-                $iCount = count($aColumns);
-                foreach ($aDbColumns as $s)
-                {
-                    // We do not want to insert primary key in static::$_aColumns.
-                    if ( ($bSimplePrimaryKey && $s !== $mPrimaryKey)
-                        || (!$bSimplePrimaryKey && !in_array($s, $mPrimaryKey))
-                    ) {
-						// If a column is renamed, take the new name.
-						$sKey = isset(static::$_aTranslations[$s]) ? static::$_aTranslations[$s] : $s;
-                        $aColumns[$sKey] = $s;
-                    }
-				}
+                $aColumns = static::$_aColumns;
 			}
+			// They are not, fetch them from database.
             else
             {
-                $aColumns = static::$_aColumns;
+				$aColumns = self::$_oDb->query('SHOW COLUMNS FROM ' . $sTableName)->fetchAll(\PDO::FETCH_COLUMN);
+
+                // We do not want to insert primary key in
+                // static::$_aColumns unless it is a compound key.
+                if (is_string($mPrimaryKey))
+                {
+                    unset($aColumns[$mPrimaryKey]);
+                }
             }
 
             self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns, static::$_aOrderBy);

@@ -20,10 +20,31 @@ class Table
         $this->columns    = $aColumns;
         $this->orderBy    = $aOrderBy;
 
+        /**
+         * Allows $_aColumns declaration like:
+         * array(
+         *      'attrName'  => 'colName',
+         *      'attr2Name' => 'col2Name',
+         *      'col3Name',
+         *      ...
+         * ),
+         *
+         * This way, attribute to column translation is super easy and
+         * practical.
+         */
+        foreach ($aColumns as $mKey => $sValue)
+        {
+            if (is_int($mKey))
+            {
+                $this->columns[$sValue] = $sValue;
+                unset($this->columns[$mKey]);
+            }
+        }
+
 		$this->alias		      = '_' . strtolower($sName);
         $this->isSimplePrimaryKey = is_string($mPrimaryKey);
 
-        $this->primaryKeyColumns  = $this->isSimplePrimaryKey ?  $this->primaryKey : $this->columnRealName($this->primaryKey);
+        $this->primaryKeyColumns  = $this->isSimplePrimaryKey ? $this->primaryKey : $this->columnRealName($this->primaryKey);
     }
 
     /**
