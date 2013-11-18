@@ -544,7 +544,7 @@ abstract class Model
         }
         else
         {
-            $aRes = array_merge($aRes, $mPrimaryKey);
+            $aRes = array_merge($aRes, $oTable->columnRealName($mPrimaryKey));
         }
 
 		if ($sAlias)
@@ -704,6 +704,13 @@ abstract class Model
     public static function last($aOptions = array())
     {
         return self::find('last', $aOptions);
+    }
+
+    public function modify($aAttributes)
+    {
+        $this->_fill($aAttributes);
+
+        return $this;
     }
 
     /**
@@ -1324,10 +1331,11 @@ abstract class Model
         {
             $this->_mId = array();
 
-            foreach ($mPrimaryKey as $sKey)
+            $aPrimaryKeyColumns = $oTable->columnRealName($mPrimaryKey);
+            foreach ($aPrimaryKeyColumns as $sKey)
             {
                 $this->_mId[] = $aRow[$sKey];
-                unset($aRow[$sKey]);
+                //unset($aRow[$sKey]);
             }
         }
 

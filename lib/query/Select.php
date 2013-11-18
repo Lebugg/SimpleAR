@@ -132,8 +132,16 @@ class Select extends \SimpleAR\Query
             if (method_exists($sCurrentModel, $sToConditionsMethod))
             {
                 $aSubConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
-                $aSubConditions = \SimpleAR\Condition::parseConditionArray($aSubConditions);
-                $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
+
+                /**
+                 * to_conditions_* may return nothing when they directly modify
+                 * the Condition object.
+                 */
+                if ($aSubConditions)
+                {
+                    $aSubConditions     = \SimpleAR\Condition::parseConditionArray($aSubConditions);
+                    $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
+                }
                 continue;
             }
 

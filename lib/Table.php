@@ -5,6 +5,7 @@ class Table
 {
     public $name;
     public $primaryKey;
+    public $primaryKeyColumns;
     public $columns;
     public $orderBy;
 
@@ -21,6 +22,8 @@ class Table
 
 		$this->alias		      = '_' . strtolower($sName);
         $this->isSimplePrimaryKey = is_string($mPrimaryKey);
+
+        $this->primaryKeyColumns  = $this->isSimplePrimaryKey ?  $this->primaryKey : $this->columnRealName($this->primaryKey);
     }
 
     /**
@@ -36,7 +39,7 @@ class Table
         if (is_string($mKey))
         {
             return $mKey === 'id'
-                ? $this->primaryKey
+                ? $this->primaryKeyColumns
                 : $this->columns[$mKey]
                 ;
         }
@@ -46,7 +49,7 @@ class Table
         foreach ($mKey as $sKey)
         {
             $aRes[] = $sKey === 'id'
-                ? $this->primaryKey
+                ? $this->primaryKeyColumns
                 : $this->columns[$sKey]
                 ;
         }

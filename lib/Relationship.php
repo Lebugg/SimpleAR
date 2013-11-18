@@ -279,7 +279,7 @@ class BelongsTo extends Relationship
     {
 		foreach ($aAttributes as $o)
 		{
-			if (!$o->attribute === 'id') {
+			if ($o->attribute !== 'id') {
 				return $this->joinLinkedModel();
 			}
 		}
@@ -532,7 +532,7 @@ class ManyMany extends Relationship
             }
             else
             {
-                $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, false);
+                $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, true);
             }
 
             return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -623,7 +623,7 @@ class ManyMany extends Relationship
 		foreach ($aAttributes as $o)
 		{
 			// And, under certain conditions, the linked table.
-			if (!$o->logic === 'or' || !$o->attribute === 'id')
+			if ($o->logic !== 'or' || $o->attribute !== 'id')
 			{
 				$sRes .= $this->_joinLM();
 				break;
