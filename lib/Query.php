@@ -2,10 +2,10 @@
 namespace SimpleAR;
 
 require 'Condition.php';
-require 'query/Delete.php';
-require 'query/Insert.php';
-require 'query/Select.php';
-require 'query/Update.php';
+require 'queries/Delete.php';
+require 'queries/Insert.php';
+require 'queries/Select.php';
+require 'queries/Update.php';
 
 abstract class Query
 {
