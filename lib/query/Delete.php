@@ -24,7 +24,6 @@ class Delete extends \SimpleAR\Query
         $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
         $aConditions = $this->_analyzeConditions($aConditions);
         list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
-        return;
 
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 

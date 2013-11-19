@@ -178,6 +178,7 @@ class Database
      */
     public function query($sQuery, $aParams = array())
     {
+        var_dump($sQuery);
         if ($this->_bDebug) {
             $sQueryDebug  = $sQuery;
             $aParamsDebug = $aParams;

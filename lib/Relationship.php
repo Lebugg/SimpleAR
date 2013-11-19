@@ -352,7 +352,7 @@ class HasMany extends Relationship
 
 class ManyMany extends Relationship
 {
-    private $jm;
+    public $jm;
 
     protected function __construct($a, $sCMClass)
     {
@@ -362,9 +362,9 @@ class ManyMany extends Relationship
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->lm->class;
         $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
         $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
+        $this->lm->pk        = $this->lm->t->primaryKey;
 
         $this->jm = new \StdClass();
 
@@ -511,11 +511,12 @@ class ManyMany extends Relationship
 
 		$oRelation->name = $this->name . '_r';
 
-		$oRelation->cm  = $this->lm;
-		$oRelation->lm  = $this->cm;
+		$oRelation->cm  = clone $this->lm;
+		$oRelation->lm  = clone $this->cm;
 
-		$this->jm->from = $this->jm->to;
-		$this->jm->to   = $this->jm->from;
+        $oRelation->jm       = clone $this->jm;
+		$oRelation->jm->from = $this->jm->to;
+		$oRelation->jm->to   = $this->jm->from;
 
         return $oRelation;
 	}

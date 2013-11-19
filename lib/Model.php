@@ -396,6 +396,31 @@ abstract class Model
 		);
     }
 
+    public function addTo($sRelation, $mLinkedModel)
+    {
+        $oRelation = static::relation($sRelation);
+
+        if ($oRelation instanceof ManyMany)
+        {
+            if ($mLinkedModel instanceof Model)
+            {
+                $mLinkedModel->save();
+                $mId = $mLinkedModel->_mId;
+            }
+            else
+            {
+                $mId = $mLinkedModel;
+            }
+
+            $oQuery = Query::insert(array(
+                'fields' => array($oRelation->jm->from, $oRelation->jm->to),
+                'values' => array($this->_mId, $mId),
+            ), $oRelation->jm->table);
+
+            $oQuery->run();
+        }
+    }
+
     public static function all($aOptions = array())
     {
         return self::find('all', $aOptions);
@@ -489,7 +514,6 @@ abstract class Model
         $this->_onBeforeDelete();
 
         $oQuery = Query::delete(array('id' => $this->_mId), get_called_class());
-        return;
         $iCount = $oQuery->run()->rowCount();
 
         if ($iCount === 0)
@@ -750,6 +774,34 @@ abstract class Model
     {
         $oQuery = Query::delete($aConditions, get_called_class());
         return $oQuery->run()->rowCount();
+    }
+
+    public function removeFrom($sRelation, $mLinkedModel)
+    {
+        $oRelation = static::relation($sRelation);
+
+        if ($oRelation instanceof ManyMany)
+        {
+            if ($mLinkedModel instanceof Model)
+            {
+                if ($mLinkedModel->_mId === null) { return; }
+
+                $mId = $mLinkedModel->_mId;
+            }
+            else
+            {
+                $mId = $mLinkedModel;
+            }
+
+            $oQuery = Query::delete(
+                array(
+                    $oRelation->jm->from => $this->_mId,
+                    $oRelation->jm->to   => $mId,
+                ),
+            $oRelation->jm->table);
+
+            $oQuery->run();
+        }
     }
 
     /**

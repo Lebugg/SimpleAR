@@ -13,8 +13,6 @@ class Select extends \SimpleAR\Query
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;
 
-        var_dump($sRootModel);
-        var_dump($this->_oRootTable);
 		$this->_aSelects = (isset($aOptions['filter']))
 			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias)
 			: $sRootModel::columnsToSelect(null, $sRootAlias)
