@@ -376,7 +376,7 @@ abstract class Model
 		) {
             if (method_exists($this, 'set_' . $sName))
             {
-                call_user_method('set_' . $sName, $this, $mValue);
+                call_user_func(array($this, 'set_' . $sName), $mValue);
             }
             else
             {
@@ -1057,33 +1057,28 @@ abstract class Model
             }
 
             // Handle linked models.
+            // $mValue can be:
+            // - a Model instance not saved yet (BelongsTo or HasOne relations);
+            // - a Model instance ID (BelongsTo or HasOne relations) (Not
+            // implemented).
+            //
+            // - a Model instance array (HasMany or ManyMany relations);
+            // - a Model instance ID array (HasMany or ManyMany relations).
             if (isset(static::$_aRelations[$sKey]))
             {
                 $oRelation = static::relation($sKey);
 
+                // If it is linked by a BelongsTo instance, update local field.
                 if ($oRelation instanceof BelongsTo)
                 {
-                    if ($mValue->id === null)
-                    {
-                        $mValue->save();
-                    }
+                    // Save in cascade.
+                    $mValue->save();
 
-                    $mKeyFrom = $oRelation->cm->attribute;
-                    if (is_string($mKeyFrom))
-                    {
-                        $aFields[] = $mKeyFrom;
-                        $aValues[] = $mValue->id;
-                    }
-                    else
-                    {
-                        foreach ($mKeyFrom as $sKey)
-                        {
-                            $aFields[] = $sKey;
-                        }
-
-                        $aValues = array_merge($aValues, $mValue->id);
-                    }
+                    // @TODO: accept compound keys.
+                    $aFields[] = $oRelation->cm->attribute;
+                    $aValues[] = $mValue->id;
                 }
+                // Otherwise, handle it later (After CM insert, actually).
                 else
                 {
                     $aLinkedModels[] = array('relation' => static::relation($sKey), 'object' => $mValue);
@@ -1102,39 +1097,51 @@ abstract class Model
             // Process linked models.
             foreach ($aLinkedModels as $a)
             {
+                // Linked model instance is not yet saved. We want to save it on
+                // cascade.
+                // Ignore if not Model instance or already saved.
                 if ($a['relation'] instanceof HasOne)
                 {
-                    if ($a['object'] instanceof Model && $a['object']->id === null)
+                    if($a['object'] instanceof Model && $a['object']->_mId === null)
                     {
-                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
+                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
                         $a['object']->save();
                     }
                 }
                 elseif ($a['relation'] instanceof HasMany)
                 {
+                    // Linked model instance is not yet saved. We want to save it on
+                    // cascade.
+                    // Ignore if not Model instance or already saved.
                     foreach ($a['object'] as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
+                            $o->{$a['relation']->lm->attribute} = $this->_mId;
                             $o->save();
                         }
                     }
                 }
                 else // ManyMany
                 {
+                    // We want to:
+                    //  - save linked model instances if not done yet;
+                    //  - consider integers as linked model instance IDs;
+                    //  - link these instances with current model via the
+                    //  relation join table;
+                    //  - save instances on cascade.
                     $aValues = array();
-                    foreach ($a['object'] as $o)
+                    foreach ($a['object'] as $m)
                     {
-                        if ($o instanceof Model && $o->_mId === null)
+                        if ($m instanceof Model)
                         {
-                            $o->save();
-                            $aValues[] = array($this->_mId, $o->_mId);
+                            $m->save();
+                            $aValues[] = array($this->_mId, $m->_mId);
                         }
                         // Else we consider this is an ID.
                         else
                         {
-                            $aValues[] = array($this->_mId, $o);
+                            $aValues[] = array($this->_mId, $m);
                         }
                     }
 
@@ -1354,33 +1361,29 @@ abstract class Model
                 continue;
             }
 
+            // Handle linked models.
+            // $mValue can be:
+            // - a Model instance not saved yet (BelongsTo or HasOne relations);
+            // - a Model instance ID (BelongsTo or HasOne relations) (Not
+            // implemented).
+            //
+            // - a Model instance array (HasMany or ManyMany relations);
+            // - a Model instance ID array (HasMany or ManyMany relations).
             if (isset(static::$_aRelations[$sKey]))
             {
                 $oRelation = static::relation($sKey);
 
+                // If it is linked by a BelongsTo instance, update local field.
                 if ($oRelation instanceof BelongsTo)
                 {
-                    if ($mValue->id === null)
-                    {
-                        $mValue->save();
-                    }
+                    // Save in cascade.
+                    $mValue->save();
 
-                    $mKeyFrom = $oRelation->cm->column;
-                    if (is_string($mKeyFrom))
-                    {
-                        $aFields[] = $oRelation->cm->attribute;
-                        $aValues[] = $mValue->id;
-                    }
-                    else
-                    {
-                        foreach ($mKeyFrom as $sKey)
-                        {
-                            $aFields[] = $sKey;
-                        }
-
-                        $aValues = array_merge($aValues, $mValue->id);
-                    }
+                    // @TODO: accept compound keys.
+                    $aFields[] = $oRelation->cm->attribute;
+                    $aValues[] = $mValue->id;
                 }
+                // Otherwise, handle it later (After CM insert, actually).
                 else
                 {
                     $aLinkedModels[] = array('relation' => static::relation($sKey), 'object' => $mValue);
@@ -1397,46 +1400,65 @@ abstract class Model
             ), get_called_class());
             $oQuery->run();
 
-            // Process linked models.
+            // I know code seems (is) redundant, but I am convinced that it is
+            // better this way. Treatment of linked model can be different
+            // during insert than during update. See ManyMany treatment for
+            // example: we delete before inserting.
             foreach ($aLinkedModels as $a)
-			{
+            {
+                // Linked model instance is not yet saved. We want to save it on
+                // cascade.
+                // Ignore if not Model instance or already saved.
                 if ($a['relation'] instanceof HasOne)
                 {
-                    if ($a['object'] instanceof Model && $a['object']->id === null)
+                    if($a['object'] instanceof Model && $a['object']->_mId === null)
                     {
-                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
+                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
                         $a['object']->save();
                     }
                 }
                 elseif ($a['relation'] instanceof HasMany)
                 {
+                    // Linked model instance is not yet saved. We want to save it on
+                    // cascade.
+                    // Ignore if not Model instance or already saved.
                     foreach ($a['object'] as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
+                            $o->{$a['relation']->lm->attribute} = $this->_mId;
                             $o->save();
                         }
                     }
                 }
                 else // ManyMany
                 {
+                    // We want to:
+                    //  - save linked model instances if not done yet;
+                    //  - consider integers as linked model instance IDs;
+                    //  - save instances on cascade.
+                    //  - link these instances with current model via the
+                    //  relation join table. To do this:
+                    //      1) Delete all rows of join table that concerns
+                    //      current model;
+                    //      2) Insert new rows.
+
                     // Remove all rows from join table. (Easier this way.)
-					$oQuery = Query::delete(array($a['relation']->jm->from => $this->mId), $a['relation']->jm->table);
+					$oQuery = Query::delete(array($a['relation']->jm->from => $this->_mId), $a['relation']->jm->table);
                     $oQuery->run();
 
                     $aValues = array();
-                    foreach ($a['object'] as $o)
+                    foreach ($a['object'] as $m)
                     {
-                        if ($o instanceof Model)
+                        if ($m instanceof Model)
                         {
-                            $o->save();
-                            $aValues[] = array($this->_mId, $o->_mId);
+                            $m->save();
+                            $aValues[] = array($this->_mId, $m->_mId);
                         }
                         // Else we consider this is an ID.
                         else
                         {
-                            $aValues[] = array($this->_mId, $o);
+                            $aValues[] = array($this->_mId, $m);
                         }
                     }
 
@@ -1448,7 +1470,6 @@ abstract class Model
                     $oQuery->run();
                 }
             }
-
         }
         catch (Exception $oEx)
         {
