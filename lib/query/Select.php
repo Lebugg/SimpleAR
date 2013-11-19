@@ -118,7 +118,7 @@ class Select extends \SimpleAR\Query
 
 				// Go forward in arborescence.
 				$aArborescence =& $aArborescence[$sRelation];
-				$sCurrentModel =  $oRelation->linkedModelClass();
+				$sCurrentModel =  $oRelation->lm->class;
 			}
 
             // Let the condition know which relation it is associated with.
@@ -196,7 +196,7 @@ class Select extends \SimpleAR\Query
 
 				// Go forward in arborescence.
 				$aArborescence =& $aArborescence[$sRelation];
-				$sCurrentModel =  $oRelation->linkedModelClass();
+				$sCurrentModel =  $oRelation->lm->class;
 			}
 
 			if ($sAttribute[0] === '#')
@@ -240,7 +240,7 @@ class Select extends \SimpleAR\Query
 			if ($aValues)
 			{
 				$sRes .= $oRelation->joinLinkedModel();
-				$sRes .= $this->_joinArborescenceToSql($aValues, $oRelation->linkedModelClass());
+				$sRes .= $this->_joinArborescenceToSql($aValues, $oRelation->lm->class);
 			}
 		}
 
@@ -264,30 +264,30 @@ class Select extends \SimpleAR\Query
 
 		if ($oRelation instanceof \SimpleAR\HasMany)
 		{
-			$sTableAlias = $oRelation->linkedModelTableAlias();
-			$sKey		 = $oRelation->keyTo(TRUE);
+			$sTableAlias = $oRelation->lm->alias;
+			$sKey		 = $oRelation->lm->column;
 
 			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'and');
 		}
 		elseif ($oRelation instanceof \SimpleAR\ManyMany)
 		{
-			$sTableAlias = $oRelation->joinTableAlias();
-			$sKey		 = $oRelation->joinKeyFrom();
+			$sTableAlias = $oRelation->jm->alias;
+			$sKey		 = $oRelation->jm->from;
 
 			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'or');
 		}
 		elseif ($oRelation instanceof \SimpleAR\HasOne)
 		{
-			$sTableAlias = $oRelation->linkedModelTableAlias();
-			$sKey		 = $oRelation->keyTo(TRUE);
+			$sTableAlias = $oRelation->lm->alias;
+			$sKey		 = $oRelation->lm->column;
 
 			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null);
 		}
 		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
 		{
 			unset($aArborescence);
-			$sTableAlias = $oRelation->currentModelTableAlias();
-			$sKey		 = $oRelation->keyFrom(TRUE);
+			$sTableAlias = $oRelation->cm->alias;
+			$sKey		 = $oRelation->cm->column;
 		}
 
 		$this->_aSelects[] = 'COUNT(' . $sTableAlias . '.' .  $sKey . ') AS ' . $sCountAlias;

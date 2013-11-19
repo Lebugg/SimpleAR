@@ -17,16 +17,15 @@ abstract class Relationship
         'NOT IN' => 'NOT IN',
     );
 
-    protected $_oLM;
-    protected $_oCM;
+    public $lm;
+    public $cm;
 
-    protected $_bOnDeleteCascade = false;
-    protected $_sLoadMode        = 'explicit';
-    protected $_sFilter          = null;
-    protected $_sName;
-    protected $_sType;
-	protected $_aConditions = array();
-	protected $_aOrder      = array();
+    public $onDeleteCascade = false;
+    public $loadMode        = 'explicit';
+    public $filter          = null;
+    public $name;
+	public $conditions = array();
+	public $order      = array();
 
     private static $_aDefaults = array(
         'load_mode' => 'explicit',
@@ -44,26 +43,24 @@ abstract class Relationship
         if (! self::$_oDb)     { self::$_oDb     = Database::instance(); }
         if (! self::$_oConfig) { self::$_oConfig = Config::instance();   }
 
-        $this->_sType = $a['type'];
+        $this->cm = new \StdClass();
+        $this->cm->class     = $sCMClass;
+        $this->cm->t         = $sCMClass::table();
+        $this->cm->table     = $this->cm->t->name;
+        $this->cm->alias     = $this->cm->t->alias;
 
-        $this->_oCM = new \StdClass();
-        $this->_oCM->class     = $sCMClass;
-        $this->_oCM->t         = $sCMClass::table();
-        $this->_oCM->table     = $this->_oCM->t->name;
-        $this->_oCM->alias     = $this->_oCM->t->alias;
+        $this->lm = new \StdClass();
+        $this->lm->class = $s = $a['model'] . self::$_oConfig->modelClassSuffix;
+        $this->lm->t     = $s::table();
+        $this->lm->table = $this->lm->t->name;
+        $this->lm->alias = $this->lm->t->alias;
+        $this->lm->pk    = $this->lm->t->primaryKey;
 
-        $this->_oLM = new \StdClass();
-        $this->_oLM->class = $s = $a['model'] . self::$_oConfig->modelClassSuffix;
-        $this->_oLM->t     = $s::table();
-        $this->_oLM->table = $this->_oLM->t->name;
-        $this->_oLM->alias = $this->_oLM->t->alias;
-        $this->_oLM->pk    = $this->_oLM->t->primaryKey;
-
-        if (isset($a['on_delete_cascade'])) { $this->_bOnDeleteCascade = $a['on_delete_cascade']; }
-        if (isset($a['filter']))            { $this->_sFilter          = $a['filter']; }
-        if (isset($a['load_mode']))         { $this->_sLoadMode        = $a['load_mode']; }
-		if (isset($a['conditions']))		{ $this->_aConditions	   = $a['conditions']; }
-		if (isset($a['order']))				{ $this->_aOrder		   = $a['order']; }
+        if (isset($a['on_delete_cascade'])) { $this->onDeleteCascade = $a['on_delete_cascade']; }
+        if (isset($a['filter']))            { $this->filter          = $a['filter']; }
+        if (isset($a['load_mode']))         { $this->loadMode      = $a['load_mode']; }
+		if (isset($a['conditions']))		{ $this->conditions      = $a['conditions']; }
+		if (isset($a['order']))				{ $this->order           = $a['order']; }
     }
 
     public static function arrayfy(&$o)
@@ -86,17 +83,12 @@ abstract class Relationship
 
     public abstract function condition($o);
 
-	public function conditions()
-	{
-		return $this->_aConditions;
-	}
-
     public static function construct($sName, $a, $sCMClass)
     {
         $s = 'SimpleAR\\' . self::$_aTypeToClass[$a['type']];
 
         $o = new $s($a, $sCMClass);
-        $o->name($sName);
+        $o->name = $sName;
 
         return $o;
     }
@@ -108,37 +100,17 @@ abstract class Relationship
             : '?';
     }
 
-    public function currentModelPrimaryKey()
-    {
-        return $this->_oCM->pk;
-    }
-
-    public function currentModelTable()
-    {
-        return $this->_oCM->table;
-    }
-
-    public function currentModelTableAlias()
-    {
-        return $this->_oCM->table;
-    }
-
     public function deleteLinkedModel($mValue)
     {
-        $oQuery = Query::delete(array($this->_oLM->attribute => $mValue), $this->_oLM->class);
+        $oQuery = Query::delete(array($this->lm->attribute => $mValue), $this->lm->class);
         $oQuery->run();
-    }
-
-    public function filter()
-    {
-        return $this->_sFilter;
     }
 
     public abstract function insert($oCM, $oLM);
 
     public function joinLinkedModel()
     {
-		return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oLM->alias}.{$this->_oLM->column}";
+		return " JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
     }
 
     public function joinAsLast($aAttributes)
@@ -146,60 +118,10 @@ abstract class Relationship
         return $this->joinLinkedModel();
     }
 
-    public function keyFrom($bColumnName = false)
-    {
-        return $bColumnName ? $this->_oCM->column : $this->_oCM->attribute;
-    }
-
-    public function keyTo($bColumnName = false)
-    {
-        return $bColumnName ? $this->_oLM->column : $this->_oLM->attribute;
-    }
-
-    public function linkedModelClass()
-    {
-        return $this->_oLM->class;
-    }
-
-    public function linkedModelTable()
-    {
-        return $this->_oLM->table;
-    }
-
-    public function linkedModelTableAlias()
-    {
-        return $this->_oLM->alias;
-    }
-
     public static function loadMode($aRelation)
     {
         return isset($aRelation['load_mode']) ? $aRelation['load_mode'] : self::$_aDefaults['load_mode'];
     }
-
-    public function name($sName = null)
-    {
-        if ($sName) {
-            $this->_sName = $sName;
-        } else {
-            return $this->_sName;
-        }
-    }
-
-    public function onDeleteCascade()
-    {
-        return $this->_bOnDeleteCascade;
-    }
-
-	public function order()
-	{
-		return $this->_aOrder;
-	}
-
-    public function type()
-    {
-        return $this->_sType;
-    }
-
 
     protected static function _checkConditionValidity($o)
     {
@@ -221,12 +143,12 @@ class BelongsTo extends Relationship
     {
         parent::__construct($a, $sCMClass);
 
-        $sLMClass = $this->_oLM->class;
+        $sLMClass = $this->lm->class;
 
-        $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
 		if (isset($a['key_from']))
 		{
-			$this->_oCM->attribute = $a['key_from'];
+			$this->cm->attribute = $a['key_from'];
 		}
 		else // We have to choose a default one.
 		{
@@ -234,18 +156,18 @@ class BelongsTo extends Relationship
 			
 			if ($sSuffix)
 			{
-				$this->_oCM->attribute = strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
+				$this->cm->attribute = strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
 			}
 			else
 			{
-				$this->_oCM->attribute = strtolower($sLMClass) . self::$_oConfig->foreignKeySuffix;
+				$this->cm->attribute = strtolower($sLMClass) . self::$_oConfig->foreignKeySuffix;
 			}
 		}
-        $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
+        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
+        $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $this->_oLM->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
-        $this->_oLM->column    = $this->_oLM->t->columnRealName($this->_oLM->attribute);
+        $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
+        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
     public function condition($o)
@@ -256,13 +178,13 @@ class BelongsTo extends Relationship
         // Get attribute column name.
         if ($o->attribute === 'id')
         {
-            $mColumn = $this->_oCM->column;
-            $oTable  = $this->_oCM->t;
+            $mColumn = $this->cm->column;
+            $oTable  = $this->cm->t;
         }
         else
         {
-            $mColumn = $this->_oLM->t->columnRealName($o->attribute);
-            $oTable  = $this->_oLM->t;
+            $mColumn = $this->lm->t->columnRealName($o->attribute);
+            $oTable  = $this->lm->t;
         }
 
         $sLHS = self::leftHandSide($mColumn, $oTable, false);
@@ -303,14 +225,14 @@ class HasOne extends Relationship
     {
         parent::__construct($a, $sCMClass);
 
-        $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
-        $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
+        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
+        $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->_oLM->class;
+        $sLMClass = $this->lm->class;
 		if (isset($a['key_to']))
 		{
-			$this->_oLM->attribute = $a['key_to'];
+			$this->lm->attribute = $a['key_to'];
 		}
 		else // We have to choose a default one.
 		{
@@ -318,14 +240,14 @@ class HasOne extends Relationship
 			
 			if ($sSuffix)
 			{
-				$this->_oLM->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
+				$this->lm->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
 			}
 			else
 			{
-				$this->_oLM->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
+				$this->lm->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
 			}
 		}
-        $this->_oLM->column    = $this->_oLM->t->columnRealName($this->_oLM->attribute);
+        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
     public function condition($o)
@@ -333,7 +255,7 @@ class HasOne extends Relationship
         static::_checkConditionValidity($o);
         self::arrayfy($o);
 
-        $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t);
+        $sLHS = Condition::leftHandSide($o->attribute, $this->lm->t);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -362,15 +284,15 @@ class HasMany extends Relationship
     {
         parent::__construct($a, $sCMClass);
         
-        $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
-        $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
+        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
+        $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->_oLM->class;
+        $sLMClass = $this->lm->class;
 		
 		if (isset($a['key_to']))
 		{
-			$this->_oLM->attribute = $a['key_to'];
+			$this->lm->attribute = $a['key_to'];
 		}
 		else // We have to choose a default one.
 		{
@@ -378,15 +300,15 @@ class HasMany extends Relationship
 			
 			if ($sSuffix)
 			{
-				$this->_oLM->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
+				$this->lm->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
 			}
 			else
 			{
-				$this->_oLM->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
+				$this->lm->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
 			}
 		}
 
-        $this->_oLM->column = $this->_oLM->t->columnRealName($this->_oLM->attribute);
+        $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
     public function condition($o)
@@ -394,8 +316,8 @@ class HasMany extends Relationship
         self::_checkConditionValidity($o);
         self::arrayfy($o);
 
-        $oLM     = $this->_oLM;
-        $oCM     = $this->_oCM;
+        $oLM     = $this->lm;
+        $oCM     = $this->cm;
 
         if ($o->logic === 'or')
         {
@@ -480,39 +402,39 @@ class HasMany extends Relationship
 
 class ManyMany extends Relationship
 {
-    private $_oJM;
+    private $jm;
 
     protected function __construct($a, $sCMClass)
     {
         parent::__construct($a, $sCMClass);
 
-        $this->_oCM->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
-        $this->_oCM->column    = $this->_oCM->t->columnRealName($this->_oCM->attribute);
-        $this->_oCM->pk        = $this->_oCM->t->primaryKey;
+        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
+        $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->_oLM->class;
-        $this->_oLM->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
-        $this->_oLM->column    = $this->_oLM->t->columnRealName($this->_oLM->attribute);
+        $sLMClass = $this->lm->class;
+        $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
+        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
 
-        $this->_oJM = new \StdClass();
+        $this->jm = new \StdClass();
 
         if (isset($a['join_model']))
         {
-            $this->_oJM->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
-            $this->_oJM->t     = $s::table();
-            $this->_oJM->table = $this->_oJM->t->name;
-            $this->_oJM->from  = $this->_oJM->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
-            $this->_oJM->to    = $this->_oJM->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
+            $this->jm->t     = $s::table();
+            $this->jm->table = $this->jm->t->name;
+            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
         }
         else
         {
-            $this->_oJM->class = null;
-            $this->_oJM->table = isset($a['join_table']) ? $a['join_table'] : $this->_oCM->table . '_' . $this->_oLM->table;
-            $this->_oJM->from  = isset($a['join_from'])  ? $a['join_from']  : $this->_oCM->pk;
-            $this->_oJM->to    = isset($a['join_to'])    ? $a['join_to']    : $this->_oLM->pk;
+            $this->jm->class = null;
+            $this->jm->table = isset($a['join_table']) ? $a['join_table'] : $this->cm->table . '_' . $this->lm->table;
+            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : $this->cm->pk;
+            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : $this->lm->pk;
         }
 
-        $this->_oJM->alias = strtolower($this->_oJM->table);
+        $this->jm->alias = strtolower($this->jm->table);
     }
 
     public function condition($o)
@@ -521,39 +443,39 @@ class ManyMany extends Relationship
         self::arrayfy($o);
 
 
-		$mColumn = $this->_oLM->t->columnRealName($o->attribute);
+		$mColumn = $this->lm->t->columnRealName($o->attribute);
 
         if ($o->logic === 'or')
         {
             $sRHS = Condition::rightHandSide($o->value);
             if ($o->attribute === 'id')
             {
-                $sLHS = Condition::leftHandSide($this->_oJM->to, $this->_oJM->alias, false);
+                $sLHS = Condition::leftHandSide($this->jm->to, $this->jm->alias, false);
             }
             else
             {
-                $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, true);
+                $sLHS = Condition::leftHandSide($o->attribute, $this->lm->t, true);
             }
 
             return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
         }
         else // $o->logic === 'and'
         {
-            $sLHS = Condition::leftHandSide($o->attribute, $this->_oLM->t, false);
+            $sLHS = Condition::leftHandSide($o->attribute, $this->lm->t, false);
             $sRHS = Condition::rightHandSide($o->value);
 
-            $sCond_JMFrom  = Condition::leftHandSide($this->_oJM->from,   $this->_oJM->alias, false);
-            $sCond_JMFrom2 = Condition::leftHandSide($this->_oJM->from,   $this->_oJM->alias, false, '2');
-            $sCond_JMTo2   = Condition::leftHandSide($this->_oJM->to,     $this->_oJM->alias, false, '2');
-            $sCond_LM2     = Condition::leftHandSide($this->_oLM->column, $this->_oLM->alias, false, '2');
+            $sCond_JMFrom  = Condition::leftHandSide($this->jm->from,   $this->jm->alias, false);
+            $sCond_JMFrom2 = Condition::leftHandSide($this->jm->from,   $this->jm->alias, false, '2');
+            $sCond_JMTo2   = Condition::leftHandSide($this->jm->to,     $this->jm->alias, false, '2');
+            $sCond_LM2     = Condition::leftHandSide($this->lm->column, $this->lm->alias, false, '2');
 
             return "NOT EXISTS (
                         SELECT NULL
-                        FROM {$this->_oLM->table} {$this->_oLM->alias}2
+                        FROM {$this->lm->table} {$this->lm->alias}2
                         WHERE {$sLHS} {$o->operator} {$sRHS}
                         AND NOT EXISTS (
                             SELECT NULL
-                            FROM {$this->_oJM->table} {$this->_oJM->alias}2
+                            FROM {$this->jm->table} {$this->jm->alias}2
                             WHERE {$sCond_JMFrom} = {$sCond_JMFrom2}
                             AND   {$sCond_JMTo2}  = {$sCond_LM2}
                         )
@@ -562,13 +484,13 @@ class ManyMany extends Relationship
                 /*
                 return "NOT EXISTS (
                             SELECT NULL
-                            FROM {$this->_oLM->table} {$this->_oLM->alias}2
-                            WHERE {$this->_oLM->alias}2.{$mColumn} $o->operator $sRightHandSide
+                            FROM {$this->lm->table} {$this->lm->alias}2
+                            WHERE {$this->lm->alias}2.{$mColumn} $o->operator $sRightHandSide
                             AND NOT EXISTS (
                                 SELECT NULL
-                                FROM {$this->_oJM->table} {$this->_oJM->alias}2
-                                WHERE {$this->_oJM->alias}.{$this->_oJM->from} = {$this->_oJM->alias}2.{$this->_oJM->from}
-                                AND   {$this->_oJM->alias}2.{$this->_oJM->to}  = {$this->_oLM->alias}2.{$this->_oLM->column}
+                                FROM {$this->jm->table} {$this->jm->alias}2
+                                WHERE {$this->jm->alias}.{$this->jm->from} = {$this->jm->alias}2.{$this->jm->from}
+                                AND   {$this->jm->alias}2.{$this->jm->to}  = {$this->lm->alias}2.{$this->lm->column}
                             )
                         )";
                 */
@@ -577,21 +499,21 @@ class ManyMany extends Relationship
 
     public function deleteJoinModel($mValue)
     {
-        $oQuery = Query::delete(array($this->_oJM->from => $mValue), $this->_oJM->table);
+        $oQuery = Query::delete(array($this->jm->from => $mValue), $this->jm->table);
         $oQuery->run();
     }
 
     public function deleteLinkedModel($mValue)
     {
-        $sLHS = Condition::leftHandSide($this->_oLM->pk, 'a', false);
-        $sRHS = Condition::leftHandSide($this->_oJM->to, 'b', false);
+        $sLHS = Condition::leftHandSide($this->lm->pk, 'a', false);
+        $sRHS = Condition::leftHandSide($this->jm->to, 'b', false);
         $sCondition = $sLHS . ' = ' . $sRHS;
 
-        $sQuery =  "DELETE FROM {$this->_oLM->table} a
+        $sQuery =  "DELETE FROM {$this->lm->table} a
                     WHERE EXISTS (
                         SELECT NULL
-                        FROM {$this->_oJM->table} b
-                        WHERE b." . implode(' = ? AND b.', $this->_oJM->from) ." = ?
+                        FROM {$this->jm->table} b
+                        WHERE b." . implode(' = ? AND b.', $this->jm->from) ." = ?
                         AND $sCondition
                     )";
 
@@ -600,9 +522,9 @@ class ManyMany extends Relationship
 
     public function insert($oCM, $oLM)
     {
-        $sQuery = 'INSERT INTO ' . $this->_oJM->table . ' (' . $this->_oJM->from . ',' . $this->_oJM->to . ') VALUES (?,?)';
+        $sQuery = 'INSERT INTO ' . $this->jm->table . ' (' . $this->jm->from . ',' . $this->jm->to . ') VALUES (?,?)';
         try {
-            self::$_oDb->query($sQuery, array($oCM->{$this->_oCM->attribute}, $oLM->{$this->_oLM->attribute}));
+            self::$_oDb->query($sQuery, array($oCM->{$this->cm->attribute}, $oLM->{$this->lm->attribute}));
         } catch(Exception $oEx) {
             throw new DuplicateKeyException(get_class($oCM) . '(' . $oCM->id . ') is already linked to ' . get_class($oLM) . '(' . $oLM->id . ').');
         }
@@ -633,47 +555,27 @@ class ManyMany extends Relationship
         return $sRes;
     }
 
-    public function joinTableAlias()
-    {
-        return $this->_oJM->alias;
-    }
-
-    public function joinKeyFrom()
-    {
-        return $this->_oJM->from;
-    }
-
-    public function joinKeyTo()
-    {
-        return $this->_oJM->to;
-    }
-
-    public function joinTable()
-    {
-        return $this->_oJM->table;
-    }
-
 	public function reverse()
 	{
 		$oRelation = clone $this;
 
-		$oRelation->name($this->name() . '_r');
+		$oRelation->name = $this->name . '_r';
 
-		$oRelation->_oCM  = $this->_oLM;
-		$oRelation->_oLM  = $this->_oCM;
+		$oRelation->cm  = $this->lm;
+		$oRelation->lm  = $this->cm;
 
-		$this->_oJM->from = $this->_oJM->to;
-		$this->_oJM->to   = $this->_oJM->from;
+		$this->jm->from = $this->jm->to;
+		$this->jm->to   = $this->jm->from;
 	}
 
     private function _joinJM()
     {
-		return " JOIN {$this->_oJM->table} {$this->_oJM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oJM->alias}.{$this->_oJM->from}";
+		return " JOIN {$this->jm->table} {$this->jm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->jm->alias}.{$this->jm->from}";
     }
 
     private function _joinLM()
     {
-		return " JOIN {$this->_oLM->table} {$this->_oLM->alias} ON {$this->_oJM->alias}.{$this->_oJM->to} = {$this->_oLM->alias}.{$this->_oLM->pk}";
+		return " JOIN {$this->lm->table} {$this->lm->alias} ON {$this->jm->alias}.{$this->jm->to} = {$this->lm->alias}.{$this->lm->pk}";
     }
 
 }

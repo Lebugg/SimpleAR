@@ -512,53 +512,6 @@ abstract class Model
         }
     }
 
-    /**
-     * Very useful function to get an array of the attributes to select from
-     * database. Attributes are values of $_aColumns.
-     *
-     *
-     * @param string $mFilter Optional filter set for the current model. It
-     * prevents us to fetch all attribute from the table.
-     *
-     * Note: it will NOT throw any exception if filter does not exist; instead,
-     * it will not use any filter.
-     *
-     * @return array
-     */
-    public static function columnsToSelect($sFilter = null, $sAlias = null)
-    {
-        $oTable = static::table();
-
-        $aColumns    = $oTable->columns;
-        $mPrimaryKey = $oTable->primaryKey;
-
-        $aRes = ($sFilter && isset(static::$_aFilters[$sFilter]))
-            ? $aRes = array_values(array_intersect_key($aColumns, array_flip(static::$_aFilters[$sFilter])))
-            : $aRes = array_values($aColumns)
-            ;
-
-        // Include primary key to  columns to fetch.
-        if ($oTable->isSimplePrimaryKey)
-        {
-            $aRes[] = $mPrimaryKey;
-        }
-        else
-        {
-            $aRes = array_merge($aRes, $oTable->columnRealName($mPrimaryKey));
-        }
-
-		if ($sAlias)
-		{
-			$iCount = count($aRes);
-			for ($i = 0 ; $i < $iCount ; ++$i)
-			{
-				$aRes[$i] = $sAlias . '.' . $aRes[$i];
-			}
-		}
-
-        return $aRes;
-    }
-
 
     /**
      * Sets the filter array. When we output the instance,
@@ -885,27 +838,27 @@ abstract class Model
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
 		$iRes     = 0;
-		$sLMClass = $oRelation->linkedModelClass();
+		$sLMClass = $oRelation->lm->class;
 
         if ($oRelation instanceof BelongsTo)
         {
-            return $this->{$oRelation->keyFrom()} === NULL ? 0 : 1;
+            return $this->{$oRelation->cm->attribute} === NULL ? 0 : 1;
         }
         elseif ($oRelation instanceof HasOne || $oRelation instanceof HasMany)
         {
             $iRes = $sLMClass::count(array(
-                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
+                'conditions' => array_merge($oRelation->conditions, array($oRelation->lm->attribute => $this->{$oRelation->cm->attribute})),
             ));
         }
         else // ManyMany
         {
 			$oReversed = $oRelation->reverse();
 
-			$sLMClass::relation($oReversed->name(), $oReversed);
+			$sLMClass::relation($oReversed->name, $oReversed);
 
 			$aConditions = array_merge(
-				$oReversed->conditions(),
-				array($oReversed->name() . '/' . $oReversed->keyTo() => $this->{$oReversed->keyFrom()})
+				$oReversed->conditions,
+				array($oReversed->name . '/' . $oReversed->lm->attribute => $this->{$oReversed->cm->attribute})
 			);
 
 			$iRes = $sLMClass::count(array(
@@ -951,7 +904,7 @@ abstract class Model
                 $oRelation->deleteJoinModel($this->_mId);
             }
 
-			if ($oRelation->onDeleteCascade())
+			if ($oRelation->onDeleteCascade)
 			{
 				$oRelation->deleteLinkedModel($this->_mId);
 
@@ -1026,7 +979,7 @@ abstract class Model
                         $mValue->save();
                     }
 
-                    $mKeyFrom = $oRelation->keyFrom();
+                    $mKeyFrom = $oRelation->cm->attribute;
                     if (is_string($mKeyFrom))
                     {
                         $aFields[] = $mKeyFrom;
@@ -1064,7 +1017,7 @@ abstract class Model
                 {
                     if ($a['object'] instanceof Model && $a['object']->id === null)
                     {
-                        $a['object']->{$a['relation']->keyTo()} = $this->_mId; // Does not handle compound keys.
+                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
                         $a['object']->save();
                     }
                 }
@@ -1074,7 +1027,7 @@ abstract class Model
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$a['relation']->keyTo()} = $this->_mId; // Does not handle compound keys.
+                            $o->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
                             $o->save();
                         }
                     }
@@ -1097,9 +1050,9 @@ abstract class Model
                     }
 
 					$oQuery = Query::insert(array(
-                        'fields' => array($a['relation']->joinKeyFrom(), $a['relation']->joinKeyTo()),
+                        'fields' => array($a['relation']->jm->from, $a['relation']->jm->to),
                         'values' => $aValues
-                    ), $a['relation']->joinTable());
+                    ), $a['relation']->jm->table);
 
                     $oQuery->run();
                 }
@@ -1197,39 +1150,39 @@ abstract class Model
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
         $mRes	  = null;
-		$sLMClass = $oRelation->linkedModelClass();
+		$sLMClass = $oRelation->lm->class;
 
         if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
         {
             $mRes = $sLMClass::first(array(
-                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
-				'order'		 => $oRelation->order(),
-                'filter'     => $oRelation->filter(),
+                'conditions' => array_merge($oRelation->conditions, array($oRelation->lm->attribute => $this->{$oRelation->cm->attribute})),
+				'order'		 => $oRelation->order,
+                'filter'     => $oRelation->filter,
             ));
         }
         elseif ($oRelation instanceof HasMany)
         {
             $mRes = $sLMClass::all(array(
-                'conditions' => array_merge($oRelation->conditions(), array($oRelation->keyTo() => $this->{$oRelation->keyFrom()})),
-				'order'		 => $oRelation->order(),
-                'filter'     => $oRelation->filter(),
+                'conditions' => array_merge($oRelation->conditions, array($oRelation->lm->attribute => $this->{$oRelation->cm->attribute})),
+				'order'		 => $oRelation->order,
+                'filter'     => $oRelation->filter,
             ));
         }
         else // ManyMany
         {
 			$oReversed = $oRelation->reverse();
 
-			$sLMClass::relation($oReversed->name(), $oReversed);
+			$sLMClass::relation($oReversed->name, $oReversed);
 
 			$aConditions = array_merge(
-				$oReversed->conditions(),
-				array($oReversed->name() . '/' . $oReversed->keyTo() => $this->{$oReversed->keyFrom()})
+				$oReversed->conditions,
+				array($oReversed->name . '/' . $oReversed->lm->attribute => $this->{$oReversed->cm->attribute})
 			);
 
 			$mRes = $sLMClass::all(array(
                 'conditions' => $aConditions,
-				'order'		 => $oRelation->order(),
-                'filter'     => $oRelation->filter(),
+				'order'		 => $oRelation->order,
+                'filter'     => $oRelation->filter,
 			));
         }
 
@@ -1360,10 +1313,10 @@ abstract class Model
                         $mValue->save();
                     }
 
-                    $mKeyFrom = $oRelation->keyFrom(true);
+                    $mKeyFrom = $oRelation->cm->column;
                     if (is_string($mKeyFrom))
                     {
-                        $aFields[] = $oRelation->keyFrom();
+                        $aFields[] = $oRelation->cm->attribute;
                         $aValues[] = $mValue->id;
                     }
                     else
@@ -1399,7 +1352,7 @@ abstract class Model
                 {
                     if ($a['object'] instanceof Model && $a['object']->id === null)
                     {
-                        $a['object']->{$a['relation']->keyTo()} = $this->_mId; // Does not handle compound keys.
+                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
                         $a['object']->save();
                     }
                 }
@@ -1409,7 +1362,7 @@ abstract class Model
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$a['relation']->keyTo()} = $this->_mId; // Does not handle compound keys.
+                            $o->{$a['relation']->lm->attribute} = $this->_mId; // Does not handle compound keys.
                             $o->save();
                         }
                     }
@@ -1417,7 +1370,7 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-					$oQuery = Query::delete(array($a['relation']->joinKeyFrom() => $this->mId), $a['relation']->joinTable());
+					$oQuery = Query::delete(array($a['relation']->jm->from => $this->mId), $a['relation']->jm->table);
                     $oQuery->run();
 
                     $aValues = array();
@@ -1436,9 +1389,9 @@ abstract class Model
                     }
 
 					$oQuery = Query::insert(array(
-                        'fields' => array($a['relation']->joinKeyFrom(), $a['relation']->joinKeyTo()),
+                        'fields' => array($a['relation']->jm->from, $a['relation']->jm->to),
                         'values' => $aValues
-                    ), $a['relation']->joinTable());
+                    ), $a['relation']->jm->table);
 
                     $oQuery->run();
                 }
