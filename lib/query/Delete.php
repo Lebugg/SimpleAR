@@ -24,6 +24,7 @@ class Delete extends \SimpleAR\Query
         $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
         $aConditions = $this->_analyzeConditions($aConditions);
         list($this->_sAnds, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, false, $this->_bUseModel);
+        return;
 
 		$sTable = $this->_bUseModel ? $this->_oRootTable->name : $this->_sRootTable;
 
@@ -34,8 +35,6 @@ class Delete extends \SimpleAR\Query
             throw new \SimpleAR\Exception('Cannot execute a DELETE query without condition.');
         }
 		$this->sql .= $sWhere;
-
-		return array($this->sql, $this->values);
 	}
 
 	private function _analyzeConditions($aConditions)
@@ -61,7 +60,8 @@ class Delete extends \SimpleAR\Query
 
             if ($this->_bUseModel)
             {
-                $oCondition->table = $this->_oRootTable;
+                // We don't want Condition to interfere with our Table object.
+                $oCondition->table = clone $this->_oRootTable;
 
                 // Call a user method in order to deal with complex/custom attributes.
                 $sToConditionsMethod = 'to_conditions_' . $sAttribute;

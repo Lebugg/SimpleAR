@@ -51,7 +51,8 @@ class Update extends \SimpleAR\Query
             $sOperator  = $oCondition->operator;
             $mValue     = $oCondition->value;
 
-            $oCondition->table = $this->_oRootTable;
+            // We don't want Condition to interfere with our Table object.
+            $oCondition->table = clone $this->_oRootTable;
 
             // Call a user method in order to deal with complex/custom attributes.
             $sToConditionsMethod = 'to_conditions_' . $sAttribute;

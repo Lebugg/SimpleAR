@@ -24,7 +24,12 @@ spl_autoload_register(function($sClass) {
     {
         include $sFile;
 
-		if (is_subclass_of($sClass, 'Model'))
+        /**
+         * Loaded class might not be a subclass of Model. It can just be a
+         * independant model class located in same directory and loaded by this
+         * autoload function.
+         */
+		if (is_subclass_of($sClass, 'SimpleAR\Model'))
 		{
         	$sClass::init();
 		}

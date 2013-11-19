@@ -49,7 +49,7 @@ class Condition
                 throw new Exception('Invalid condition value "' . $this->value . '" for attribtue "' . $this->attribtue . '".');
             }
 
-            // Concert objects to object ID's.
+            // Convert objects to object ID's.
             if (is_object($this->value[0]))
             {
                 for ($i = 0, $iCount = count($this->value) ; $i < $iCount ; ++$i)

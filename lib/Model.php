@@ -408,6 +408,52 @@ abstract class Model
         return array('id' => $this->_mId) + $this->_aAttributes;
     }
 
+    /**
+     * Very useful function to get an array of the attributes to select from
+     * database. Attributes are values of $_aColumns.
+     *
+     *
+     * @param string $mFilter Optional filter set for the
+     * current model. It
+     * prevents us to fetch all attribute from the
+     * table.
+     *
+     * Note: it will NOT throw any exception
+     * if filter does not exist; instead,
+     * it will not use any filter.
+     *
+     * @return array
+     */
+    public static function columnsToSelect($sFilter = null, $sAlias = null)
+    {
+        $oTable = static::table();
+
+        $aColumns    = $oTable->columns;
+        $mPrimaryKey = $oTable->primaryKey;
+
+        $aRes = ($sFilter !== null && isset(static::$_aFilters[$sFilter]))
+            ? array_values(array_intersect_key($aColumns, array_flip(static::$_aFilters[$sFilter])))
+            : array_values($aColumns)
+            ;
+
+        // Include primary key to columns to fetch. Useful only for simple
+        // primary keys.
+        if ($oTable->isSimplePrimaryKey)
+        {
+            $aRes[] = $mPrimaryKey;
+        }
+
+        if ($sAlias)
+        {
+            foreach ($aRes as &$sColumn)
+            {
+                $sColumn = $sAlias . '.' . $sColumn;
+            }
+        }
+
+        return $aRes;
+    }
+
     public static function count($aOptions = array())
     {
         return self::find('count', $aOptions);
@@ -440,9 +486,10 @@ abstract class Model
         $this->_onBeforeDelete();
 
         $oQuery = Query::delete(array('id' => $this->_mId), get_called_class());
+        return;
         $iCount = $oQuery->run()->rowCount();
 
-        if ($iCount == 0)
+        if ($iCount === 0)
         {
             throw new RecordNotFoundException($this->_mId);
         }
