@@ -660,16 +660,6 @@ abstract class Model
     }
 
     /**
-     * Getter. Returns the model primary key name.
-     *
-     * @return string The model primary key name.
-     */
-    public static function primaryKey()
-    {
-        return static::table()->primaryKey();
-    }
-
-    /**
      * Saves the instance to the database. Will insert it if not yet created or
      * update otherwise.
      *
@@ -706,16 +696,6 @@ abstract class Model
         $a = explode('\\', get_called_class());
 
         return self::$_aTables[array_pop($a)];
-    }
-
-    /**
-     * Getter. Returns the model table name.
-     *
-     * @return string The model table name.
-     */
-    public static function tableName()
-    {
-        return static::table()->name();
     }
 
     public function toArray()
