@@ -88,11 +88,8 @@ abstract class Model
      */
     protected static $_aColumns = array();
 
-    protected static $_aTranslations = array();
-
     protected static $_aDefaultValues = array();
 
-    protected $_aAttributes = array();
 
     /**
      * The model instance's ID.
@@ -103,6 +100,10 @@ abstract class Model
      * @var int
      */
     protected $_mId;
+
+    protected $_aAttributes = array();
+
+    protected $_bIsDirty = false;
 
     /**
      * This array contains the list of filters defined for the model.
@@ -295,6 +296,9 @@ abstract class Model
 		{
 			$this->_fill($aAttributes);
 		}
+
+        $this->_setDefaultValues();
+        $this->_bIsDirty = true;
     }
 
     /**
@@ -379,6 +383,7 @@ abstract class Model
                 $this->_aAttributes[$sName] = $mValue;
             }
 
+            $this->_bIsDirty = true;
 			return;
         }
 
@@ -755,7 +760,21 @@ abstract class Model
      */
     public function save()
     {
-        return $this->_mId === NULL ? $this->_insert() : $this->_update();
+        if ($this->_bIsDirty)
+        {
+            if ($this->_mId === null)
+            {
+                $this->_insert();
+            }
+            else
+            {
+                $this->_update();
+            }
+
+            $this->_bIsDirty = false;
+        }
+
+        return $this;
     }
 
 	/**
@@ -827,6 +846,7 @@ abstract class Model
         else
         {
             $this->_aAttributes[$sAttributeName] = func_get_arg(1);
+            $this->_bIsDirty = true;
         }
     }
 
@@ -991,6 +1011,7 @@ abstract class Model
     private function _fill($aAttributes)
     {
 		$this->_aAttributes = $aAttributes + $this->_aAttributes;
+        $this->_bIsDirty    = true;
 
 		/* Restrictive way of doing it:
         $aColumns = static::table()->columns();
@@ -1184,7 +1205,6 @@ abstract class Model
             }
         }
 
-        $this->_setDefaultValues();
         $this->_onAfterLoad();
 
         return $this;
