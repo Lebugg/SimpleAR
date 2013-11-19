@@ -21,7 +21,6 @@ abstract class Relationship
     public $cm;
 
     public $onDeleteCascade = false;
-    public $loadMode        = 'explicit';
     public $filter          = null;
     public $name;
 	public $conditions = array();
@@ -58,7 +57,6 @@ abstract class Relationship
 
         if (isset($a['on_delete_cascade'])) { $this->onDeleteCascade = $a['on_delete_cascade']; }
         if (isset($a['filter']))            { $this->filter          = $a['filter']; }
-        if (isset($a['load_mode']))         { $this->loadMode      = $a['load_mode']; }
 		if (isset($a['conditions']))		{ $this->conditions      = $a['conditions']; }
 		if (isset($a['order']))				{ $this->order           = $a['order']; }
     }
@@ -118,11 +116,6 @@ abstract class Relationship
         return $this->joinLinkedModel();
     }
 
-    public static function loadMode($aRelation)
-    {
-        return isset($aRelation['load_mode']) ? $aRelation['load_mode'] : self::$_aDefaults['load_mode'];
-    }
-
     protected static function _checkConditionValidity($o)
     {
         if (isset($o->value[1]) && !isset(self::$_aArrayOperators[$o->operator]))
@@ -143,26 +136,11 @@ class BelongsTo extends Relationship
     {
         parent::__construct($a, $sCMClass);
 
-        $sLMClass = $this->lm->class;
+        $this->cm->attribute = isset($a['key_from'])
+            ? $a['key_from']
+            : strtolower($this->lm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix;
+            ;
 
-        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
-		if (isset($a['key_from']))
-		{
-			$this->cm->attribute = $a['key_from'];
-		}
-		else // We have to choose a default one.
-		{
-			$sSuffix = self::$_oConfig->modelClassSuffix;
-			
-			if ($sSuffix)
-			{
-				$this->cm->attribute = strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
-			}
-			else
-			{
-				$this->cm->attribute = strtolower($sLMClass) . self::$_oConfig->foreignKeySuffix;
-			}
-		}
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         $this->cm->pk        = $this->cm->t->primaryKey;
 
@@ -229,25 +207,12 @@ class HasOne extends Relationship
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->lm->class;
-		if (isset($a['key_to']))
-		{
-			$this->lm->attribute = $a['key_to'];
-		}
-		else // We have to choose a default one.
-		{
-			$sSuffix = self::$_oConfig->modelClassSuffix;
-			
-			if ($sSuffix)
-			{
-				$this->lm->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
-			}
-			else
-			{
-				$this->lm->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
-			}
-		}
-        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
+        $this->lm->attribute = isset($a['key_to'])
+            ? $a['key_to']
+            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            ;
+
+        $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
     public function condition($o)
@@ -288,25 +253,10 @@ class HasMany extends Relationship
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         $this->cm->pk        = $this->cm->t->primaryKey;
 
-        $sLMClass = $this->lm->class;
-		
-		if (isset($a['key_to']))
-		{
-			$this->lm->attribute = $a['key_to'];
-		}
-		else // We have to choose a default one.
-		{
-			$sSuffix = self::$_oConfig->modelClassSuffix;
-			
-			if ($sSuffix)
-			{
-				$this->lm->attribute = strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix;
-			}
-			else
-			{
-				$this->lm->attribute = strtolower($sCMClass) . self::$_oConfig->foreignKeySuffix;
-			}
-		}
+        $this->lm->attribute = (isset($a['key_to']))
+            ? $a['key_to']
+            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
@@ -423,8 +373,8 @@ class ManyMany extends Relationship
             $this->jm->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower(strstr($sCMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower(strstr($sLMClass, self::$_oConfig->modelClassSuffix, true)) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix);
         }
         else
         {
@@ -566,6 +516,8 @@ class ManyMany extends Relationship
 
 		$this->jm->from = $this->jm->to;
 		$this->jm->to   = $this->jm->from;
+
+        return $oRelation;
 	}
 
     private function _joinJM()

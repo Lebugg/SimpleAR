@@ -212,7 +212,6 @@ abstract class Model
      *      "fieldName" => array(
      *          "type" => <relation type>,
      *          "model" => <model name>,
-     *          "load_mode" => <string> ('always' | 'explicit'),
      *          "on_delete_cascade" => <bool>,
      *          <And other fields depending on relation type>
      *      ),
@@ -228,7 +227,6 @@ abstract class Model
      *  "has_many" or "many_many" for the moment;
      *  * model: The model class name without the "Model" suffix. For example:
      *  "model" => "Company" for CompanyModel;
-     *  * load_mode: Relation will be needed according to load mode.
      *  * on_delete_cascade: If true, delete linked model(s).
      *
      * But there are also fields that depend on relation type. Let's see them:
@@ -669,7 +667,10 @@ abstract class Model
 		// Set defaults for model classes
 		if ($sCurrentClass != 'Model')
 		{
-            $sTableName  = static::$_sTableName  ?: call_user_func(self::$_oConfig->classToTable, $sCurrentClass);
+            $sSuffix        = self::$_oConfig->modelClassSuffix;
+            $sModelBaseName = $sSuffix ? strstr($sCurrentClass, self::$_oConfig->modelClassSuffix, true) : $sCurrentClass;
+
+            $sTableName  = static::$_sTableName  ?: call_user_func(self::$_oConfig->classToTable, $sModelBaseName);
             $mPrimaryKey = static::$_mPrimaryKey ?: self::$_oConfig->primaryKey;
 
             // Columns are defined in model, perfect!
@@ -690,7 +691,11 @@ abstract class Model
                 }
             }
 
-            self::$_aTables[$sCurrentClass] = new Table($sTableName, $mPrimaryKey, $aColumns, static::$_aOrderBy);
+            $oTable = new Table($sTableName, $mPrimaryKey, $aColumns);
+            $oTable->orderBy       = static::$_aOrderBy;
+            $oTable->modelBaseName = $sModelBaseName;
+
+            self::$_aTables[$sCurrentClass] = $oTable;
 		}
     }
 

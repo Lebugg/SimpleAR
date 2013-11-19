@@ -8,17 +8,17 @@ class Table
     public $primaryKeyColumns;
     public $columns;
     public $orderBy;
+    public $modelBaseName;
 
 	// Constructed.
 	public $alias;
     public $isSimplePrimaryKey;
 
-    public function __construct($sName, $mPrimaryKey, $aColumns, $aOrderBy)
+    public function __construct($sName, $mPrimaryKey, $aColumns)
     {
         $this->name       = $sName;
         $this->primaryKey = $mPrimaryKey;
         $this->columns    = $aColumns;
-        $this->orderBy    = $aOrderBy;
 
         /**
          * Allows $_aColumns declaration like:
