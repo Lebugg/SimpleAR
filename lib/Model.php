@@ -871,190 +871,13 @@ abstract class Model
     {
     }
 
-    protected static function _conditionsToSql($aConditions, $mUseAlias = true)
-    {
-        $oTable = static::table();
-
-        $aTablesIn     = array();
-        $aAndClauses   = array();
-        $aValuesToBind = array();
-        $sFrom         = '';
-
-        $sRootClass = get_called_class();
-
-		if ($mUseAlias !== false)
-		{
-			$sRootAlias = $mUseAlias === true ? $oTable->alias : $mUseAlias;
-			$mUseAlias  = true;
-		}
-
-        foreach ($aConditions as $mConditionKey => $mConditionValue)
-        {
-            // We accept two forms of conditions:
-            // 1) Basic conditions:
-            //      array(
-            //          'my/attribute' => 'myValue',
-            //          ...
-            //      )
-            // 2) Conditions with operator:
-            //      array(
-            //          array('my/attribute', 'myOperator', 'myValue'),
-            //          ...
-            //      )
-            //
-            // Operator: =, !=, IN, NOT IN, >, <, <=, >=.
-
-            if (is_string($mConditionKey)) // We are in case 1).
-            {
-                $sAttribute = $mConditionKey;
-                $mValue     = $mConditionValue;
-                $sOperator  = null;
-            }
-            else // We are in case 2).
-            {
-                $sAttribute  = $mConditionValue[0];
-                $mValue      = $mConditionValue[2];
-                $sOperator   = $mConditionValue[1];
-            }
-
-            $aPieces = explode('/', $sAttribute);
-            $iCount  = count($aPieces);
-
-            // Empty string or other errors.
-            if (!$iCount)
-            {
-                throw new Exception('Invalid condition attribute: "' . $sAttribute . '".');
-            }
-
-            // The last item of $aPieces is the attribute the condition is 
-            // made on.
-            $mAttribute = explode(',', array_pop($aPieces));
-
-            // We check if given attribute is a compound attribute (a couple, for example).
-            if (count($mAttribute) == 1) // Simple attribute.
-            {
-                $mAttribute = $mAttribute[0];
-            }
-
-            if (is_string($mAttribute)) // Simple attribute.
-            {
-                // The condition is simply made on a model's attribute.
-                if ($iCount == 1 && $oTable->hasColumn($mAttribute))
-                {
-                    // Construct right hand part of the condition.
-                    if (is_array($mValue))
-                    {
-                        $sConditionValueString = '(' . str_repeat('?,', count($aCondition[1]) - 1) . '?)';
-                        $sOperator = $sOperator ?: 'IN';
-                    }
-                    else
-                    {
-                        $sConditionValueString = '?';
-                        $sOperator = $sOperator ?: '=';
-                    }
-
-                    $aAndClauses[] = $mUseAlias
-								   ? $sRootAlias . '.' . $oTable->columnRealName($mAttribute) . ' ' . $sOperator . ' ' . $sConditionValueString
-								   : $oTable->columnRealName($mAttribute) . ' ' . $sOperator . ' ' . $sConditionValueString
-								   ;
-                    $aValuesToBind = array_merge($aValuesToBind, is_array($mValue) ? $mValue : array($mValue));
-
-                    // Jump to next condition.
-                    continue;
-                }
-            }
-            else // Compound attribute;
-            {
-                $aTmp      = array();
-                $aTmp2     = array();
-                $sOperator = $sOperator ?: '=';
-
-                foreach ($mValue as $aTuple)
-                {
-                    foreach ($mAttribute as $i => $sAttribute)
-                    {
-                        $sColumn = $oTable->columnRealName($sAttribute);
-
-                        $aTmp[] = $mUseAlias ? "$sRootAlias.{$sColumn} {$sOperator} ?" : "{$sColumn} {$sOperator} ?";
-                        $aValuesToBind[] = $aTuple[$i];
-                    }
-
-                    $aTmp2[] = '(' . implode(' AND ', $aTmp) . ')';
-                    $aTmp    = array();
-                }
-
-                // The 'OR' simulates a IN statement for compound keys.
-                $aAndClauses[] = '(' . implode(' OR ', $aTmp2) . ')';
-            }
-
-            // The condition is more complex.
-
-            $sCurrentModelClass = $sRootClass;
-
-            // Data container about final attribute and comparison type. Used by 
-            // Relationship class.
-            $o = new \StdClass();
-            $o->operator   = $sOperator ?: '=';
-            $o->logic      = 'or'; // If we want a AND logic, we have to define a syntax first.
-            $o->value      = $mValue;
-            $o->valueCount = is_array($mValue) ? count($mValue) : 1;
-            $o->attribute  = $mAttribute;
-
-            // We do specific treatments for the last relation.
-            $sLastRelationName = array_pop($aPieces);
-
-            // From here, every $sPiece must be a relation name of 
-            // $sCurrentModelClass. It would throw an exception otherwise.
-            foreach ($aPieces as $sPiece)
-            {
-                $oRelation          = $sCurrentModelClass::relation($sPiece);
-                $sFrom             .= $oRelation->joinLinkedModel($aTablesIn);
-
-                // Go forward through relations arborescence.
-                $sCurrentModelClass = $oRelation->linkedModelClass();
-            }
-
-            // We now process the last relation.
-            $oRelation     = $sCurrentModelClass::relation($sLastRelationName);
-            $sFrom        .= $oRelation->joinAsLast($aTablesIn, $o); // <-- Here is $o var!
-            $aAndClauses[] = $oRelation->condition($o);
-            $aValuesToBind = array_merge($aValuesToBind, (array) $o->value); // @todo: flatten value array.
-        }
-
-        return array('from' => $sFrom, 'ands' => implode(' AND ', $aAndClauses), 'values' => $aValuesToBind);
-    }
-
-    /**
-     * Construct a SQL ORDER BY clause according to static::$_aOrder array.
-     *
-     * @param string $sAlias Table alias used in the SQL query (mandatory).
-	 *
-	 * Does not handle multiple primary keys.
-     *
-     * @return string The ORDER BY clause.
-     */
-    private static function _constructSqlOrderClause($aOrder, $sAlias)
-    {
-        $aRes   = array();
-        $oTable = static::table();
-
-        // If there are common keys between static::$_aOrder and $aOrder, 
-        // entries of static::$_aOrder will be overwritten.
-        foreach (array_merge(static::$_aOrderBy, $aOrder) as $sField => $sOrder)
-        {
-            $aRes[] = $sAlias.'.'. $oTable->columnRealName($sField) . ' ' . $sOrder;
-        }
-
-        return $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
-    }
-
     private function _countLinkedModel($sRelationName)
     {
         $oRelation = static::relation($sRelationName);
 
         // Current object is not saved in database yet. It does not
         // have an ID, so we cannot retrieve linked models from Db.
-        if ($this->id === null)
+        if ($this->_mId === null)
         {
 			return 0;
         }
@@ -1076,24 +899,18 @@ abstract class Model
         }
         else // ManyMany
         {
-            $sQuery = 'SELECT COUNT(*) FROM ' . $oRelation->linkedModelTable() . ' lt'
-                    . ' JOIN ' . $oRelation->joinTable() . ' jt ON jt.' . $oRelation->joinKeyTo() . ' = lt.' . $oRelation->keyTo(true)
-                    . ' WHERE jt.' . $oRelation->joinKeyFrom() . ' = ?';
+			$oReversed = $oRelation->reverse();
 
-			$aValues = is_string($this->_mId) ? array($this->_mId) : $this->_mId;
-			
-			// Use relation's conditions.
-			$aSqlConditions = $sLMClass::_conditionsToSql($oRelation->conditions(), 'lt');
-			if ($aSqlConditions['ands'])
-			{
-				$sQuery .= ' AND ' . $aSqlConditions['ands'];
-				$aValues = array_merge($aValues, $aSqlConditions['values']);
-			}
+			$sLMClass::relation($oReversed->name(), $oReversed);
 
-			// Use relation's ORDER BY clause.
-			$sQuery .= $sLMClass::_constructSqlOrderClause($oRelation->order(), 'lt');
+			$aConditions = array_merge(
+				$oReversed->conditions(),
+				array($oReversed->name() . '/' . $oReversed->keyTo() => $this->{$oReversed->keyFrom()})
+			);
 
-            $iRes = $sLMClass::_processSqlQuery($sQuery, $aValues, 'count', array('filter' => $oRelation->filter()));
+			$iRes = $sLMClass::count(array(
+                'conditions' => $aConditions,
+			));
         }
 
         return $iRes;
@@ -1267,15 +1084,15 @@ abstract class Model
                     $aValues = array();
                     foreach ($a['object'] as $o)
                     {
-                        if ($o instanceof Model && $o->id === null)
+                        if ($o instanceof Model && $o->_mId === null)
                         {
                             $o->save();
-                            $aValues[] = array($this->id, $o->id);
+                            $aValues[] = array($this->_mId, $o->_mId);
                         }
                         // Else we consider this is an ID.
                         else
                         {
-                            $aValues[] = array($this->id, $o);
+                            $aValues[] = array($this->_mId, $o);
                         }
                     }
 
@@ -1365,7 +1182,7 @@ abstract class Model
 
         // Current object is not saved in database yet. It does not
         // have an ID, so we cannot retrieve linked models from Db.
-        if ($this->id === null)
+        if ($this->_mId === null)
         {
             if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
             {
@@ -1400,24 +1217,20 @@ abstract class Model
         }
         else // ManyMany
         {
-            $sQuery = 'SELECT lt.' . implode(',lt.', $sLMClass::columnsToSelect($oRelation->filter())) . ' FROM ' . $oRelation->linkedModelTable() . ' lt'
-                    . ' JOIN ' . $oRelation->joinTable() . ' jt ON jt.' . $oRelation->joinKeyTo() . ' = lt.' . $oRelation->keyTo(true)
-                    . ' WHERE jt.' . $oRelation->joinKeyFrom() . ' = ?';
+			$oReversed = $oRelation->reverse();
 
-			$aValues = is_string($this->_mId) ? array($this->_mId) : $this->_mId;
-			
-			// Use relation's conditions.
-			$aSqlConditions = $sLMClass::_conditionsToSql($oRelation->conditions(), 'lt');
-			if ($aSqlConditions['ands'])
-			{
-				$sQuery .= ' AND ' . $aSqlConditions['ands'];
-				$aValues = array_merge($aValues, $aSqlConditions['values']);
-			}
+			$sLMClass::relation($oReversed->name(), $oReversed);
 
-			// Use relation's ORDER BY clause.
-			$sQuery .= $sLMClass::_constructSqlOrderClause($oRelation->order(), 'lt');
+			$aConditions = array_merge(
+				$oReversed->conditions(),
+				array($oReversed->name() . '/' . $oReversed->keyTo() => $this->{$oReversed->keyFrom()})
+			);
 
-            $mRes = $sLMClass::_processSqlQuery($sQuery, $aValues, 'several', array('filter' => $oRelation->filter()));
+			$mRes = $sLMClass::all(array(
+                'conditions' => $aConditions,
+				'order'		 => $oRelation->order(),
+                'filter'     => $oRelation->filter(),
+			));
         }
 
         return $mRes;
@@ -1470,23 +1283,28 @@ abstract class Model
      * @param $sRelationName The name of the relation.
      * @return object A Relationship object.
      */
-    public static function relation($sRelationName)
+    public static function relation($sRelationName, $oRelation = null)
     {
-        $a = static::$_aRelations;
+		if ($oRelation === null)
+		{
+			if (!isset(static::$_aRelations[$sRelationName]))
+			{
+				throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
+			}
 
-        if (!isset($a[$sRelationName]))
-        {
-            throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
-        }
+			// If relation is not yet initlialized, do it.
+			if (!is_object(static::$_aRelations[$sRelationName]))
+			{
+				static::$_aRelations[$sRelationName] = Relationship::construct($sRelationName, static::$_aRelations[$sRelationName], get_called_class());
+			}
 
-        // If relation is not yet initlialized, do it.
-        if (!is_object($a[$sRelationName]))
-        {
-            $a[$sRelationName] = Relationship::construct($sRelationName, $a[$sRelationName], get_called_class());
-        }
-
-        // Return the Relationship object.
-        return $a[$sRelationName];
+			// Return the Relationship object.
+			return static::$_aRelations[$sRelationName];
+		}
+		else
+		{
+			static::$_aRelations[$sRelationName] = $oRelation;
+		}
     }
 
     public static function remove($aConditions = array())
@@ -1599,7 +1417,7 @@ abstract class Model
                 else // ManyMany
                 {
                     // Remove all rows from join table. (Easier this way.)
-					$oQuery = Query::delete(array($a['relation']->joinKeyFrom() => $this->id), $a['relation']->joinTable());
+					$oQuery = Query::delete(array($a['relation']->joinKeyFrom() => $this->mId), $a['relation']->joinTable());
                     $oQuery->run();
 
                     $aValues = array();
@@ -1608,12 +1426,12 @@ abstract class Model
                         if ($o instanceof Model)
                         {
                             $o->save();
-                            $aValues[] = array($this->id, $o->id);
+                            $aValues[] = array($this->_mId, $o->_mId);
                         }
                         // Else we consider this is an ID.
                         else
                         {
-                            $aValues[] = array($this->id, $o);
+                            $aValues[] = array($this->_mId, $o);
                         }
                     }
 

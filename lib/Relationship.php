@@ -653,6 +653,19 @@ class ManyMany extends Relationship
         return $this->_oJM->table;
     }
 
+	public function reverse()
+	{
+		$oRelation = clone $this;
+
+		$oRelation->name($this->name() . '_r');
+
+		$oRelation->_oCM  = $this->_oLM;
+		$oRelation->_oLM  = $this->_oCM;
+
+		$this->_oJM->from = $this->_oJM->to;
+		$this->_oJM->to   = $this->_oJM->from;
+	}
+
     private function _joinJM()
     {
 		return " JOIN {$this->_oJM->table} {$this->_oJM->alias} ON {$this->_oCM->alias}.{$this->_oCM->column} = {$this->_oJM->alias}.{$this->_oJM->from}";
