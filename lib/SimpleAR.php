@@ -24,6 +24,9 @@ spl_autoload_register(function($sClass) {
     {
         include $sFile;
 
-        $sClass::init();
+		if (is_subclass_of($sClass, 'Model'))
+		{
+        	$sClass::init();
+		}
     }
 });
