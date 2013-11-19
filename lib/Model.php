@@ -660,6 +660,42 @@ abstract class Model
     }
 
     /**
+     * Get the relation identified by its name.
+     *
+     * @param $sRelationName The name of the relation.
+     * @return object A Relationship object.
+     */
+    public static function relation($sRelationName, $oRelation = null)
+    {
+		if ($oRelation === null)
+		{
+			if (!isset(static::$_aRelations[$sRelationName]))
+			{
+				throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
+			}
+
+			// If relation is not yet initlialized, do it.
+			if (!is_object(static::$_aRelations[$sRelationName]))
+			{
+				static::$_aRelations[$sRelationName] = Relationship::construct($sRelationName, static::$_aRelations[$sRelationName], get_called_class());
+			}
+
+			// Return the Relationship object.
+			return static::$_aRelations[$sRelationName];
+		}
+		else
+		{
+			static::$_aRelations[$sRelationName] = $oRelation;
+		}
+    }
+
+    public static function remove($aConditions = array())
+    {
+        $oQuery = Query::delete($aConditions, get_called_class());
+        return $oQuery->run()->rowCount();
+    }
+
+    /**
      * Saves the instance to the database. Will insert it if not yet created or
      * update otherwise.
      *
@@ -1208,42 +1244,6 @@ abstract class Model
         }
 
         return $mRes;
-    }
-
-    /**
-     * Get the relation identified by its name.
-     *
-     * @param $sRelationName The name of the relation.
-     * @return object A Relationship object.
-     */
-    public static function relation($sRelationName, $oRelation = null)
-    {
-		if ($oRelation === null)
-		{
-			if (!isset(static::$_aRelations[$sRelationName]))
-			{
-				throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
-			}
-
-			// If relation is not yet initlialized, do it.
-			if (!is_object(static::$_aRelations[$sRelationName]))
-			{
-				static::$_aRelations[$sRelationName] = Relationship::construct($sRelationName, static::$_aRelations[$sRelationName], get_called_class());
-			}
-
-			// Return the Relationship object.
-			return static::$_aRelations[$sRelationName];
-		}
-		else
-		{
-			static::$_aRelations[$sRelationName] = $oRelation;
-		}
-    }
-
-    public static function remove($aConditions = array())
-    {
-        $oQuery = Query::delete($aConditions, get_called_class());
-        return $oQuery->run()->rowCount();
     }
 
     private function _setDefaultValues()
