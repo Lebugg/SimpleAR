@@ -194,18 +194,80 @@ class Condition
     }
 
 	/**
+     *
 	 * We accept two forms of conditions:
 	 * 1) Basic conditions:
+     * <code>
 	 *      array(
 	 *          'my/attribute' => 'myValue',
 	 *          ...
 	 *      )
+     * </code>
 	 * 2) Conditions with operator:
+     * <code>
 	 *      array(
 	 *          array('my/attribute', 'myOperator', 'myValue'),
 	 *          ...
 	 *      )
+     * </code>
+     *
+     * Of course, you can combine both form in a same condition array.
+     *
+     * By default, conditions are linked with a AND operator but you can use an
+     * OR by specifying it in condition array:
+     * <code>
+	 *      array(
+	 *          'attr1' => 'val1',
+     *          'OR',
+     *          'attr2' => 'val2',
+     *          'attr3' => 'val3,
+	 *      )
+     * </code>
+     *
+     * This correspond to the following exhaustive array:
+     * <code>
+	 *      array(
+	 *          'attr1' => 'val1',
+     *          'OR',
+     *          'attr2' => 'val2',
+     *          'AND',
+     *          'attr3' => 'val3,
+	 *      )
+     * </code>
 	 *
+     * You can nest condition arrays. Example:
+     * <code>
+	 *      array(
+	 *          array(
+	 *              'attr1' => 'val1',
+     *              'attr2' => 'val2',
+	 *          )
+     *          'OR',
+	 *          array(
+     *              'attr3' => 'val3,
+     *              'attr1' => 'val4,
+	 *          )
+	 *      )
+     * </code>
+     *
+     * So we come with this condition array syntax tree:
+     * <code>
+     *  condition_array:
+     *      array(
+     *          [condition | condition_array | (OR | AND)] *
+     *      );
+     *
+     *  condition:
+     *      [
+     *          'attribute' => 'value'
+     *          |
+     *          array('attribute', 'operator', 'value')
+     *      ]
+     *  attribute: <string>
+     *  operator: <string>
+     *  value: <mixed>
+     * </code>
+     *
 	 * Operator: =, !=, IN, NOT IN, >, <, <=, >=.
 	 */
     public static function parseConditionArray($aArray)
