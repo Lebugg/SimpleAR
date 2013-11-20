@@ -339,7 +339,7 @@ abstract class Model
 
             if (method_exists($this, 'get_' . $s))
             {
-                return call_user_method('get_' . $s, $this);
+                return call_user_func(array($this, 'get_' . $s));
             }
 
             return $this->_aAttributes[$s];
@@ -350,16 +350,20 @@ abstract class Model
 		{
 			$sBaseName = substr($s, 1);
 
-            if (isset($this->_aAttributes[$sBaseName]))
+            if (method_exists($this, 'count_' . $sBaseName))
             {
-                return $this->_aAttributes[$s] = count($this->_aAttributes[$sBaseName]);
+                return $this->_aAttributes[$s] = call_user_func(array($this, 'count_' . $sBaseName));
             }
 
-            if (isset($this->_aRelations[$sBaseName]))
+            if (isset(static::$_aRelations[$sBaseName]))
             {
                 return $this->_aAttributes[$s] = $this->_countLinkedModel($sBaseName);
 			}
 
+            if (isset($this->_aAttributes[$sBaseName]))
+            {
+                return $this->_aAttributes[$s] = count($this->_aAttributes[$sBaseName]);
+            }
 		}
 
 
