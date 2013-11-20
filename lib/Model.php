@@ -315,14 +315,14 @@ abstract class Model
         // Classic attribute.
         if (isset($this->_aAttributes[$s]) || array_key_exists($s, $this->_aAttributes))
         { 
-            if (method_exists($this, 'get_' . $s))
-            {
-                return call_user_func(array($this, 'get_' . $s));
-            }
-         
             return $this->_aAttributes[$s];
         }
 
+        if (method_exists($this, 'get_' . $s))
+        {
+            return call_user_func(array($this, 'get_' . $s));
+        }
+         
         // Specific case for id.
         if ($s === 'id')
         {
