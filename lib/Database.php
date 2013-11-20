@@ -48,14 +48,7 @@ class Database
      *
      * @var DataBase
      */
-    private static $_oInstance = NULL;
-
-    /**
-     * Array that caches prepared requests.
-     *
-     * @var array
-     */
-    private $_aSth = array();
+    private static $_o = NULL;
 
     /**
      * The current/last PDO Statement used.
@@ -79,14 +72,16 @@ class Database
         $oConfig = Config::instance();
         $aDsn    = $oConfig->dsn;
 
-        $sDsn                                    = $aDsn['driver'].':host='.$aDsn['host'] .';dbname='.$aDsn['name'] .';charset='.$aDsn['charset'].';';
-        $aOptions                                = array();
+        $sDsn = $aDsn['driver'].':host='.$aDsn['host'] .';dbname='.$aDsn['name'] .';charset='.$aDsn['charset'].';';
+
+        $aOptions = array();
         $aOptions[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
         $aOptions[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
 
         try {
             $this->_oPdo = new \PDO($sDsn, $aDsn['user'], $aDsn['password'], $aOptions);
-        } catch (\PDOException $oEx)
+        }
+        catch (\PDOException $oEx)
 		{
             throw new DatabaseException($oEx->getMessage(), null, $oEx);
         }
@@ -104,12 +99,13 @@ class Database
      */
     public function execute($aParams = array())
     {
-        if ($this->_oSth) {
+        if ($this->_oSth)
+        {
             $this->_oSth->execute((array) $aParams);
             return $this->_oSth;
         }
 
-        return FALSE;
+        return false;
     }
 
     /**
@@ -119,11 +115,12 @@ class Database
      */
     public static function instance()
     {
-        if (self::$_oInstance === NULL) {
-            self::$_oInstance = new DataBase();
+        if (self::$_o === null)
+        {
+            self::$_o = new DataBase();
         }
 
-        return self::$_oInstance;
+        return self::$_o;
     }
 
     /**
@@ -147,22 +144,14 @@ class Database
      */
     public function prepare($sQuery)
     {
-		if ($this->_bDebug)
-		{
-		}
-
-        try {
-            if (isset($this->_aSth[$sQuery])) {
-                $this->_oSth = $this->_aSth[$sQuery];
-            } else {
-                $this->_oSth        = $this->_oPdo->prepare($sQuery);
-                $this->_aSth[$sQuery] = $this->_oSth;
-            }
-        } catch (\PDOException $oEx) {
+        try
+        {
+            return $this->_oSth = $this->_oPdo->prepare($sQuery);
+        }
+        catch (\PDOException $oEx)
+        {
             throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
         }
-
-        return $this->_oSth;
     }
 
     /**
@@ -178,7 +167,8 @@ class Database
      */
     public function query($sQuery, $aParams = array())
     {
-        if ($this->_bDebug) {
+        if ($this->_bDebug)
+        {
             $sQueryDebug  = $sQuery;
             $aParamsDebug = $aParams;
 
@@ -194,23 +184,25 @@ class Database
             $time = microtime(TRUE);
         }
 
-        try {
+        try
+        {
+            $oSth = $this->_oPdo->prepare($sQuery);
+            $oSth->execute((array) $aParams);
 
-            $oSth = $this->prepare($sQuery);
-            $this->_oSth->execute((array) $aParams);
-
-            if ($this->_bDebug) {
+            if ($this->_bDebug)
+            {
                 $this->_aQueryTimes[] = (microtime(TRUE) - $time) * 1000;
             }
-        } catch (\PDOException $oEx) {
+        }
+        catch (\PDOException $oEx)
+        {
             throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
         }
 
-        return $this->_oSth;
+        return $oSth;
     }
 
     // FOR CI.
-
     public function database()
     {
         return $this->_sDatabase;
