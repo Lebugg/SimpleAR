@@ -312,37 +312,29 @@ abstract class Model
      */
     public function __get($s)
     {
-		$bCount = ($s[0] === '#');
-		if ($bCount)
-		{
-			$s = substr($s, 1);
-		}
-
-        if ($s == 'id')
-        {
-            return $this->_mId;
-        }
-
+        // Classic attribute.
         if (isset($this->_aAttributes[$s]) || array_key_exists($s, $this->_aAttributes))
         { 
             if (method_exists($this, 'get_' . $s))
             {
-                return call_user_method('get_' . $s, $this);
+                return call_user_func(array($this, 'get_' . $s));
             }
          
-            return $bCount ? count($this->_aAttributes[$s]) : $this->_aAttributes[$s];
+            return $this->_aAttributes[$s];
         }
 
+        // Specific case for id.
+        if ($s === 'id')
+        {
+            return $this->_mId;
+        }
+
+        // Relation.
         // Will arrive here maximum once per relation because when a relation is
         // loaded, an attribute named as the relation is appended to $this->_aAttributes.
         // So, it would return it right above.
         if (isset(static::$_aRelations[$s]))
         {
-			if ($bCount)
-			{
-				return $this->_countLinkedModel($s);
-			}
-
             $this->_aAttributes[$s] = $this->_loadLinkedModel($s);
 
             if (method_exists($this, 'get_' . $s))
@@ -352,6 +344,23 @@ abstract class Model
 
             return $this->_aAttributes[$s];
         }
+
+        // Count. Rare case, that is why it is at the end. 
+		if ($s[0] === '#')
+		{
+			$sBaseName = substr($s, 1);
+
+            if (isset($this->_aAttributes[$sBaseName]))
+            {
+                return $this->_aAttributes[$s] = count($this->_aAttributes[$sBaseName]);
+            }
+
+            if (isset($this->_aRelations[$sBaseName]))
+            {
+                return $this->_aAttributes[$s] = $this->_countLinkedModel($sBaseName);
+			}
+
+		}
 
 
         $aTrace = debug_backtrace();
