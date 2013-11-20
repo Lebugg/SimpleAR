@@ -452,31 +452,30 @@ abstract class Model
      *
      * @return array
      */
-    public static function columnsToSelect($sFilter = null, $sAlias = null)
+    public static function columnsToSelect($sFilter = null, $sTableAlias = '')
     {
         $oTable = static::table();
+        $aRes   = array();
 
-        $aColumns    = $oTable->columns;
-        $mPrimaryKey = $oTable->primaryKey;
-
-        $aRes = ($sFilter !== null && isset(static::$_aFilters[$sFilter]))
-            ? array_values(array_intersect_key($aColumns, array_flip(static::$_aFilters[$sFilter])))
-            : array_values($aColumns)
+        $aColumns = ($sFilter !== null && isset(static::$_aFilters[$sFilter]))
+            ? array_intersect_key($oTable->columns, array_flip(static::$_aFilters[$sFilter]))
+            : $oTable->columns
             ;
 
         // Include primary key to columns to fetch. Useful only for simple
         // primary keys.
         if ($oTable->isSimplePrimaryKey)
         {
-            $aRes[] = $mPrimaryKey;
+            $aColumns['id'] = $oTable->primaryKey;
         }
 
-        if ($sAlias)
+        // If a table alias is given, add a dot to respect SQL syntax and to not
+        // worry about it in following foreach loop.
+        if ($sTableAlias) { $sTableAlias .= '.'; }
+
+        foreach ($aColumns as $sAttribute => $sColumn)
         {
-            foreach ($aRes as &$sColumn)
-            {
-                $sColumn = $sAlias . '.' . $sColumn;
-            }
+            $aRes[] = $sTableAlias . $sColumn . ' AS ' . $sAttribute;
         }
 
         return $aRes;
@@ -1221,7 +1220,8 @@ abstract class Model
      * Loads the model instance from the database.
      *
      * @param array $aRow It is the array directly given by the
-     * \PDOStatement:fetch() function.
+     * \PDOStatement:fetch() function. Every field contained in this  parameter
+     * correspond to attribute name, not to column's (@see columnsToSelect()).
      *
      * @return $this
      */
@@ -1229,40 +1229,27 @@ abstract class Model
     {
         $this->_onBeforeLoad();
 
-        $oTable      = static::table();
-        $mPrimaryKey = $oTable->primaryKey;
+        $oTable = static::table();
 
         // We set our object ID.
         if ($oTable->isSimplePrimaryKey)
         {
-            $this->_mId = $aRow[$mPrimaryKey];
-            unset($aRow[$mPrimaryKey]);
+            $this->_mId = $aRow['id'];
+            unset($aRow['id']);
         }
         else
         {
             $this->_mId = array();
 
-            $aPrimaryKeyColumns = $oTable->columnRealName($mPrimaryKey);
-            foreach ($aPrimaryKeyColumns as $sKey)
+            foreach ($oTable->primaryKey as $sAttribute)
             {
-                $this->_mId[] = $aRow[$sKey];
+                $this->_mId[] = $aRow[$sAttribute];
                 //unset($aRow[$sKey]);
             }
         }
 
-        // We fill the class members.
-        $aMap = array_flip($oTable->columns);
-        foreach ($aRow as $sKey => $sValue)
-		{
-            // $aMap[$sKey] gives us the class member name associated to the
-            // DB field. So we set the member with the right value.
-            // The condition prevents the error of a missing class member;
-            // remove it for stronger consistency.
-            if (isset($aMap[$sKey]))
-			{
-                $this->_aAttributes[$aMap[$sKey]] = $sValue;
-            }
-        }
+        // We fill the class members (So easy!)
+        $this->_aAttributes = $aRow;
 
         $this->_onAfterLoad();
 

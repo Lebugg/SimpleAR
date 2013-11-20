@@ -250,7 +250,7 @@ class Select extends \SimpleAR\Query
 	private function _orderByCount($sRelation, $sOrder, $sClass, &$aArborescence)
 	{
 		$sRelation   = substr($sRelation, 1);
-		$sCountAlias = 'COUNT_' . $sRelation;
+		$sCountAlias = $sRelation . '_count';
 
 		$oRelation   = $sClass::relation($sRelation);
 		$oTable		 = $sClass::table();
