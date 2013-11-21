@@ -878,23 +878,15 @@ abstract class Model
 
     private static function _arrayToArray($aArray)
     {
-        // It is faster to iterate this way instead using a foreach when
-        // altering the array.
-        $aHash  = array_keys($aArray);
-        $iCount = count($aArray);
-
-        for ($i = 0 ; $i < $iCount ; ++$i)
+        foreach ($aArray as &$m)
         {
-            if (is_object($aArray[$aHash[$i]]))
+            if (is_object($m))
             {
-                $aArray[$aHash[$i]] = $aArray[$aHash[$i]]->toArray();
-                continue;
+                $m = $m->toArray();
             }
-
-            if (is_array($aArray[$aHash[$i]]))
+            elseif (is_array($m))
             {
-                $aArray[$aHash[$i]] = self::_arrayToArray($aArray[$aHash[$i]]);
-                continue;
+                $m = self::_arrayToArray($m);
             }
         }
 
