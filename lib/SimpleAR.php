@@ -19,19 +19,31 @@ require 'exceptions/DatabaseException.php';
 require 'exceptions/DuplicateKeyException.php';
 require 'exceptions/RecordNotFoundException.php';
 
-spl_autoload_register(function($sClass) {
-    if (file_exists($sFile = Config::instance()->modelDirectory . $sClass . '.php'))
-    {
-        include $sFile;
+function init()
+{
+    $oConfig = Config::instance();
 
-        /**
-         * Loaded class might not be a subclass of Model. It can just be a
-         * independant model class located in same directory and loaded by this
-         * autoload function.
-         */
-		if (is_subclass_of($sClass, 'SimpleAR\Model'))
-		{
-        	$sClass::init();
-		}
+    if ($oConfig->convertDateToObject)
+    {
+        require 'DateTime.php';
+
+        DateTime::setFormat($oConfig->dateFormat);
     }
-});
+
+    spl_autoload_register(function($sClass) use ($oConfig) {
+        if (file_exists($sFile = $oConfig->modelDirectory . $sClass . '.php'))
+        {
+            include $sFile;
+
+            /**
+             * Loaded class might not be a subclass of Model. It can just be a
+             * independant model class located in same directory and loaded by this
+             * autoload function.
+             */
+            if (is_subclass_of($sClass, 'SimpleAR\Model'))
+            {
+                $sClass::init();
+            }
+        }
+    });
+}

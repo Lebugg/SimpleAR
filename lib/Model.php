@@ -1256,6 +1256,18 @@ abstract class Model
         // We fill the class members (So easy!)
         $this->_aAttributes = $aRow;
 
+        if (self::$_oConfig->convertDateToObject)
+        {
+            foreach ($this->_aAttributes as $sKey => &$mValue)
+            {
+                // $sKey.startsWith('date')
+                if (strpos($sKey, 'date') === 0)
+                {
+                    $mValue = new DateTime($mValue);
+                }
+            }
+        }
+
         $this->_onAfterLoad();
 
         return $this;
