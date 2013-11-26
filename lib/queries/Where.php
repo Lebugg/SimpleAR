@@ -16,7 +16,7 @@ abstract class Where extends \SimpleAR\Query
     {
         $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
         $aConditions = $this->_analyzeConditions($aConditions);
-        list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, $this->_bUseModel, $this->_bUseModel);
+        list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, $this->_bUseAlias, $this->_bUseModel);
 
 		$this->_sWhere = ($sSql) ? ' WHERE ' . $sSql : '';
     }

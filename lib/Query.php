@@ -16,6 +16,7 @@ abstract class Query
 	public $values = array();
 
     protected $_bUseModel  = true;
+    protected $_bUseAlias  = true;
 
     /**
      * Attributes used when we use model classes.
@@ -38,6 +39,7 @@ abstract class Query
 		else
 		{
 			$this->_bUseModel  = false;
+            $this->_bUseAlias  = false;
 			$this->_sRootTable = $sRootModel;
 		}
 	}
