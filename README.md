@@ -22,54 +22,54 @@ Features
 
 * CRUD manipulation:
     * **Create**:
-
-```php
-$o = new Class(<attributes>);
-$o->save();
-```
-
-        *or*
-
-```php
-$o = Class::create(<attributes>);
-```
-
-    * **Read**:
+   
+        ```php
+        $o = new Class(<attributes>);
+        $o->save();
+        ```
         
-```php
-Class::find(<options>);
-```
+        *or*
+        
+        ```php
+        $o = Class::create(<attributes>);
+        ```
+        
+    * **Read**:
+              
+        ```php
+        Class::find(<options>);
+        ```
             
         (and its derivated: `Class::findByPK()`, `Class::all()`,
         `Class::first()`, `Class::last()`)
 
     * **Update**:
 
-```php
-$o->myAttr = $myValue;
-$o->save();
-```
+        ```php
+        $o->myAttr = $myValue;
+        $o->save();
+        ```
             
         *or*
-        
-```php
-$o->modify(<attributes>)
-$o->save();
-```
+                
+        ```php
+        $o->modify(<attributes>)
+        $o->save();
+        ```
             
         for several attributes in a row.
 
     * **Delete**:
     
-```php
-$o->delete();
-```
+        ```php
+        $o->delete();
+        ```
             
         *or*
-
-```php
-Class::remove(<conditions>);
-```
+        
+        ```php
+        Class::remove(<conditions>);
+        ```
 
 * Model relationships:
     * belongs\_to, has\_one, has\_many, many\_many;
@@ -83,50 +83,50 @@ complex searches.
 
 * Conditions can be made through a model arborescence:
 
-```php
-'conditions' => array(
-    'company/contacts/last_name' => 'Doe',
-    ...
-),
-```
+    ```php
+    'conditions' => array(
+        'company/contacts/last_name' => 'Doe',
+        ...
+    ),
+    ```
 
 * Do not use methods to construct your query conditions: one array suffises:
 
-```php
-'conditions' => array(
-    array(
-        'company/contacts/first_name' => 'John',
-        'company/contacts/last_name'  => 'Doe',
+    ```php
+    'conditions' => array(
+        array(
+            'company/contacts/first_name' => 'John',
+            'company/contacts/last_name'  => 'Doe',
+        ),
+        'OR',
+        array(
+            'company/contacts/first_name' => 'Paul',
+            'company/contacts/last_name'  => 'Smith',
+        ),
     ),
-    'OR',
-    array(
-        'company/contacts/first_name' => 'Paul',
-        'company/contacts/last_name'  => 'Smith',
-    ),
-),
-```
+    ```
 
     But you can do better. Check this out:
-
-```php
-'conditions' => array(
-    'company/contacts/first_name,last_name' => array(array('John', 'Doe'), array('Paul', 'Smith')),
-),
-```
+    
+    ```php
+    'conditions' => array(
+        'company/contacts/first_name,last_name' => array(array('John', 'Doe'), array('Paul', 'Smith')),
+    ),
+    ```
 
     Great, isn't it?
 
 * Order your result by a related model's attribute:
-
-```php
-'order_by' => array('company/director/last_name' => 'ASC'),
-```
+    
+    ```php
+    'order_by' => array('company/director/last_name' => 'ASC'),
+    ```
 
 * Order your result by a `COUNT`:
     
-```php
-'order_by' => array('#contacts' => 'DESC'),
-```
+    ```php
+    'order_by' => array('#contacts' => 'DESC'),
+    ```
 
 One of the strenghts of this ORM is that it can be used on top of any database.
 I mean that if, for example, you have to use a really ugly database schema, this
@@ -136,15 +136,15 @@ very clean way your schema.
 * Attribute to column translation: In the model column definition array you can
 change columns' names for a more fitting ones.
 
-```php
-protected static $_aColumns = array(
-    'first_name', // Column is named "first_name" and it is a good one.
-    'last_name',
-    'age' => 'years_since_birth', // Column "years_since_birth" of
-                                  // database table will be named "age" in our model.
-    ...
-);
-```
+    ```php
+    protected static $_aColumns = array(
+        'first_name', // Column is named "first_name" and it is a good one.
+        'last_name',
+        'age' => 'years_since_birth', // Column "years_since_birth" of
+                                      // database table will be named "age" in our model.
+        ...
+    );
+    ```
 
 * Callbacks at every important step of interaction with database (Names are
 meaningful):
@@ -180,23 +180,23 @@ folder sounds good, for example).
 
 2. Include SimpleAR.php with some basic configuration:
 
-```php
-include 'libraries/SimpleAR/SimpleAR.php';
-
-$oCfg = SimpleAR\Config::instance();
-$oCfg->dsn = array(
-    'driver'   => DB_DRIVER,
-    'host'     => DB_HOST,
-    'name'     => DB_NAME,
-    'user'     => DB_USER,
-    'password' => DB_PASS,
-);
-
-// Note trailing slash.
-$oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
-
-SimpleAR\init();
-```
+    ```php
+    include 'libraries/SimpleAR/SimpleAR.php';
+    
+    $oCfg = SimpleAR\Config::instance();
+    $oCfg->dsn = array(
+        'driver'   => DB_DRIVER,
+        'host'     => DB_HOST,
+        'name'     => DB_NAME,
+        'user'     => DB_USER,
+        'password' => DB_PASS,
+    );
+    
+    // Note trailing slash.
+    $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
+    
+    SimpleAR\init();
+    ```
 
 3. No, there is no third step; It's done!
 
