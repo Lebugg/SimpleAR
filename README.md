@@ -23,39 +23,53 @@ Features
 * CRUD manipulation:
     * **Create**:
 
-            $o = new Class(<attributes>);
-            $o->save();
+```php
+$o = new Class(<attributes>);
+$o->save();
+```
 
         *or*
 
-            $o = Class::create(<attributes>);
+```php
+$o = Class::create(<attributes>);
+```
 
     * **Read**:
         
-            Class::find(<options>);
+```php
+Class::find(<options>);
+```
             
         (and its derivated: `Class::findByPK()`, `Class::all()`,
         `Class::first()`, `Class::last()`)
 
     * **Update**:
 
-            $o->myAttr = $myValue;
-            $o->save();
+```php
+$o->myAttr = $myValue;
+$o->save();
+```
             
         *or*
         
-            $o->modify(<attributes>)
-            $o->save();
+```php
+$o->modify(<attributes>)
+$o->save();
+```
             
         for several attributes in a row.
 
     * **Delete**:
     
-            $o->delete();
+```php
+$o->delete();
+```
             
         *or*
 
-            Class::remove(<conditions>);
+```php
+Class::remove(<conditions>);
+```
 
 * Model relationships:
     * belongs\_to, has\_one, has\_many, many\_many;
@@ -69,40 +83,50 @@ complex searches.
 
 * Conditions can be made through a model arborescence:
 
-        'conditions' => array(
-            'company/contacts/last_name' => 'Doe',
-            ...
-        ),
+```php
+'conditions' => array(
+    'company/contacts/last_name' => 'Doe',
+    ...
+),
+```
 
 * Do not use methods to construct your query conditions: one array suffises:
 
-        'conditions' => array(
-            array(
-                'company/contacts/first_name' => 'John',
-                'company/contacts/last_name'  => 'Doe',
-            ),
-            'OR',
-            array(
-                'company/contacts/first_name' => 'Paul',
-                'company/contacts/last_name'  => 'Smith',
-            ),
-        ),
+```php
+'conditions' => array(
+    array(
+        'company/contacts/first_name' => 'John',
+        'company/contacts/last_name'  => 'Doe',
+    ),
+    'OR',
+    array(
+        'company/contacts/first_name' => 'Paul',
+        'company/contacts/last_name'  => 'Smith',
+    ),
+),
+```
 
     But you can do better. Check this out:
 
-        'conditions' => array(
-            'company/contacts/first_name,last_name' => array(array('John', 'Doe'), array('Paul', 'Smith')),
-        ),
+```php
+'conditions' => array(
+    'company/contacts/first_name,last_name' => array(array('John', 'Doe'), array('Paul', 'Smith')),
+),
+```
 
     Great, isn't it?
 
 * Order your result by a related model's attribute:
 
-        'order_by' => array('company/director/last_name' => 'ASC'),
+```php
+'order_by' => array('company/director/last_name' => 'ASC'),
+```
 
 * Order your result by a `COUNT`:
     
-        'order_by' => array('#contacts' => 'DESC'),
+```php
+'order_by' => array('#contacts' => 'DESC'),
+```
 
 One of the strenghts of this ORM is that it can be used on top of any database.
 I mean that if, for example, you have to use a really ugly database schema, this
@@ -112,13 +136,15 @@ very clean way your schema.
 * Attribute to column translation: In the model column definition array you can
 change columns' names for a more fitting ones.
 
-        protected static $_aColumns = array(
-            'first_name', // Column is named "first_name" and it is a good one.
-            'last_name',
-            'age' => 'years_since_birth', // Column "years_since_birth" of
-                                          // database table will be named "age" in our model.
-            ...
-        );
+```php
+protected static $_aColumns = array(
+    'first_name', // Column is named "first_name" and it is a good one.
+    'last_name',
+    'age' => 'years_since_birth', // Column "years_since_birth" of
+                                  // database table will be named "age" in our model.
+    ...
+);
+```
 
 * Callbacks at every important step of interaction with database (Names are
 meaningful):
@@ -150,30 +176,51 @@ Installation
 ------------
 
 1. Just copy *lib/* folder content anywhere in your code (a *libraries/SimpleAR/*
-folder sound good, for example).
+folder sounds good, for example).
 
 2. Include SimpleAR.php with some basic configuration:
 
-        include 'libraries/SimpleAR/SimpleAR.php';
+```php
+include 'libraries/SimpleAR/SimpleAR.php';
 
-        $oCfg = SimpleAR\Config::instance();
-        $oCfg->dsn = array(
-            'driver'   => DB_DRIVER,
-            'host'     => DB_HOST,
-            'name'     => DB_NAME,
-            'user'     => DB_USER,
-            'password' => DB_PASS,
-        );
+$oCfg = SimpleAR\Config::instance();
+$oCfg->dsn = array(
+    'driver'   => DB_DRIVER,
+    'host'     => DB_HOST,
+    'name'     => DB_NAME,
+    'user'     => DB_USER,
+    'password' => DB_PASS,
+);
 
-        // Note trailing slash.
-        $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
+// Note trailing slash.
+$oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
 
-        SimpleAR\init();
+SimpleAR\init();
+```
 
 3. No, there is no third step; It's done!
 
 How to use SimpleAR?
 --------------------
 
+To use SimpleAR functionalities, simply make your model classes extends
+SimpleAR's Model class:
+
+```php
+<?php
+
+class MyModel extends SimpleAR\Model
+{
+}
+```
+
+
+You are done.
+
 Configuration
 -------------
+
+There are several available configuration options you can modify the same way as
+shown in Installation - step two.
+
+All of them are describe in documentation.

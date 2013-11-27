@@ -3,15 +3,15 @@ namespace SimpleAR;
 
 class Config
 {
-    private $_dsn;
    
     private $_autoRetrieveModelColumns = false;
     private $_charset                  = 'utf8';
     private $_classToTable             = 'strtolower';
     private $_convertDateToObject      = true;
     private $_dateFormat               = 'Y-m-d';
-    private $_debug                    = true;
+    private $_debug                    = false;
     private $_doForeignKeyWork         = false;
+    private $_dsn;
     private $_foreignKeySuffix         = 'Id';
 	private $_locale				   = 'en_US';
 
