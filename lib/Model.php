@@ -880,7 +880,7 @@ abstract class Model
     {
         foreach ($aArray as &$m)
         {
-            if (is_object($m))
+            if (is_object($m) && $m instanceof Model)
             {
                 $m = $m->toArray();
             }

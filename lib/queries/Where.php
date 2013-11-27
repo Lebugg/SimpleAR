@@ -14,14 +14,26 @@ abstract class Where extends \SimpleAR\Query
 
     protected function _where($aConditions)
     {
+        // Transform user syntax formatted condition array into a object
+        // formatted array.
         $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
-        $aConditions = $this->_analyzeConditions($aConditions);
+
+        // Arborescence feature is only available when using models (it is based
+        // on model relationships).
+        if ($this->_bUseModel)
+        {
+            $aConditions = $this->_extractArborescenceFromConditions($aConditions);
+        }
+
+        // We made all wanted treatments; get SQL out of Condition array.
+        // We update values because Condition::arrayToSql() will flatten them in
+        // order to bind them to SQL string with PDO.
         list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, $this->_bUseAlias, $this->_bUseModel);
 
 		$this->_sWhere = ($sSql) ? ' WHERE ' . $sSql : '';
     }
 
-	private function _analyzeConditions($aConditions)
+	private function _extractArborescenceFromConditions($aConditions)
 	{
         for ($i = 0, $iCount = count($aConditions) ; $i < $iCount ; ++$i)
         {
@@ -31,7 +43,7 @@ abstract class Where extends \SimpleAR\Query
             // Group of conditions.
             if (is_array($mItem))
             {
-                $aConditions[$i][1] = $this->_analyzeConditions($mItem);
+                $aConditions[$i][1] = $this->_extractArborescenceFromConditions($mItem);
                 continue;
             }
 
@@ -71,7 +83,7 @@ abstract class Where extends \SimpleAR\Query
 
             // Let the condition know which relation it is associated with.
 			$oCondition->relation  = $oRelation;
-            $oCondition->table     = $sCurrentModel::table();
+            $oCondition->table     = clone $sCurrentModel::table();
             // Remove arborescence from Condition attribute string.
             $oCondition->attribute = $sAttribute;
 
@@ -88,7 +100,7 @@ abstract class Where extends \SimpleAR\Query
                 if ($aSubConditions)
                 {
                     $aSubConditions     = \SimpleAR\Condition::parseConditionArray($aSubConditions);
-                    $aConditions[$i][1] = $this->_analyzeConditions($aSubConditions);
+                    $aConditions[$i][1] = $this->_extractArborescenceFromConditions($aSubConditions);
                 }
                 continue;
             }
