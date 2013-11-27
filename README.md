@@ -107,7 +107,7 @@ complex searches.
     ```
 
     But you can do better. Check this out:
-    
+
     ```php
     'conditions' => array(
         'company/contacts/first_name,last_name' => array(array('John', 'Doe'), array('Paul', 'Smith')),
@@ -206,14 +206,13 @@ How to use SimpleAR?
 To use SimpleAR functionalities, simply make your model classes extends
 SimpleAR's Model class:
 
-```php
-<?php
+    ```php
+    <?php
 
-class MyModel extends SimpleAR\Model
-{
-}
-```
-
+    class MyModel extends SimpleAR\Model
+    {
+    }
+    ```
 
 You are done.
 
