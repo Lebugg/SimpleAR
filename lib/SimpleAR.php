@@ -13,11 +13,13 @@ require 'Database.php';
 require 'Table.php';
 require 'Query.php';
 require 'Model.php';
+require 'ReadOnlyModel.php';
 require 'Relationship.php';
 require 'exceptions/Exception.php';
 require 'exceptions/DatabaseException.php';
 require 'exceptions/DuplicateKeyException.php';
 require 'exceptions/RecordNotFoundException.php';
+require 'exceptions/ReadOnlyException.php';
 
 function init()
 {

@@ -630,7 +630,7 @@ abstract class Model
     {
         // Find by primary key. It can be an array when using compound primary 
         // keys.
-        if (ctype_digit($mFirst) || is_array($mFirst))
+        if (is_int($mFirst) || is_array($mFirst))
         {
             return self::findByPK($mFirst, $aOptions);
         }
