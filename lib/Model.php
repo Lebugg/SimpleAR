@@ -416,6 +416,26 @@ abstract class Model
 		);
     }
 
+    /**
+     * This function allow to only *link* one model from a relation
+     * without *unlink* all of the linked models (that would have been the case
+     * when directly assigning the relation content via `=`.
+     *
+     * @param $sRelation string The relation name.
+     * @param $mLinkedModel int|Model What to add.
+     *
+     * ```php
+     * $oUser->addTo('applications', 12);
+     * ```
+     *
+     * or
+     *
+     * ```php
+     * $oUser->addTo('applications', $oJobOffer);
+     * ```
+     *
+     * @return void.
+     */
     public function addTo($sRelation, $mLinkedModel)
     {
         $oRelation = static::relation($sRelation);
@@ -795,6 +815,26 @@ abstract class Model
         return $oQuery->run()->rowCount();
     }
 
+    /**
+     * This function allow to only *unlink* one model from a relation
+     * without unlink all of the linked models (that would have been the case
+     * when directly assigning the relation content via `=`.
+     *
+     * @param $sRelation string The relation name.
+     * @param $mLinkedModel int|Model What to remove.
+     *
+     * ```php
+     * $oUser->removeFrom('applications', 12);
+     * ```
+     *
+     * or
+     *
+     * ```php
+     * $oUser->removeFrom('applications', $oJobOffer);
+     * ```
+     *
+     * @return void.
+     */
     public function removeFrom($sRelation, $mLinkedModel)
     {
         $oRelation = static::relation($sRelation);
