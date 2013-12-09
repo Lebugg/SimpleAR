@@ -18,19 +18,19 @@ abstract class Model
     /**
      * The database handler instance.
      *
-     * @var Database
+     * @var \SimpleAR\Database
      */
     protected static $_oDb;
 
     /**
      * Contains configuration.
      *
-     * @var Config
+     * @var \SimpleAR\Config
      */      
     protected static $_oConfig;
 
     /**
-     * The database table name of the model.
+     * The name of the database table this model is associated with.
      *
      * @var string
      */
@@ -39,13 +39,18 @@ abstract class Model
     /**
      * The primary key name of the model.
      *
-     * It MUST correspond to a valid primary key in the model table. Or, at
-     * least, the field should have these properties:
-     *  * unique ;
-     *  * integer ;
-     *  * auto-increment.
+     * It can have two types:
      *
-     * @var string
+     *  * If a string, it *must* correspond to a valid field of the table. This
+     *  field *should* have these properties:
+     *
+     *      * unique;
+     *      * integer;
+     *      * auto-increment.
+     *
+     *  * If an array, it must contain only model attribute names.
+     *
+     * @var string|array
      */
     protected static $_mPrimaryKey;
 
@@ -54,6 +59,7 @@ abstract class Model
      * database fields.
      *
      * Advantages of this array are multiple:
+     *
      *  * DB field names abstraction (some of them are meaningless) ;
      *  * Defines which fields will be retrieved (some of them are useless) ;
      *
@@ -61,49 +67,36 @@ abstract class Model
      * corresponding to $_aColumns keys.
      *
      * The array is constructed this way:
-     * <code>
+     * ```php
      *  array(
      *      'myAttribute' => 'db_field_name_for_my_attribute',
      *      ...
      *  );
-     * </code>
+     * ```
      *
-     * And so, we must define a <b>public</b> class member:
-     * <code>
-     *  public $myAttribute;
-     *  ...
-     * </code>
-     *
-     * It is possible to specify a default value for each member. These value
+     * It is possible to specify a default value for attribute by using the
+     * {@see \SimpleAR\Model::$_aDefaultValues} array. These value
      * will be used for model instance insertion in DB.
-     * Example:
-     * <code>
-     *  public $myAttribute = 12;
-     *  ...
-     * </code>
-     * If nothing is set for this member before saving, value 12 will be
-     * inserted.
      *
      * @var array
      */
     protected static $_aColumns = array();
 
-    protected static $_aDefaultValues = array();
-
-
     /**
-     * The model instance's ID.
+     * Attributes' default values array.
      *
-     * This is the primary key of the model. It contains the value of DB field
-     * name corresponding to $_mPrimaryKey.
+     * Example:
+     * ```php
+     *  protected $_aDefaultValues = array(
+     *      'myAttribute' => 12,
+     *  );
+     * ```
+     * If nothing is set for 'myAttribute' before saving, value 12 will be
+     * inserted.
      *
-     * @var int
+     * @var array
      */
-    protected $_mId;
-
-    protected $_aAttributes = array();
-
-    protected $_bIsDirty = false;
+    protected static $_aDefaultValues = array();
 
     /**
      * This array contains the list of filters defined for the model.
@@ -113,6 +106,7 @@ abstract class Model
      * the URL.
      *
      * Here is the syntax of this array:
+     * ```php
      * array (
      *      '<filter's name>' => array(
      *          'field1',
@@ -124,31 +118,13 @@ abstract class Model
      *      ),
      *      ...
      * );
+     * ```
      *
      * <filter's name> is an arbitrary name you choose for the filter. field1,
      * field2 are model's attributes (that is to say, key of
-     * static::$_aColumns).
-     *
-     * Note: A special filter named "search" can be declared; if so, it will be
-     * used for a search request.
-     *
-     * Note: Use filtering BEFORE loading model instance; this way, you will
-     * prevent database to retrieve all fields from the model table.
+     * \SimpleAR\Model::$_aColumns).
      */
     protected static $_aFilters = array();
-
-    /**
-     * Current filter name.
-     *
-     * This attribute contains the current filter name. It has to be an entry of
-     * ModelAbstract::$_aFilters.
-     *
-     * @see ModelAbstract::_loadAccordingToFilter()
-     * @see ModelAbstract::_aFilters
-     *
-     * @var string
-     */
-    protected $_sCurrentFilter = null;
 
     /**
      * An array that allows another way to filter output.
@@ -172,7 +148,7 @@ abstract class Model
      * integrity is worth it.
      *
      * It is constructed this way:
-     * <code>
+     * ```php
      *  array(
      *      array(
      *          'myAttribute1',
@@ -183,13 +159,13 @@ abstract class Model
      *      ),
      *      ...
      *  );
-     * </code>
+     * ```
      *
      * In the above example, it will check (before insert) that couple
      * ('myAttribute1', 'myAttribute2') will still satisfy unicity constraint
      * after model insertion. Then, unicity on 'myAttribute3' will be checked.
      *
-     * If any of the constraints is not respected, an Exception is thrown.
+     * If any of the constraints is not respected, a \SimpleAR\Exception is thrown.
      *
      * @var array
      */
@@ -208,22 +184,23 @@ abstract class Model
      * other models.
      *
      * It is constructed this way:
-     * <code>
+     * ```php
      *  array(
-     *      "fieldName" => array(
-     *          "type" => <relation type>,
-     *          "model" => <model name>,
-     *          "on_delete_cascade" => <bool>,
+     *      'relation_name' => array(
+     *          'type'              => <relation type>,
+     *          'model'             => <model name>,
+     *          'on_delete_cascade' => <bool>,
      *          <And other fields depending on relation type>
      *      ),
      *  ...
      *  );
-     * </code>
+     * ```
      *
      * In this section, "CM" stands for Current Model; "LM" stands for Linked
      * Model.
      *
      * Explanation of different fields:
+     *
      *  * type: The relation type with the model. Can be "belongs_to", "has_one",
      *  "has_many" or "many_many" for the moment;
      *  * model: The model class name without the "Model" suffix. For example:
@@ -233,38 +210,43 @@ abstract class Model
      * But there are also fields that depend on relation type. Let's see them:
      *
      *  * belongs_to:
+     *
      *      * key_from: CM attribute that links to LM. Mandatory.
      *
      *  * has_one:
+     *
      *      * key_from: CM field that links to LM.
-     *                  Optional. Default: CM::_mPrimaryKey.
-     *                  It is possible to change the value to a CM::_aColumns key if
-     *                  the link is not made on CM primary key.
+     *        Optional. Default: CM::_mPrimaryKey.
+     *        It is possible to change the value to a CM::_aColumns key if
+     *        the link is not made on CM primary key.
      *
      *      * key_to:   LM field that links to CM.
-     *                  Optional. Default: UserModel => userId
-     *                  It is possible to change the value to a LM::_aColumns key if
-     *                  the link is not made in CM primary key or if the CM PK name is
-     *                  not the same that the LM foreign key name.
+     *        Optional. Default: UserModel => userId
+     *        It is possible to change the value to a LM::_aColumns key if
+     *        the link is not made in CM primary key or if the CM PK name is
+     *        not the same that the LM foreign key name.
+     *
      *  * has_many:
+     *
      *      * key_from: CM unique field that links to key_to.
-     *                  Optional. Default: UserModel => userId
-     *                  Can be change if the link is not made on CM primary key.
+     *        Optional. Default: UserModel => userId
+     *        Can be change if the link is not made on CM primary key.
      *
      *      * key_to:   LM field that links to key_from.
-     *                  Optional. Default: CM::_mPrimaryKey (same name).
+     *        Optional. Default: CM::_mPrimaryKey (same name).
      *
      *  * many_many:
+     *
      *      * join_table: The table that makes the join between the two models.
      *
      *      * key_from: CM unique field that links to join_from. Default:
      *      CM::_mPrimaryKey.
      *
      *      * join_from: Join table field that links to CM primary key.
-     *                  Optional. Default: CM::_mPrimaryKey.
+     *        Optional. Default: CM::_mPrimaryKey.
      *
      *      * join_to:   Join table field that links to LM primary key.
-     *                  Optional. Default: LM::_mPrimaryKey.
+     *        Optional. Default: LM::_mPrimaryKey.
      *
      *      * key_to : LM unique field that links to join_to. Default:
      *      LM::_mPrimaryKey.
@@ -273,8 +255,33 @@ abstract class Model
      */
     protected static $_aRelations = array();
 
-    private static $_aTables = array();
+    /**
+     * The model instance's ID.
+     *
+     * This is the primary key of the model. It contains the value of DB field
+     * name corresponding to $_mPrimaryKey.
+     *
+     * @var mixed
+     */
+    protected $_mId;
 
+    /**
+     * The model instance's attribute list.
+     *
+     * It contains all *used* model instance attributes of the model. This array
+     * is constructed in serveral places in the code. Let's review them!
+     *
+     * * When a row is fetched from database, an Model instance is created and its
+     * $_aAttributes array is filled with all selected fields and their values.
+     * * When you access to a 
+     * * When you set an attribute that is not in this array yet
+     * @var mixed
+     */
+    protected $_aAttributes = array();
+
+    protected $_bIsDirty = false;
+
+    private static $_aTables = array();
     /**
      * Constructor.
      *

@@ -12,38 +12,41 @@ namespace SimpleAR;
  * This class implements Singleton pattern. It handles all SimpleAR
  * configuration options. Each member is an option.
  *
+ * Example:
  * If a configuration option is called "charset", then Config class has a
- * $_charset member attribute. To get and set charset option, use:
- *  <code>
- *      // Set
- *      $oConfig->charset = 'utf8';
+ * `$_charset` member attribute. To get and set charset option, use:
  *
- *      // Get
- *      $sCharset = $oConfig->charset;
- *  </code>
- * Config class implements __get() and __set() magic methods to get and set
+ * ```php
+ * // Set
+ * $oConfig->charset = 'utf8';
+ *
+ * // Get
+ * $sCharset = $oConfig->charset;
+ * ```
+ *
+ * Config class implements `__get()` and `__set()` magic methods to get and set
  * options. This allows developper to add a specific setter for an option by
  * creating a function called by the *option* name.
  *
- * Example: for the "charset" option, you can write a
- * <code>charset($sCharset)</code> function that will handle Config::$_charset
+ * Example: for the "charset" option, you can write a `charset($sCharset)`
+ * function that will handle `Config::$_charset`
  * set:
- *  <code>
- *      public function charset($sCharset)
- *      {
- *          if (in_array($sCharset, array('utf8', 'latin1')))
- *          {
- *              $this->_charset = $sCharset;
- *          }
- *          else
- *          {
- *              throw new Exception('Wrong charset!');
- *          }
- *      }
- *  </code>
- * 
  *
- * Only one option is required: Config::$_dsn.
+ * ```php
+ * public function charset($sCharset)
+ * {
+ *     if (in_array($sCharset, array('utf8', 'latin1')))
+ *     {
+ *         $this->_charset = $sCharset;
+ *     }
+ *     else
+ *     {
+ *         throw new Exception('Wrong charset!');
+ *     }
+ * }
+ * ```
+ *
+ * Only one option is required: `Config::$_dsn`.
  *
  * More documentation on options is available in class members' comment
  * sections.
@@ -80,12 +83,13 @@ class Config
      * Should model attributes that are dates be automatically converted to
      * DateTime objects?
      *
-     * @var bool If set to true, all date attributes of models will be converted
+     * If set to true, all date attributes of models will be converted
      * into a DateTime object. Actually, it is an extended version of the PHP
      * DateTime class that implement the __toString() magic method. When echoing
      * the attribute, it will automatically format the DateTime object with the
      * specified date format.
      *
+     * @var bool
      * @see \SimpleAR\DateTime for the used DateTime class.
      * @see \SimpleAR\Config::$_dateFormat for documentation about how to set
      * date format.
@@ -94,9 +98,11 @@ class Config
 
     /**
      * Date format to be used by SimpleAR.
-     *
-     * @var string A valid date format. It will be used in conjunction with
+     * 
+     * It will be used in conjunction with
      * DateTime attributes if Config::$_convertDateToObject is set to true.
+     *
+     * @var string A valid date format.
      *
      * Default value: 'Y-m-d'
      *
@@ -110,8 +116,10 @@ class Config
     /**
      * Should we use debug mode?
      *
-     * @var bool At the moment, only used by Database class to store database
+     * At the moment, only used by Database class to store database
      * queries and their execution time.
+     *
+     * @var bool
      *
      * Default value: false
      */
@@ -120,49 +128,60 @@ class Config
     /**
      * Should SimpleAR fire SQL queries to delete rows in cascade through tables?
      *
-     * @var bool This is useful if used database is bad formatted (Lack of
+     * This is useful if used database is bad formatted (Lack of
      * foreign keys) or if database table engine does not support foreign keys.
      *
+     * @var bool
      * Default value: false
      */
     private $_doForeignKeyWork = false;
 
     /**
      * DSN associative array.
-     * 
      *
-     * @var array It *must* contain all these keys: - 'driver': PDO database
-     * driver ("mysql", "pgsql"...); - 'host': Database host name; - 'name':
-     * Database name; - 'user': User to use to connect to database; -
-     * 'password': User's password.
+     * It *must* contain all these keys:
      *
-     * You can also pass these *optional* keys: - 'charset': Database charset.
-     * Will use Config::$_charset if not given.
+     * - 'driver': PDO database driver ("mysql", "pgsql"...);
+     * - 'host': Database host name;
+     * - 'name': Database name;
+     * - 'user': User to use to connect to database;
+     * - 'password': User's password.
      *
+     * You can also pass these *optional* keys:
+     *
+     * - 'charset': Database charset. Will use `Config::$_charset` if not given.
+     *
+     * @var array DSN associative array.
      * @throws Exception if one of required information is missing.
      * @see Config::$_charset
      */
     private $_dsn;
 
     /**
-     * @var string Suffix to append to calculated foreign key's base name for
+     * Suffix to append to calculated foreign key's base name for
      * constructing default foreign key name in model relationships.
+     *
+     * @var string
      *
      * Default value: 'Id'
      */
     private $_foreignKeySuffix = 'Id';
 
 	/**
-	 * @var string The suffix appended to model class's base name.
+     * The suffix appended to model class's base name.
 	 * For example, if model class suffix is "Model", model classes must be
 	 * named like "UserModel", "CommentModel"...
+
+	 * @var string
      *
      * Default value: ''
 	 */
     private $_modelClassSuffix = '';
 
     /**
-     * @var string The path to the folder containing models.
+     * The path to the folder containing models.
+
+     * @var string
      *
      * Default value: './models/';
      */
@@ -171,8 +190,12 @@ class Config
     /**
      * Default primary key name.
      *
-     * @var string The default primary key name. If primary key is not specified
+     * The default primary key name. If primary key is not specified
      * in the model class, this one will be used.
+     *
+     * @var string
+     *
+     * Default value: 'id';
      *
      * @see \SimpleAR\Model::$_mPrimaryKey for further information on primary
      * keys.
