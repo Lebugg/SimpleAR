@@ -223,3 +223,11 @@ There are several available configuration options you can modify the same way as
 shown in Installation - step two.
 
 All of them are describe in documentation.
+
+Documentation
+-------------
+
+A PHPDoc generated documentation can be found
+[here](https://github.com/Lebugg/SimpleAR/blob/master/doc/index.html
+"Documentation").
+

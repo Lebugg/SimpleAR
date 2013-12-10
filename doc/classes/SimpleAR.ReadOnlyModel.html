@@ -114,7 +114,7 @@
                         <ul class="dropdown-menu">
                             <li>
                                 <a href="../reports/errors.html">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Errors <span class="label label-info pull-right">249</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Errors <span class="label label-info pull-right">236</span>
                                 </a>
                             </li>
                             <li>
@@ -139,28 +139,28 @@
                                 <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1611960940"></a>
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-2069428948"></a>
                                 <a href="../namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
             </div>
-            <div id="namespace-1611960940" class="accordion-body collapse in">
+            <div id="namespace-2069428948" class="accordion-body collapse in">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1070631177"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-192710319"></a>
                                 <a href="../namespaces/SimpleAR.html" style="margin-left: 30px; padding-left: 0">SimpleAR</a>
             </div>
-            <div id="namespace-1070631177" class="accordion-body collapse ">
+            <div id="namespace-192710319" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1258146754"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1372306795"></a>
                                 <a href="../namespaces/SimpleAR.Query.html" style="margin-left: 30px; padding-left: 0">Query</a>
             </div>
-            <div id="namespace-1258146754" class="accordion-body collapse ">
+            <div id="namespace-1372306795" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -1163,7 +1163,7 @@ stored into this array from within <code>Model::init()</code> function.</p>
             <article class="method">
                 <h3 class="public ">addTo()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">addTo(mixed <span class="argument">$sRelation</span>, mixed <span class="argument">$mLinkedModel</span>) : \SimpleAR\void.</pre>
+                <pre class="signature" style="margin-right: 54px;">addTo(string <span class="argument">$sRelation</span>, int|\SimpleAR\Model <span class="argument">$mLinkedModel</span>) : \SimpleAR\void.</pre>
                 <p><em>This function allow to only *link* one model from a relation
 without *unlink* all of the linked models (that would have been the case
 when directly assigning the relation content via `=`.</em></p>
@@ -1172,14 +1172,14 @@ when directly assigning the relation content via `=`.</em></p>
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td>mixed</td>
+                                <td>string</td>
                                 <td>$sRelation</td>
-                                <td><p>string The relation name.</p></td>
+                                <td><p>The relation name.</p></td>
                             </tr>
                                                     <tr>
-                                <td>mixed</td>
+                                <td>int|<a href="../classes/SimpleAR.Model.html">\SimpleAR\Model</a></td>
                                 <td>$mLinkedModel</td>
-                                <td><p>int|Model What to add.</p>
+                                <td><p>What to add.</p>
 <pre><code class="language-php">$oUser-&gt;addTo('applications', 12);</code></pre>
 <p>or</p>
 <pre><code class="language-php">$oUser-&gt;addTo('applications', $oJobOffer);</code></pre></td>
@@ -1216,21 +1216,26 @@ when directly assigning the relation content via `=`.</em></p>
             <article class="method">
                 <h3 class="public ">create()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">create( <span class="argument">$aAttributes</span>)</pre>
-                <p><em></em></p>
-                
+                <pre class="signature" style="margin-right: 54px;">create(array <span class="argument">$aAttributes</span>) : $this</pre>
+                <p><em>This function creates a new Model instance and inserts it into database.</em></p>
+                <p>This is just a shorthand for:</p>
+<pre><code class="language-php"> $o = new static($aAttributes);
+ return $o-&gt;save();</code></pre>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>array</td>
                                 <td>$aAttributes</td>
-                                <td></td>
+                                <td><p>Array of attributes to fill the new instance
+with.</p></td>
                             </tr>
                                             </table>
                 
                 
-                            </article>
+                                    <h4>Returns</h4>
+                    $this
+                                                </article>
         </div>
         <aside class="span4 detailsbar">
             <h1><i class="icon-arrow-down"></i></h1>
@@ -1238,7 +1243,10 @@ when directly assigning the relation content via `=`.</em></p>
                                                             <dl>
                                                     <dt>Inherited from</dt>
                     <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
-                                                            </dl>
+                                                                            <dt>See also</dt>
+                                                                <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                            <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                                                </dl>
             <h2>Tags</h2>
             <table class="table table-condensed">
                                     <tr>
@@ -1440,16 +1448,20 @@ update otherwise.</em></p>
             <article class="method">
                 <h3 class="public ">__construct()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">__construct( <span class="argument">$aAttributes</span>,  <span class="argument">$aOptions</span>)</pre>
+                <pre class="signature" style="margin-right: 54px;">__construct(array <span class="argument">$aAttributes</span>,  <span class="argument">$aOptions</span>)</pre>
                 <p><em>Constructor.</em></p>
-                
+                <p>The constructor methods is used to create a new Model instance from
+scratch. Attribute array and some extra option can be passed it in.</p>
+<p>Besides, constructor will set default values if any specified in
+<code>Model::$_aDefaultValues</code>.</p>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>array</td>
                                 <td>$aAttributes</td>
-                                <td></td>
+                                <td><p>Array of attributes to fill the new instance
+with. The <code>Model::_fill()</code> method will be used for this.</p></td>
                             </tr>
                                                     <tr>
                                 <td></td>
@@ -1466,7 +1478,10 @@ update otherwise.</em></p>
                                                             <dl>
                                                     <dt>Inherited from</dt>
                     <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
-                                                            </dl>
+                                                                            <dt>See also</dt>
+                                                                <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                            <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                                                </dl>
             <h2>Tags</h2>
             <table class="table table-condensed">
                                     <tr>
@@ -1487,9 +1502,38 @@ update otherwise.</em></p>
                 <h3 class="public ">__get()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
                 <pre class="signature" style="margin-right: 54px;">__get(string <span class="argument">$s</span>) : mixed</pre>
-                <p><em>If users try to access to an unknown property, checks if it is defined in
-model relations array. If yes, loads it.</em></p>
-                <p>If $sName is equal to "id", it will return the ID of the model instance.</p>
+                <p><em>Property/Attribute getter.</em></p>
+                <p>Since no public property is declared in <code>Model</code>, this method will be
+fired every time user tries to get a <em>virtual property</em>.</p>
+<p>This function will check attribute existence in several places. Here are
+the differents check, by order:</p>
+<ol>
+<li>Is in attribute array (<code>Model::$_aAttributes</code>). If there, return it;</li>
+<li>Is try-to-be-get attribute called "id"? If yes, return instance's ID;</li>
+<li>Is there a method called <code>get_&lt;attribute name&gt;()</code>? If yes, fire it and
+return its result;</li>
+<li>Is it a relation (in <code>Model::$_aRelations</code>)? If yes, load linked</li>
+<li>Is it a <em>count get</em>? If yes, compute it, store the result in attribute
+array and return it.</li>
+</ol>
+<p>If, at this step, there is nothing found, throw an error (notice).</p>
+<h2>Count get</h2>
+<p>What is a <em>count get</em>? It is a weird (?) syntax you can use in order to
+retrieve totals i.e. number of products of an company.</p>
+<p>Example:
+Let us say you have a Company model and a Product model. There is a
+has_many relation from Company to Product named "products".
+Then, you can do:</p>
+<pre><code class="language-php"> echo $oMyCompany-&gt;{'#products'};</code></pre>
+<p>to print the number of products the company has.</p>
+<p>There are three ways of retrieving a count. Here by order of priority:</p>
+<ol>
+<li>There is a method called <code>count_&lt;attribute name&gt;()</code>. Fire it, store
+the result in attributes array and return it;</li>
+<li>The count is already in attributes array. Return it;</li>
+<li>There is a corresponding relation is the model. Execute a COUNT query,
+store the result in attribute array, return it.</li>
+</ol>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
@@ -1530,21 +1574,33 @@ model relations array. If yes, loads it.</em></p>
             <article class="method">
                 <h3 class="public ">__set()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">__set( <span class="argument">$sName</span>,  <span class="argument">$mValue</span>)</pre>
-                <p><em></em></p>
-                
+                <pre class="signature" style="margin-right: 54px;">__set(string <span class="argument">$sName</span>, mixed <span class="argument">$mValue</span>) : void</pre>
+                <p><em>Property setter.</em></p>
+                <p>Since no public property is declared in <code>Model</code>, this method will be
+fired every time user tries to set a <em>virtual property</em>.</p>
+<p>This function will check existence of the property. You can set a
+property if one of these conditions is fulfilled:</p>
+<ul>
+<li>It is a declared column;</li>
+<li>It is a relation name;</li>
+<li>It is already present in the attribute array.</li>
+</ul>
+<p>In all cases, the property you set will be store in the attribute array.
+Nothing else is modified.</p>
+<p>However, if a method called <code>set_&lt;property name&gt;()</code> exists, it will be
+fired instead of directly modify the attribute array.</p>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>string</td>
                                 <td>$sName</td>
-                                <td></td>
+                                <td><p>The property name.</p></td>
                             </tr>
                                                     <tr>
-                                <td></td>
+                                <td>mixed</td>
                                 <td>$mValue</td>
-                                <td></td>
+                                <td><p>The property value.</p></td>
                             </tr>
                                             </table>
                 
@@ -1576,21 +1632,24 @@ model relations array. If yes, loads it.</em></p>
             <article class="method">
                 <h3 class="public ">all()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">all( <span class="argument">$aOptions</span>)</pre>
-                <p><em></em></p>
-                
+                <pre class="signature" style="margin-right: 54px;">all(array <span class="argument">$aOptions</span>) : array</pre>
+                <p><em>Return several Model instances according to an option array.</em></p>
+                <p>This function is an alias for:</p>
+<pre><code class="language-php">Model::find('all', $aOptions);</code></pre>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>array</td>
                                 <td>$aOptions</td>
-                                <td></td>
+                                <td><p>An option array.</p></td>
                             </tr>
                                             </table>
                 
                 
-                            </article>
+                                    <h4>Returns</h4>
+                    array
+                                                </article>
         </div>
         <aside class="span4 detailsbar">
             <h1><i class="icon-arrow-down"></i></h1>
@@ -1598,7 +1657,9 @@ model relations array. If yes, loads it.</em></p>
                                                             <dl>
                                                     <dt>Inherited from</dt>
                     <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
-                                                            </dl>
+                                                                            <dt>See also</dt>
+                                                                <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                                                </dl>
             <h2>Tags</h2>
             <table class="table table-condensed">
                                     <tr>
@@ -1619,14 +1680,14 @@ model relations array. If yes, loads it.</em></p>
                 <h3 class="public ">attributes()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
                 <pre class="signature" style="margin-right: 54px;">attributes() : array</pre>
-                <p><em>Return all PUBLIC attributes of the instance with their values.</em></p>
+                <p><em>Return attribute array plus the object ID.</em></p>
                 
 
                 
                 
                                     <h4>Returns</h4>
                     array
-                                            &mdash; <p>The instance attributes with their values.</p>
+                                            &mdash; <p>The instance attributes and its ID.</p>
                                                 </article>
         </div>
         <aside class="span4 detailsbar">
@@ -1654,7 +1715,7 @@ model relations array. If yes, loads it.</em></p>
             <article class="method">
                 <h3 class="public ">columnsToSelect()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">columnsToSelect( <span class="argument">$sFilter</span>,  <span class="argument">$sTableAlias</span>,  <span class="argument">$sResAlias</span>) : array</pre>
+                <pre class="signature" style="margin-right: 54px;">columnsToSelect(string <span class="argument">$sFilter</span>, string <span class="argument">$sTableAlias</span>, string <span class="argument">$sResAlias</span>) : array</pre>
                 <p><em>Very useful function to get an array of the attributes to select from
 database. Attributes are values of $_aColumns.</em></p>
                 
@@ -1662,19 +1723,20 @@ database. Attributes are values of $_aColumns.</em></p>
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>string</td>
                                 <td>$sFilter</td>
-                                <td></td>
+                                <td><p>Optional filter that prevents us to fetch all
+attribute from the table.</p></td>
                             </tr>
                                                     <tr>
-                                <td></td>
+                                <td>string</td>
                                 <td>$sTableAlias</td>
-                                <td></td>
+                                <td><p>The alias to use to designate the table.</p></td>
                             </tr>
                                                     <tr>
-                                <td></td>
+                                <td>string</td>
                                 <td>$sResAlias</td>
-                                <td></td>
+                                <td><p>The alias to use to tidy resulting row up.</p></td>
                             </tr>
                                             </table>
                 
@@ -1694,6 +1756,15 @@ database. Attributes are values of $_aColumns.</em></p>
             <table class="table table-condensed">
                                     <tr>
                         <th>
+                            note
+                        </th>
+                        <td>
+                                                                                            <p>: it will <em>not</em> throw any exception if filter does not exist; instead,
+it will not use any filter.</p>
+                                                    </td>
+                    </tr>
+                                    <tr>
+                        <th>
                             todo
                         </th>
                         <td>
@@ -1709,21 +1780,24 @@ database. Attributes are values of $_aColumns.</em></p>
             <article class="method">
                 <h3 class="public ">count()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">count( <span class="argument">$aOptions</span>)</pre>
-                <p><em></em></p>
-                
+                <pre class="signature" style="margin-right: 54px;">count(array <span class="argument">$aOptions</span>) : array</pre>
+                <p><em>Return count of Model instances according to an option array.</em></p>
+                <p>This function is an alias for:</p>
+<pre><code class="language-php">Model::find('count', $aOptions);</code></pre>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
                                                     <tr>
-                                <td></td>
+                                <td>array</td>
                                 <td>$aOptions</td>
-                                <td></td>
+                                <td><p>An option array.</p></td>
                             </tr>
                                             </table>
                 
                 
-                            </article>
+                                    <h4>Returns</h4>
+                    array
+                                                </article>
         </div>
         <aside class="span4 detailsbar">
             <h1><i class="icon-arrow-down"></i></h1>
@@ -1731,7 +1805,9 @@ database. Attributes are values of $_aColumns.</em></p>
                                                             <dl>
                                                     <dt>Inherited from</dt>
                     <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
-                                                            </dl>
+                                                                            <dt>See also</dt>
+                                                                <dd><a href=""><span class="namespace-wrapper"></span></a></dd>
+                                                                </dl>
             <h2>Tags</h2>
             <table class="table table-condensed">
                                     <tr>
@@ -3208,7 +3284,7 @@ correspond to attribute name, not to column's (@see columnsToSelect()).</p></td>
                 <section class="span10 offset1">
                     <hr />
                     Documentation is powered by <a href="http://www.phpdoc.org/">phpDocumentor </a> and authored
-                    on December 10th, 2013 at 20:49.
+                    on December 11th, 2013 at 00:43.
                 </section>
             </section>
         </section>

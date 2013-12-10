@@ -381,12 +381,22 @@ abstract class Model
     /**
      * Constructor.
      *
-     * @param int $iId The ID of the instance we want. If null, no instance will
-     * be loaded.
+     * The constructor methods is used to create a new Model instance from
+     * scratch. Attribute array and some extra option can be passed it in.
      *
-     * @param array $aOptions. An array option that can be specified. This array 
-     * can contains following entries:
-     *  - "filter": An optional filter to apply to the model.
+     * Besides, constructor will set default values if any specified in
+     * `Model::$_aDefaultValues`.
+     *
+     * @param array $aAttributes Array of attributes to fill the new instance
+     * with. The `Model::_fill()` method will be used for this.
+     *
+     * @param array $aOptions. An array option to extra configure the new
+     * instance. It can contain following entries:
+     *
+     *  * "filter": An optional filter to apply to the model.
+     *
+     * @see SimpleAR\Model::_fill()
+     * @see SimpleAR\Model::_setDefaultValues()
      */
     public function __construct($aAttributes = array(), $aOptions = array())
     {
@@ -405,10 +415,45 @@ abstract class Model
     }
 
     /**
-     * If users try to access to an unknown property, checks if it is defined in
-     * model relations array. If yes, loads it.
+     * Property/Attribute getter.
      *
-     * If $sName is equal to "id", it will return the ID of the model instance.
+     * Since no public property is declared in `Model`, this method will be
+     * fired every time user tries to get a *virtual property*.
+     *
+     * This function will check attribute existence in several places. Here are
+     * the differents check, by order:
+     *
+     * 1. Is in attribute array (`Model::$_aAttributes`). If there, return it;
+     * 2. Is try-to-be-get attribute called "id"? If yes, return instance's ID;
+     * 3. Is there a method called `get_<attribute name>()`? If yes, fire it and
+     * return its result;
+     * 4. Is it a relation (in `Model::$_aRelations`)? If yes, load linked
+     * 5. Is it a *count get*? If yes, compute it, store the result in attribute
+     * array and return it.
+     *
+     * If, at this step, there is nothing found, throw an error (notice).
+     *
+     * Count get
+     * ---------
+     * What is a *count get*? It is a weird (?) syntax you can use in order to
+     * retrieve totals i.e. number of products of an company.
+     *
+     * Example:
+     * Let us say you have a Company model and a Product model. There is a
+     * has_many relation from Company to Product named "products".
+     * Then, you can do:
+     *  ```php
+     *  echo $oMyCompany->{'#products'};
+     *  ```
+     * to print the number of products the company has.
+     *
+     * There are three ways of retrieving a count. Here by order of priority:
+     *
+     * 1. There is a method called `count_<attribute name>()`. Fire it, store
+     * the result in attributes array and return it;
+     * 2. The count is already in attributes array. Return it;
+     * 3. There is a corresponding relation is the model. Execute a COUNT query,
+     * store the result in attribute array, return it.
      *
      * @param string $s The property name.
      * @return mixed
@@ -421,17 +466,16 @@ abstract class Model
             return $this->_aAttributes[$s];
         }
 
-        if (method_exists($this, 'get_' . $s))
-        {
-            return call_user_func(array($this, 'get_' . $s));
-        }
-         
         // Specific case for id.
         if ($s === 'id')
         {
             return $this->_mId;
         }
 
+        if (method_exists($this, 'get_' . $s))
+        {
+            return call_user_func(array($this, 'get_' . $s));
+        } 
         // Relation.
         // Will arrive here maximum once per relation because when a relation is
         // loaded, an attribute named as the relation is appended to $this->_aAttributes.
@@ -458,15 +502,15 @@ abstract class Model
                 return $this->_aAttributes[$s] = call_user_func(array($this, 'count_' . $sBaseName));
             }
 
-            if (isset(static::$_aRelations[$sBaseName]))
-            {
-                return $this->_aAttributes[$s] = $this->_countLinkedModel($sBaseName);
-			}
-
             if (isset($this->_aAttributes[$sBaseName]))
             {
                 return $this->_aAttributes[$s] = count($this->_aAttributes[$sBaseName]);
             }
+
+            if (isset(static::$_aRelations[$sBaseName]))
+            {
+                return $this->_aAttributes[$s] = $this->_countLinkedModel($sBaseName);
+			}
 		}
 
 
@@ -478,9 +522,33 @@ abstract class Model
             E_USER_NOTICE
 		);
 
-		return null;
+        return null;
     }
 
+    /**
+     * Property setter.
+     *
+     * Since no public property is declared in `Model`, this method will be
+     * fired every time user tries to set a *virtual property*.
+     *
+     * This function will check existence of the property. You can set a
+     * property if one of these conditions is fulfilled:
+     *
+     *  * It is a declared column;
+     *  * It is a relation name;
+     *  * It is already present in the attribute array.
+     *
+     * In all cases, the property you set will be store in the attribute array.
+     * Nothing else is modified.
+     *
+     * However, if a method called `set_<property name>()` exists, it will be
+     * fired instead of directly modify the attribute array.
+     *
+     * @param string $sName  The property name.
+     * @param mixed  $mValue The property value.
+     *
+     * @return void
+     */
     public function __set($sName, $mValue)
     {
         $aColumns = static::table()->columns;
@@ -517,8 +585,8 @@ abstract class Model
      * without *unlink* all of the linked models (that would have been the case
      * when directly assigning the relation content via `=`.
      *
-     * @param $sRelation string The relation name.
-     * @param $mLinkedModel int|Model What to add.
+     * @param string    $sRelation    The relation name.
+     * @param int|Model $mLinkedModel What to add.
      *
      * ```php
      * $oUser->addTo('applications', 12);
@@ -557,15 +625,27 @@ abstract class Model
         }
     }
 
+    /**
+     * Return several Model instances according to an option array.
+     *
+     * This function is an alias for:
+     *  ```php
+     * Model::find('all', $aOptions);
+     *  ```
+     * @param array $aOptions An option array.
+     * @return array
+     *
+     * @see SimpleAR\Model::find()
+     */
     public static function all($aOptions = array())
     {
         return self::find('all', $aOptions);
     }
 
     /**
-     * Return all PUBLIC attributes of the instance with their values.
+     * Return attribute array plus the object ID.
      *
-     * @return array The instance attributes with their values.
+     * @return array The instance attributes and its ID.
      */
     public function attributes()
     {
@@ -576,14 +656,13 @@ abstract class Model
      * Very useful function to get an array of the attributes to select from
      * database. Attributes are values of $_aColumns.
      *
+     * @param string $sFilter Optional filter that prevents us to fetch all
+     * attribute from the table.
      *
-     * @param string $mFilter Optional filter set for the
-     * current model. It
-     * prevents us to fetch all attribute from the
-     * table.
+     * @param string $sTableAlias The alias to use to designate the table.
+     * @param string $sResAlias   The alias to use to tidy resulting row up.
      *
-     * Note: it will NOT throw any exception
-     * if filter does not exist; instead,
+     * @note: it will *not* throw any exception if filter does not exist; instead,
      * it will not use any filter.
      *
      * @return array
@@ -618,11 +697,40 @@ abstract class Model
         return $aRes;
     }
 
+    /**
+     * Return count of Model instances according to an option array.
+     *
+     * This function is an alias for:
+     *  ```php
+     * Model::find('count', $aOptions);
+     *  ```
+     * @param array $aOptions An option array.
+     * @return array
+     *
+     * @see SimpleAR\Model::find()
+     */
     public static function count($aOptions = array())
     {
         return self::find('count', $aOptions);
     }
 
+    /**
+     * This function creates a new Model instance and inserts it into database.
+     *
+     * This is just a shorthand for:
+     *  ```php
+     *  $o = new static($aAttributes);
+     *  return $o->save();
+     *  ```
+     *
+     * @param array $aAttributes Array of attributes to fill the new instance
+     * with.
+     *
+     * @return $this
+     *
+     * @see SimpleAR\Model::__construct()
+     * @see SimpleAR\Model::save()
+     */
     public static function create($aAttributes)
     {
         $o = new static($aAttributes);
