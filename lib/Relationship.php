@@ -138,7 +138,7 @@ class BelongsTo extends Relationship
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
-            : strtolower($this->lm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix;
+            : strtolower($this->lm->table) . self::$_oConfig->foreignKeySuffix;
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -209,7 +209,7 @@ class HasOne extends Relationship
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            : strtolower($this->cm->table . self::$_oConfig->foreignKeySuffix
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -255,7 +255,7 @@ class HasMany extends Relationship
 
         $this->lm->attribute = (isset($a['key_to']))
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            : strtolower($this->cm->table) . self::$_oConfig->foreignKeySuffix
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -373,8 +373,8 @@ class ManyMany extends Relationship
             $this->jm->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix);
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->table) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->table) . self::$_oConfig->foreignKeySuffix);
         }
         else
         {
