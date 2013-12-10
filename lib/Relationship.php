@@ -106,12 +106,12 @@ abstract class Relationship
 
     public abstract function insert($oCM, $oLM);
 
-    public function joinLinkedModel()
+    public function joinLinkedModel($iDepth)
     {
 		return " JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
     }
 
-    public function joinAsLast($aAttributes)
+    public function joinAsLast($aAttributes, $iDepth)
     {
         return $this->joinLinkedModel();
     }
@@ -175,7 +175,7 @@ class BelongsTo extends Relationship
     {
     }
 
-    public function joinAsLast($aAttributes)
+    public function joinAsLast($aAttributes, $iDepth)
     {
 		foreach ($aAttributes as $o)
 		{
@@ -338,7 +338,7 @@ class HasMany extends Relationship
     {
     }
 
-    public function joinAsLast($aAttributes)
+    public function joinAsLast($aAttributes, $iDepth)
     {
 		foreach ($aAttributes as $o)
 		{
@@ -480,12 +480,12 @@ class ManyMany extends Relationship
         }
     }
 
-    public function joinLinkedModel()
+    public function joinLinkedModel($iDepth)
     {
         return $this->_joinJM() . ' ' .  $this->_joinLM();
     }
 
-    public function joinAsLast($aAttributes)
+    public function joinAsLast($aAttributes, $iDepth)
     {
         $sRes = '';
 

@@ -281,6 +281,8 @@ abstract class Model
 
     protected $_bIsDirty = false;
 
+    protected $_sCurrentFilter;
+
     private static $_aTables = array();
     /**
      * Constructor.
@@ -492,7 +494,7 @@ abstract class Model
      *
      * @return array
      */
-    public static function columnsToSelect($sFilter = null, $sTableAlias = '')
+    public static function columnsToSelect($sFilter = null, $sTableAlias = '', $sResAlias = '')
     {
         $oTable = static::table();
         $aRes   = array();
@@ -512,10 +514,11 @@ abstract class Model
         // If a table alias is given, add a dot to respect SQL syntax and to not
         // worry about it in following foreach loop.
         if ($sTableAlias) { $sTableAlias .= '.'; }
+        if ($sResAlias)   { $sResAlias   .= '.'; }
 
         foreach ($aColumns as $sAttribute => $sColumn)
         {
-            $aRes[] = $sTableAlias . $sColumn . ' AS ' . $sAttribute;
+            $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResAlias . $sAttribute . '`';
         }
 
         return $aRes;
@@ -694,7 +697,7 @@ abstract class Model
                 break;
         }
 
-        return self::_processSqlQuery($oQuery->sql, $oQuery->values, $sMultiplicity, $aOptions);
+        return self::_processSqlQuery($oQuery, $sMultiplicity, $aOptions);
     }
 
     public static function findByPK($mId, $aOptions = array())
@@ -704,7 +707,7 @@ abstract class Model
 
         // Fetch model.
 		$oQuery = Query::select($aOptions, get_called_class());
-        if (!$oModel = self::_processSqlQuery($oQuery->sql, $oQuery->values, 'one', $aOptions))
+        if (!$oModel = self::_processSqlQuery($oQuery, 'one', $aOptions))
         {
             throw new RecordNotFoundException($mId);
         }
@@ -775,6 +778,7 @@ abstract class Model
     public function modify($aAttributes)
     {
         $this->_fill($aAttributes);
+        $this->_bIsDirty = true;
 
         return $this;
     }
@@ -789,7 +793,7 @@ abstract class Model
     {
 		if ($oRelation === null)
 		{
-			if (!isset(static::$_aRelations[$sRelationName]))
+			if (! isset(static::$_aRelations[$sRelationName]))
 			{
 				throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
 			}
@@ -1114,7 +1118,6 @@ abstract class Model
     private function _fill($aAttributes)
     {
 		$this->_aAttributes = $aAttributes + $this->_aAttributes;
-        $this->_bIsDirty    = true;
 
 		/* Restrictive way of doing it:
         $aColumns = static::table()->columns();
@@ -1300,18 +1303,40 @@ abstract class Model
             }
         }
 
-        // We fill the class members (So easy!)
-        $this->_aAttributes = $aRow;
-
-        if (self::$_oConfig->convertDateToObject)
+        // Eager load.
+        if (isset($aRow['_WITH_']))
         {
-            foreach ($this->_aAttributes as $sKey => &$mValue)
+            foreach ($aRow['_WITH_'] as $sRelation => $aValue)
             {
-                // $sKey.startsWith('date')
-                if (strpos($sKey, 'date') === 0)
+                $oRelation = static::relation($sRelation);
+                $sLMClass  = $oRelation->lm->class;
+
+                if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
                 {
-                    $mValue = new DateTime($mValue);
+                    $o = new $sLMClass();
+                    $o->_load($aValue);
+
+                    $this->_attr($sRelation, $o);
                 }
+                else
+                {
+                    $this->_attr($sRelation, $aRow['_WITH_'][$sRelation]);
+                }
+            }
+
+            unset($aRow['_WITH_']);
+        }
+
+        $this->_fill($aRow);
+
+        $bConvertDateToObject = self::$_oConfig->convertDateToObject;
+
+        foreach ($this->_aAttributes as $sKey => &$mValue)
+        {
+            // $sKey.startsWith('date')
+            if ($bConvertDateToObject && strpos($sKey, 'date') === 0)
+            {
+                $mValue = new DateTime($mValue);
             }
         }
 
@@ -1388,19 +1413,21 @@ abstract class Model
     }
 
 
-    private static function _processSqlQuery($sQuery, $aParams, $sMultiplicity, $aOptions)
+    private static function _processSqlQuery($oQuery, $sMultiplicity, $aOptions)
     {
-        $oSth   = self::$_oDb->query($sQuery, $aParams);
         $mRes   = null;
+
+        $oQuery->run();
 
         switch ($sMultiplicity)
 		{
             case 'count':
-                $mRes = $oSth->fetchColumn();
+                $mRes = $oQuery->res();
                 break;
 
             case 'one':
-                $aRow = $oSth->fetch(\PDO::FETCH_ASSOC);
+                $aRow = $oQuery->row();
+
                 if ($aRow)
 				{
                     $mRes = new static(null, $aOptions);
@@ -1409,7 +1436,7 @@ abstract class Model
                 break;
 
             case 'several':
-                $aRows = $oSth->fetchAll(\PDO::FETCH_ASSOC);
+                $aRows = $oQuery->all();
                 $mRes  = array();
 
                 foreach ($aRows as $aRow)

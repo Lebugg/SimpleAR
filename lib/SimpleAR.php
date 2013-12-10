@@ -20,6 +20,7 @@ require 'exceptions/DatabaseException.php';
 require 'exceptions/DuplicateKeyException.php';
 require 'exceptions/RecordNotFoundException.php';
 require 'exceptions/ReadOnlyException.php';
+require 'Tools.php';
 
 function init()
 {
