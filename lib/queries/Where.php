@@ -9,12 +9,24 @@ abstract class Where extends \SimpleAR\Query
 
     protected $_aJoinedTables = array();
 
+    const JOIN_INNER = 10;
+    const JOIN_LEFT  = 20;
+    const JOIN_RIGHT = 21;
+    const JOIN_OUTER = 30;
+
+    protected $_aJoinTypes = array(
+        10 => 'INNER',
+        20 => 'LEFT',
+        21 => 'RIGHT',
+        30 => 'OUTER',
+    );
+
     /**
      *
      * @return array
      *      To be used as `list($aArborescence, $oLastRelation) = $this->_addToArborescence(<>);`
      */
-    protected function _addToArborescence($aRelationNames)
+    protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER)
     {
         if (!$aRelationNames) { return; }
 
@@ -34,6 +46,25 @@ abstract class Where extends \SimpleAR\Query
             // Go forward in arborescence.
             $aArborescence = &$aArborescence[$sRelation];
             $sCurrentModel = $oRelation->lm->class;
+        }
+
+        if (! isset($aArborescence['_TYPE_']))
+        {
+            $aArborescence['_TYPE_'] = $iJoinType;
+        }
+        else
+        {
+            // Choose right join type.
+            $iCurrentType = $aArborescence['_TYPE_'];
+
+            if ($iCurrentType / 10 > $iJoinType / 10)
+            {
+                $aArborescence['_TYPE_'] = $iJoinType;
+            }
+            elseif ($iCurrentType / 10 === $iJoinType / 10)
+            {
+                $aArborescence['_TYPE_'] = self::JOIN_INNER;
+            }
         }
 
 		if ($oRelation instanceof \SimpleAR\HasMany)
@@ -166,31 +197,38 @@ abstract class Where extends \SimpleAR\Query
 			$oRelation = $sCurrentModel::relation($sRelationName);
             $sTable    = $oRelation->lm->table;
 
+            $aConditions =  isset($aValues['_CONDITIONS_']) ? $aValues['_CONDITIONS_'] : false; unset($aValues['_CONDITIONS_']);
+            $iJoinType   =  isset($aValues['_TYPE_'])       ? $aValues['_TYPE_']       : false; unset($aValues['_TYPE_']);
+
 			// If relation arborescence continues, process it.
 			if ($aValues)
 			{
                 // Join it if not done yet.
                 if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
                 {
-                    $sRes .= $oRelation->joinLinkedModel($iDepth);
+                    $sRes .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$iJoinType]);
 
                     // Add it to joined tables array.
                     $this->_aJoinedTables[$iDepth][] = $sTable;
                 }
 
-                unset($aValues['_CONDITIONS_']);
 				$sRes .= $this->_joinArborescenceToSql($aValues, $oRelation->lm->class, $iDepth + 1);
 			}
             // If there are conditions to apply on linked model, we may have to join it.
-			elseif (isset($aValues['_CONDITIONS_']))
+			elseif ($aConditions)
 			{
                 // Already joined? Don't process it.
                 if (isset($this->_aJoinedTables[$iDepth][$oRelation->lm->table]))
                 {
-				    $sRes .= $oRelation->joinAsLast($aValues['_CONDITIONS_'], $iDepth);
-                }
+				    $sTmp  = $oRelation->joinAsLast($aConditions, $iDepth, $this->_aJoinTypes[$iJoinType]);
+                    $sRes .= $sTmp;
 
-                unset($aValues['_CONDITIONS_']);
+                    if ($sTmp)
+                    {
+                        // Add it to joined tables array.
+                        $this->_aJoinedTables[$iDepth][] = $sTable;
+                    }
+                }
 			}
 
 		}

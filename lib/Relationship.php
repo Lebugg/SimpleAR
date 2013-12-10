@@ -106,14 +106,14 @@ abstract class Relationship
 
     public abstract function insert($oCM, $oLM);
 
-    public function joinLinkedModel($iDepth)
+    public function joinLinkedModel($iDepth, $sJoinType)
     {
-		return " JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
+		return "$sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
     }
 
-    public function joinAsLast($aAttributes, $iDepth)
+    public function joinAsLast($aAttributes, $iDepth, $sJoinType)
     {
-        return $this->joinLinkedModel();
+        return $this->joinLinkedModel($iDepth, $sJoinType);
     }
 
     protected static function _checkConditionValidity($o)
@@ -175,12 +175,12 @@ class BelongsTo extends Relationship
     {
     }
 
-    public function joinAsLast($aAttributes, $iDepth)
+    public function joinAsLast($aAttributes, $iDepth, $sJoinType)
     {
 		foreach ($aAttributes as $o)
 		{
 			if ($o->attribute !== 'id') {
-				return $this->joinLinkedModel();
+				return $this->joinLinkedModel($iDepth, $sJoinType);
 			}
 		}
     }
@@ -338,12 +338,12 @@ class HasMany extends Relationship
     {
     }
 
-    public function joinAsLast($aAttributes, $iDepth)
+    public function joinAsLast($aAttributes, $iDepth, $sJoinType)
     {
 		foreach ($aAttributes as $o)
 		{
 			if ($o->logic !== 'or') {
-				return $this->joinLinkedModel();
+				return $this->joinLinkedModel($iDepth, $sJoinType);
 			}
 		}
     }
@@ -480,24 +480,24 @@ class ManyMany extends Relationship
         }
     }
 
-    public function joinLinkedModel($iDepth)
+    public function joinLinkedModel($iDepth, $sJoinType)
     {
-        return $this->_joinJM() . ' ' .  $this->_joinLM();
+        return $this->_joinJM($iDepth, $sJoinType) . ' ' .  $this->_joinLM($iDepth, $sJoinType);
     }
 
-    public function joinAsLast($aAttributes, $iDepth)
+    public function joinAsLast($aAttributes, $iDepth, $sJoinType)
     {
         $sRes = '';
 
         // We always want to join the middle table.
-        $sRes .= $this->_joinJM();
+        $sRes .= $this->_joinJM($iDepth, $sJoinType);
 
 		foreach ($aAttributes as $o)
 		{
 			// And, under certain conditions, the linked table.
 			if ($o->logic !== 'or' || $o->attribute !== 'id')
 			{
-				$sRes .= $this->_joinLM();
+				$sRes .= $this->_joinLM($iDepth, $sJoinType);
 				break;
 			}
 		}
@@ -521,14 +521,14 @@ class ManyMany extends Relationship
         return $oRelation;
 	}
 
-    private function _joinJM()
+    private function _joinJM($iDepth, $sJoinType)
     {
-		return " JOIN {$this->jm->table} {$this->jm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->jm->alias}.{$this->jm->from}";
+		return "$sJoinType JOIN {$this->jm->table} {$this->jm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->jm->alias}.{$this->jm->from}";
     }
 
-    private function _joinLM()
+    private function _joinLM($iDepth, $sJoinType)
     {
-		return " JOIN {$this->lm->table} {$this->lm->alias} ON {$this->jm->alias}.{$this->jm->to} = {$this->lm->alias}.{$this->lm->pk}";
+		return "$sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->jm->alias}.{$this->jm->to} = {$this->lm->alias}.{$this->lm->pk}";
     }
 
 }
