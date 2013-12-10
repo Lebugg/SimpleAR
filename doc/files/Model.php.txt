@@ -585,9 +585,6 @@ abstract class Model
      * without *unlink* all of the linked models (that would have been the case
      * when directly assigning the relation content via `=`.
      *
-     * @param string    $sRelation    The relation name.
-     * @param int|Model $mLinkedModel What to add.
-     *
      * ```php
      * $oUser->addTo('applications', 12);
      * ```
@@ -597,6 +594,9 @@ abstract class Model
      * ```php
      * $oUser->addTo('applications', $oJobOffer);
      * ```
+     *
+     * @param string    $sRelation    The relation name.
+     * @param int|Model $mLinkedModel What to add.
      *
      * @return void.
      */
@@ -1026,9 +1026,6 @@ abstract class Model
      * without unlink all of the linked models (that would have been the case
      * when directly assigning the relation content via `=`.
      *
-     * @param $sRelation string The relation name.
-     * @param $mLinkedModel int|Model What to remove.
-     *
      * ```php
      * $oUser->removeFrom('applications', 12);
      * ```
@@ -1038,6 +1035,9 @@ abstract class Model
      * ```php
      * $oUser->removeFrom('applications', $oJobOffer);
      * ```
+     *
+     * @param string    $sRelation    The relation name.
+     * @param int|Model $mLinkedModel What to remove.
      *
      * @return void.
      */
