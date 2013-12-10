@@ -237,10 +237,21 @@ abstract class Model
      *
      *  * many_many:
      *
-     *      * join_table: The table that makes the join between the two models.
+     *  If you want to use a middle model to join CM et LM, here are the fields
+     *  you need:
      *
-     *      * key_from: CM unique field that links to join_from. Default:
-     *      CM::_mPrimaryKey.
+     *      * join_model: The join model class.
+     *
+     *      * join_from: Join model attribute that links to CM primary key.
+     *        Optional. Default: ???
+     *
+     *      * join_to:   Join model attribute that links to LM primary key.
+     *        Optional.
+     *
+     *  If you don't want to use a middle model to join CM et LM, here are the fields
+     *  you need:
+     *
+     *      * join_table: The table that makes the join between the two models.
      *
      *      * join_from: Join table field that links to CM primary key.
      *        Optional. Default: CM::_mPrimaryKey.
@@ -248,8 +259,52 @@ abstract class Model
      *      * join_to:   Join table field that links to LM primary key.
      *        Optional. Default: LM::_mPrimaryKey.
      *
+     *  In both case, you can optionnaly specify these fields:
+     *
+     *      * key_from: CM unique field that links to join_from. Default:
+     *      CM::_mPrimaryKey.
+     *
      *      * key_to : LM unique field that links to join_to. Default:
      *      LM::_mPrimaryKey.
+     *
+     *
+     *  Example:
+     *  ```php
+     *  class Company extends SimpleAR\Model
+     *  {
+     *      protected $_aRelations = array(
+     *          'products' => array(
+     *              'type'     => 'has_many',   // Mandatory.
+     *              'model'    => 'Product',    // Mandatory.
+     *              'key_from' => 'product_id', // Optional.
+     *          ),
+     *      );
+     *  }
+     *  ```
+     *
+     * On top of these configuration fields, you can add the following fields:
+     *
+     *  * "conditions": An array of conditions that will be used to filter
+     *  retrieved linked models.
+     *  * "order_by": An order by array that will be used retrieving linked
+     *  models.
+     * 
+     *  Example:
+     *  ```php
+     *  class Company extends SimpleAR\Model
+     *  {
+     *      protected $_aRelations = array(
+     *          'products' => array(
+     *              'type'     => 'has_many',   // Mandatory.
+     *              'model'    => 'Product',    // Mandatory.
+     *              'key_from' => 'product_id', // Optional.
+     *
+     *              'conditions' => array(array('price', '>', 10.00), 'category' => array(12, 4, 7)),
+     *              'order_by'   => array('price' => 'ASC'),
+     *          ),
+     *      );
+     *  }
+     *  ```
      *
      * @var array
      */
@@ -272,18 +327,57 @@ abstract class Model
      * is constructed in serveral places in the code. Let's review them!
      *
      * * When a row is fetched from database, an Model instance is created and its
-     * $_aAttributes array is filled with all selected fields and their values.
-     * * When you access to a 
-     * * When you set an attribute that is not in this array yet
-     * @var mixed
+     * $_aAttributes array is filled with all selected fields and their values;
+     * * When you access to a relation: Linked models are fetched from database
+     * and stored in this array;
+     * * When you set an attribute that is not in this array yet;
+     * * When access to a *count* attribute.
+     *
+     * @var array
      */
     protected $_aAttributes = array();
 
+    /**
+     * This attribute is used to decide if model instance really has to be
+     * saved when using `save()` method. For instance, if no attribute has been
+     * modified, there is no need to execute an UPDATE SQL query.
+     *
+     * @var bool
+     */
     protected $_bIsDirty = false;
 
+    /**
+     * This attribute contains the current used filter.
+     *
+     * @var string
+     */
     protected $_sCurrentFilter;
 
+    /**
+     * This array contains the list of declared Table objects.
+     *
+     * Table objects contains data about the model table i.e. columns, table
+     * name, primary key...
+     *
+     * We could have used static variables in Model instead (and actually, that
+     * is what was done before), but it created problems with inheritance (even
+     * with static keyword) when a static variable was not declared in subclass
+     * and stuff... But I won't get to deep in there now.
+     *
+     * I know, many people would say that static is evil and blablabla, but I
+     * don't agree and I think it is PHP implementation of it that is bad. (See
+     * this
+     * http://stackoverflow.com/questions/1203810/is-there-a-way-to-have-php-subclasses-inherit-properties-both-static-and-instan
+     * and that https://bugs.php.net/bug.php?id=49105)
+     *
+     * There is one Table for each Model and this Table is instanciated and
+     * stored into this array from within `Model::init()` function.
+     *
+     * @var array
+     * @see SimpleAR\Model::init()
+     */
     private static $_aTables = array();
+
     /**
      * Constructor.
      *

@@ -180,12 +180,28 @@ class Config
 
     /**
      * The path to the folder containing models.
-
-     * @var string
+     *
+     * Example:
+     * ```php
+     * $oCfg->modelDirectory = 'my/model/directory/';
+     * ```
+     * Usually, you will only use one model directory source, but it may happen
+     * that you need several ones. In that case, you can set a array containing
+     * all the paths you need. It will check directories for model presence in
+     * the order of apparition in the array.
+     *
+     * Example:
+     * ```php
+     * $oCfg->modelDirectory = array('my/model/directory/', 'my/other/path/');
+     * ```
+     *
+     * @note Every path needs to end by a trailing slash.
+     *
+     * @var array
      *
      * Default value: './models/';
      */
-    private $_modelDirectory = './models/';
+    private $_modelDirectory = array('./models/');
 
     /**
      * Default primary key name.
@@ -322,17 +338,23 @@ class Config
      *
      * This function checks that given path exists.
      *
-     * @param string $s The directory path.
+     * @param string|array $m The directory path or an array containing
+     * differents directory paths.
      * @see \SimpleAR\Config::$_modelDirectory
      */
-    public function modelDirectory($s)
+    public function modelDirectory($m)
     {
-        if (!is_dir($s))
+        $a = (array) $m;
+
+        foreach ($a as $s)
         {
-            throw new Exception('Model path "' . $s . '" does not exist.');
+            if (!is_dir($s))
+            {
+                throw new Exception('Model path "' . $s . '" does not exist.');
+            }
         }
 
-        $this->_modelDirectory = $s;
+        $this->_modelDirectory = $a;
     }
 
 }

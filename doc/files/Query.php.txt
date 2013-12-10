@@ -6,6 +6,7 @@ require 'queries/Where.php';
 require 'queries/Delete.php';
 require 'queries/Insert.php';
 require 'queries/Select.php';
+require 'queries/Count.php';
 require 'queries/Update.php';
 
 abstract class Query
@@ -48,8 +49,8 @@ abstract class Query
 
 	public static function count($aOptions, $oTable)
 	{
-		$oBuilder = new Query\Select($oTable);
-        $oBuilder->buildCount($aOptions);
+		$oBuilder = new Query\Count($oTable);
+        $oBuilder->build($aOptions);
 
 		return $oBuilder;
 	}
@@ -70,6 +71,11 @@ abstract class Query
 		return $oBuilder;
 	}
 
+    public function rowCount()
+    {
+        return $this->_oSth->rowCount();
+    }
+
     public function run()
     {
         $oDb = Database::instance();
@@ -82,7 +88,9 @@ abstract class Query
             }
         }
 
-        return $oDb->query($this->sql, $this->values);
+        $this->_oSth = $oDb->query($this->sql, $this->values);
+
+        return $this;
     }
 
 	public static function select($aOptions, $oTable)

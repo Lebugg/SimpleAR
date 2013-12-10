@@ -1,0 +1,47 @@
+<?php
+namespace SimpleAR;
+
+/**
+ * This file contains the ReadOnlyModel class.
+ *
+ * @author Damien Launay
+ */
+
+/**
+ * This class limits object operations to read-only.
+ *
+ * @author Damien Launay
+ */
+abstract class ReadOnlyModel extends Model
+{
+    public function addTo($sRelation, $mLinkedModel)
+    {
+        throw new ReadOnlyException('addTo');
+    }
+
+    public static function create($aAttributes)
+    {
+        throw new ReadOnlyException('create');
+    }
+
+    public function delete($sRelationName = null)
+    {
+        throw new ReadOnlyException('delete');
+    }
+
+    public static function remove($aConditions = array())
+    {
+        throw new ReadOnlyException('remove');
+    }
+
+    public function removeFrom($sRelation, $mLinkedModel)
+    {
+        throw new ReadOnlyException('removeFrom');
+    }
+
+    public function save()
+    {
+        throw new ReadOnlyException('save');
+    }
+}
+

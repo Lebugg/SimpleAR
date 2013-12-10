@@ -221,41 +221,94 @@ abstract class Model
      *        the link is not made on CM primary key.
      *
      *      * key_to:   LM field that links to CM.
-     *                  Optional. Default: UserModel => userId
-     *                  It is possible to change the value to a LM::_aColumns key if
-     *                  the link is not made in CM primary key or if the CM PK name is
-     *                  not the same that the LM foreign key name.
+     *        Optional. Default: UserModel => userId
+     *        It is possible to change the value to a LM::_aColumns key if
+     *        the link is not made in CM primary key or if the CM PK name is
+     *        not the same that the LM foreign key name.
      *
      *  * has_many:
      *
      *      * key_from: CM unique field that links to key_to.
-     *                  Optional. Default: UserModel => userId
-     *                  Can be change if the link is not made on CM primary key.
+     *        Optional. Default: UserModel => userId
+     *        Can be change if the link is not made on CM primary key.
      *
      *      * key_to:   LM field that links to key_from.
-     *                  Optional. Default: CM::_mPrimaryKey (same name).
+     *        Optional. Default: CM::_mPrimaryKey (same name).
      *
      *  * many_many:
      *
+     *  If you want to use a middle model to join CM et LM, here are the fields
+     *  you need:
+     *
+     *      * join_model: The join model class.
+     *
+     *      * join_from: Join model attribute that links to CM primary key.
+     *        Optional. Default: ???
+     *
+     *      * join_to:   Join model attribute that links to LM primary key.
+     *        Optional.
+     *
+     *  If you don't want to use a middle model to join CM et LM, here are the fields
+     *  you need:
+     *
      *      * join_table: The table that makes the join between the two models.
+     *
+     *      * join_from: Join table field that links to CM primary key.
+     *        Optional. Default: CM::_mPrimaryKey.
+     *
+     *      * join_to:   Join table field that links to LM primary key.
+     *        Optional. Default: LM::_mPrimaryKey.
+     *
+     *  In both case, you can optionnaly specify these fields:
      *
      *      * key_from: CM unique field that links to join_from. Default:
      *      CM::_mPrimaryKey.
      *
-     *      * join_from: Join table field that links to CM primary key.
-     *                  Optional. Default: CM::_mPrimaryKey.
-     *
-     *      * join_to:   Join table field that links to LM primary key.
-     *                  Optional. Default: LM::_mPrimaryKey.
-     *
      *      * key_to : LM unique field that links to join_to. Default:
      *      LM::_mPrimaryKey.
+     *
+     *
+     *  Example:
+     *  ```php
+     *  class Company extends SimpleAR\Model
+     *  {
+     *      protected $_aRelations = array(
+     *          'products' => array(
+     *              'type'     => 'has_many',   // Mandatory.
+     *              'model'    => 'Product',    // Mandatory.
+     *              'key_from' => 'product_id', // Optional.
+     *          ),
+     *      );
+     *  }
+     *  ```
+     *
+     * On top of these configuration fields, you can add the following fields:
+     *
+     *  * "conditions": An array of conditions that will be used to filter
+     *  retrieved linked models.
+     *  * "order_by": An order by array that will be used retrieving linked
+     *  models.
+     * 
+     *  Example:
+     *  ```php
+     *  class Company extends SimpleAR\Model
+     *  {
+     *      protected $_aRelations = array(
+     *          'products' => array(
+     *              'type'     => 'has_many',   // Mandatory.
+     *              'model'    => 'Product',    // Mandatory.
+     *              'key_from' => 'product_id', // Optional.
+     *
+     *              'conditions' => array(array('price', '>', 10.00), 'category' => array(12, 4, 7)),
+     *              'order_by'   => array('price' => 'ASC'),
+     *          ),
+     *      );
+     *  }
+     *  ```
      *
      * @var array
      */
     protected static $_aRelations = array();
-
-    private static $_aTables = array();
 
     /**
      * The model instance's ID.
@@ -267,9 +320,63 @@ abstract class Model
      */
     protected $_mId;
 
+    /**
+     * The model instance's attribute list.
+     *
+     * It contains all *used* model instance attributes of the model. This array
+     * is constructed in serveral places in the code. Let's review them!
+     *
+     * * When a row is fetched from database, an Model instance is created and its
+     * $_aAttributes array is filled with all selected fields and their values;
+     * * When you access to a relation: Linked models are fetched from database
+     * and stored in this array;
+     * * When you set an attribute that is not in this array yet;
+     * * When access to a *count* attribute.
+     *
+     * @var array
+     */
     protected $_aAttributes = array();
 
+    /**
+     * This attribute is used to decide if model instance really has to be
+     * saved when using `save()` method. For instance, if no attribute has been
+     * modified, there is no need to execute an UPDATE SQL query.
+     *
+     * @var bool
+     */
     protected $_bIsDirty = false;
+
+    /**
+     * This attribute contains the current used filter.
+     *
+     * @var string
+     */
+    protected $_sCurrentFilter;
+
+    /**
+     * This array contains the list of declared Table objects.
+     *
+     * Table objects contains data about the model table i.e. columns, table
+     * name, primary key...
+     *
+     * We could have used static variables in Model instead (and actually, that
+     * is what was done before), but it created problems with inheritance (even
+     * with static keyword) when a static variable was not declared in subclass
+     * and stuff... But I won't get to deep in there now.
+     *
+     * I know, many people would say that static is evil and blablabla, but I
+     * don't agree and I think it is PHP implementation of it that is bad. (See
+     * this
+     * http://stackoverflow.com/questions/1203810/is-there-a-way-to-have-php-subclasses-inherit-properties-both-static-and-instan
+     * and that https://bugs.php.net/bug.php?id=49105)
+     *
+     * There is one Table for each Model and this Table is instanciated and
+     * stored into this array from within `Model::init()` function.
+     *
+     * @var array
+     * @see SimpleAR\Model::init()
+     */
+    private static $_aTables = array();
 
     /**
      * Constructor.
@@ -405,6 +512,26 @@ abstract class Model
 		);
     }
 
+    /**
+     * This function allow to only *link* one model from a relation
+     * without *unlink* all of the linked models (that would have been the case
+     * when directly assigning the relation content via `=`.
+     *
+     * @param $sRelation string The relation name.
+     * @param $mLinkedModel int|Model What to add.
+     *
+     * ```php
+     * $oUser->addTo('applications', 12);
+     * ```
+     *
+     * or
+     *
+     * ```php
+     * $oUser->addTo('applications', $oJobOffer);
+     * ```
+     *
+     * @return void.
+     */
     public function addTo($sRelation, $mLinkedModel)
     {
         $oRelation = static::relation($sRelation);
@@ -461,7 +588,7 @@ abstract class Model
      *
      * @return array
      */
-    public static function columnsToSelect($sFilter = null, $sTableAlias = '')
+    public static function columnsToSelect($sFilter = null, $sTableAlias = '', $sResAlias = '')
     {
         $oTable = static::table();
         $aRes   = array();
@@ -481,10 +608,11 @@ abstract class Model
         // If a table alias is given, add a dot to respect SQL syntax and to not
         // worry about it in following foreach loop.
         if ($sTableAlias) { $sTableAlias .= '.'; }
+        if ($sResAlias)   { $sResAlias   .= '.'; }
 
         foreach ($aColumns as $sAttribute => $sColumn)
         {
-            $aRes[] = $sTableAlias . $sColumn . ' AS ' . $sAttribute;
+            $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResAlias . $sAttribute . '`';
         }
 
         return $aRes;
@@ -619,7 +747,7 @@ abstract class Model
     {
         // Find by primary key. It can be an array when using compound primary 
         // keys.
-        if (ctype_digit($mFirst) || is_array($mFirst))
+        if (is_int($mFirst) || is_array($mFirst))
         {
             return self::findByPK($mFirst, $aOptions);
         }
@@ -663,7 +791,7 @@ abstract class Model
                 break;
         }
 
-        return self::_processSqlQuery($oQuery->sql, $oQuery->values, $sMultiplicity, $aOptions);
+        return self::_processSqlQuery($oQuery, $sMultiplicity, $aOptions);
     }
 
     public static function findByPK($mId, $aOptions = array())
@@ -673,7 +801,7 @@ abstract class Model
 
         // Fetch model.
 		$oQuery = Query::select($aOptions, get_called_class());
-        if (!$oModel = self::_processSqlQuery($oQuery->sql, $oQuery->values, 'one', $aOptions))
+        if (!$oModel = self::_processSqlQuery($oQuery, 'one', $aOptions))
         {
             throw new RecordNotFoundException($mId);
         }
@@ -744,6 +872,7 @@ abstract class Model
     public function modify($aAttributes)
     {
         $this->_fill($aAttributes);
+        $this->_bIsDirty = true;
 
         return $this;
     }
@@ -758,7 +887,7 @@ abstract class Model
     {
 		if ($oRelation === null)
 		{
-			if (!isset(static::$_aRelations[$sRelationName]))
+			if (! isset(static::$_aRelations[$sRelationName]))
 			{
 				throw new Exception('Relation "' . $sRelationName . '" does not exist for class "' . get_called_class() . '".');
 			}
@@ -784,6 +913,26 @@ abstract class Model
         return $oQuery->run()->rowCount();
     }
 
+    /**
+     * This function allow to only *unlink* one model from a relation
+     * without unlink all of the linked models (that would have been the case
+     * when directly assigning the relation content via `=`.
+     *
+     * @param $sRelation string The relation name.
+     * @param $mLinkedModel int|Model What to remove.
+     *
+     * ```php
+     * $oUser->removeFrom('applications', 12);
+     * ```
+     *
+     * or
+     *
+     * ```php
+     * $oUser->removeFrom('applications', $oJobOffer);
+     * ```
+     *
+     * @return void.
+     */
     public function removeFrom($sRelation, $mLinkedModel)
     {
         $oRelation = static::relation($sRelation);
@@ -1063,7 +1212,6 @@ abstract class Model
     private function _fill($aAttributes)
     {
 		$this->_aAttributes = $aAttributes + $this->_aAttributes;
-        $this->_bIsDirty    = true;
 
 		/* Restrictive way of doing it:
         $aColumns = static::table()->columns();
@@ -1249,18 +1397,40 @@ abstract class Model
             }
         }
 
-        // We fill the class members (So easy!)
-        $this->_aAttributes = $aRow;
-
-        if (self::$_oConfig->convertDateToObject)
+        // Eager load.
+        if (isset($aRow['_WITH_']))
         {
-            foreach ($this->_aAttributes as $sKey => &$mValue)
+            foreach ($aRow['_WITH_'] as $sRelation => $aValue)
             {
-                // $sKey.startsWith('date')
-                if (strpos($sKey, 'date') === 0)
+                $oRelation = static::relation($sRelation);
+                $sLMClass  = $oRelation->lm->class;
+
+                if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
                 {
-                    $mValue = new DateTime($mValue);
+                    $o = new $sLMClass();
+                    $o->_load($aValue);
+
+                    $this->_attr($sRelation, $o);
                 }
+                else
+                {
+                    $this->_attr($sRelation, $aRow['_WITH_'][$sRelation]);
+                }
+            }
+
+            unset($aRow['_WITH_']);
+        }
+
+        $this->_fill($aRow);
+
+        $bConvertDateToObject = self::$_oConfig->convertDateToObject;
+
+        foreach ($this->_aAttributes as $sKey => &$mValue)
+        {
+            // $sKey.startsWith('date')
+            if ($bConvertDateToObject && strpos($sKey, 'date') === 0)
+            {
+                $mValue = new DateTime($mValue);
             }
         }
 
@@ -1337,19 +1507,21 @@ abstract class Model
     }
 
 
-    private static function _processSqlQuery($sQuery, $aParams, $sMultiplicity, $aOptions)
+    private static function _processSqlQuery($oQuery, $sMultiplicity, $aOptions)
     {
-        $oSth   = self::$_oDb->query($sQuery, $aParams);
         $mRes   = null;
+
+        $oQuery->run();
 
         switch ($sMultiplicity)
 		{
             case 'count':
-                $mRes = $oSth->fetchColumn();
+                $mRes = $oQuery->res();
                 break;
 
             case 'one':
-                $aRow = $oSth->fetch(\PDO::FETCH_ASSOC);
+                $aRow = $oQuery->row();
+
                 if ($aRow)
 				{
                     $mRes = new static(null, $aOptions);
@@ -1358,7 +1530,7 @@ abstract class Model
                 break;
 
             case 'several':
-                $aRows = $oSth->fetchAll(\PDO::FETCH_ASSOC);
+                $aRows = $oQuery->all();
                 $mRes  = array();
 
                 foreach ($aRows as $aRow)

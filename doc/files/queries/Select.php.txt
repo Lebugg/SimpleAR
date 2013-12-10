@@ -7,14 +7,26 @@ class Select extends \SimpleAR\Query\Where
 	private $_sOrderBy;
 	private $_aGroupBy		= array();
 
+    public function all()
+    {
+        $aRes = array();
+
+        while ($aOne = $this->row())
+        {
+            $aRes[] = $aOne;
+        }
+
+        return $aRes;
+    }
+
 	public function build($aOptions)
 	{
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;
 
 		$this->_aSelects = (isset($aOptions['filter']))
-			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias)
-			: $sRootModel::columnsToSelect(null, $sRootAlias)
+			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias, '_')
+			: $sRootModel::columnsToSelect(null, $sRootAlias, '_')
 			;
 
 		if (isset($aOptions['conditions']))
@@ -27,10 +39,10 @@ class Select extends \SimpleAR\Query\Where
 			$this->_analyzeOrderBy($aOptions['order_by']);
 		}
 
-		if (isset($aOptions['counts']))
-		{
-			$this->_analyzeCounts($aOptions['counts']);
-		}
+        if (isset($aOptions['with']))
+        {
+			$this->_with($aOptions['with']);
+        }
 
         $this->_arborescenceToSql();
 
@@ -51,22 +63,50 @@ class Select extends \SimpleAR\Query\Where
 		}
 	}
 
-	public function buildCount($aOptions)
-	{
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
+    public function row()
+    {
+        $aRes = array();
 
-		if (isset($aOptions['conditions']))
-		{
-            $this->_where($aOptions['conditions']);
-		}
+        $aReversedPK = $this->_oRootTable->isSimplePrimaryKey ? array('id' => 0) : array_flip((array) $this->_oRootTable->primaryKey);
+        $aResId      = null;
 
-        $this->_arborescenceToSql();
+        // We want one resulting object. But we may have to process several lines in case that eager
+        // load of related models have been made with has_many or many_many relations.
+        while (($aRow = $this->_oSth->fetch(\PDO::FETCH_ASSOC)) !== false)
+        {
+            $aParsedRow = $this->_parseRow($aRow);
 
-		$this->sql  = 'SELECT COUNT(*)';
-		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
-		$this->sql .= $this->_sWhere;
-	}
+            // New main object, we are finished.
+            if ($aRes && $aResId !== array_intersect_key($aParsedRow, $aReversedPK)) // Compare IDs
+            {
+                break;
+            }
+
+            // Same row but there is no linked model to fetch. Weird. Query must be not well
+            // constructed. (Lack of GROUP BY).
+            if ($aRes && !isset($aParsedRow['_WITH_']))
+            {
+                continue;
+            }
+
+            // Now, we have to combined new parsed row with our constructing result.
+
+            if ($aRes)
+            {
+                // Merge related models.
+                $aRes = array_merge_recursive_distinct($aRes, $aParsedRow);
+            }
+            else
+            {
+                $aRes   = $aParsedRow;
+
+                // Store result object ID for later use.
+                $aResId = array_intersect_key($aRes, $aReversedPK);
+            }
+        }
+
+        return $aRes;
+    }
 
 	private function _analyzeOrderBy($aOrderBy)
 	{
@@ -85,7 +125,7 @@ class Select extends \SimpleAR\Query\Where
 			{
 				if ($sAttribute[0] === '#')
 				{
-					$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $this->_sRootModel, $this->_aArborescence);
+					$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $this->_sRootModel, '_', $this->_aArborescence);
 					continue;
 				}
 
@@ -97,24 +137,12 @@ class Select extends \SimpleAR\Query\Where
 			$sAttribute = array_pop($aPieces);
 
 			// Add related model(s) in join arborescence.
-			$aArborescence =& $this->_aArborescence;
-			$sCurrentModel =  $this->_sRootModel;
-			foreach ($aPieces as $sRelation)
-			{
-				$oRelation = $sCurrentModel::relation($sRelation);
-				if (! isset($aArborescence[$sRelation]))
-				{
-					$aArborescence[$sRelation] = array();
-				}
-
-				// Go forward in arborescence.
-				$aArborescence =& $aArborescence[$sRelation];
-				$sCurrentModel =  $oRelation->lm->class;
-			}
+            list($aArborescence, $oRelation) = $this->_addToArborescence($aPieces);
+            $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
 
 			if ($sAttribute[0] === '#')
 			{
-				$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $sCurrentModel, $aArborescence);
+				$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $sCurrentModel, $oRelation->name, $aArborescence);
 				continue;
 			}
 
@@ -125,19 +153,15 @@ class Select extends \SimpleAR\Query\Where
         $this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
 	}
 
-	private function _analyzeCounts($aCounts)
-	{
-	}
-
 	private function _groupBy()
 	{
 		return $this->_aGroupBy ? ' GROUP BY ' . implode(',', $this->_aGroupBy) : '';
 	}
 
-	private function _orderByCount($sRelation, $sOrder, $sClass, &$aArborescence)
+	private function _orderByCount($sRelation, $sOrder, $sClass, $sResultAlias, &$aArborescence)
 	{
         // $sCountAlias: `#<Relation name>`;
-		$sCountAlias = '`' . $sRelation . '`';
+		$sCountAlias = '`' . $sResultAlias . '.' . $sRelation . '`';
 		$sRelation   = substr($sRelation, 1);
 
 		$oRelation   = $sClass::relation($sRelation);
@@ -155,21 +179,21 @@ class Select extends \SimpleAR\Query\Where
 			$sTableAlias = $oRelation->lm->alias;
 			$sKey		 = $oRelation->lm->column;
 
-			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'and');
+			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'and');
 		}
 		elseif ($oRelation instanceof \SimpleAR\ManyMany)
 		{
 			$sTableAlias = $oRelation->jm->alias;
 			$sKey		 = $oRelation->jm->from;
 
-			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null, 'or');
+			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'or');
 		}
 		elseif ($oRelation instanceof \SimpleAR\HasOne)
 		{
 			$sTableAlias = $oRelation->lm->alias;
 			$sKey		 = $oRelation->lm->column;
 
-			$aArborescence['@'][] = new \SimpleAR\Condition('id', null, null);
+			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null);
 		}
 		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
 		{
@@ -183,6 +207,48 @@ class Select extends \SimpleAR\Query\Where
 
 		return $sCountAlias . ' ' . $sOrder;
 	}
+
+    private function _parseRow($aRow)
+    {
+        $aRes = array();
+
+        foreach ($aRow as $sKey => $mValue)
+        {
+            $a = explode('.', $sKey);
+
+            if ($a[0] === '_')
+            {
+                // $a[1]: table column name.
+
+                $aRes[$a[1]] = $mValue;
+            }
+            else
+            {
+                // $a[0]: relation name.
+                // $a[1]: related table column name.
+
+                $aRes['_WITH_'][$a[0]][$a[1]] = $mValue;
+            }
+        }
+
+        return $aRes;
+    }
+
+    private function _with($m)
+    {
+        $a = (array) $m;
+
+        foreach($a as $sRelation)
+        {
+            list($a, $oRelation) = $this->_addToArborescence(explode('/', $sRelation));
+
+            $sLM = $oRelation->lm->class;
+            $this->_aSelects = array_merge(
+                $this->_aSelects,
+                $sLM::columnsToSelect($oRelation->filter, $oRelation->lm->alias, $sRelation)
+            );
+        }
+    }
 
 }
 
