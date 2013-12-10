@@ -34,18 +34,24 @@ function init()
     }
 
     spl_autoload_register(function($sClass) use ($oConfig) {
-        if (file_exists($sFile = $oConfig->modelDirectory . $sClass . '.php'))
+        foreach ($oConfig->modelDirectory as $sPath)
         {
-            include $sFile;
-
-            /**
-             * Loaded class might not be a subclass of Model. It can just be a
-             * independant model class located in same directory and loaded by this
-             * autoload function.
-             */
-            if (is_subclass_of($sClass, 'SimpleAR\Model'))
+            if (file_exists($sFile = $sPath . $sClass . '.php'))
             {
-                $sClass::init();
+                include $sFile;
+
+                /**
+                 * Loaded class might not be a subclass of Model. It can just be a
+                 * independant model class located in same directory and loaded by this
+                 * autoload function.
+                 */
+                if (is_subclass_of($sClass, 'SimpleAR\Model'))
+                {
+                    $sClass::init();
+                }
+
+                // We have included our model, stop here.
+                break;
             }
         }
     });
