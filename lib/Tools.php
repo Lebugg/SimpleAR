@@ -1,4 +1,11 @@
 <?php
+namespace SimpleAR;
+/**
+ * This file contains some useful functions that do not belong to a specific class of the project.
+ *
+ * @author Lebugg
+ */
+
 /**
  * array_merge_recursive does indeed merge arrays, but it converts values with duplicate
  * keys to arrays rather than overwriting the value in the first array with the duplicate
