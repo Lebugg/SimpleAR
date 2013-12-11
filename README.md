@@ -195,7 +195,7 @@ folder sounds good, for example).
     // Note trailing slash.
     $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
     
-    SimpleAR\init();
+    SimpleAR\init($oCfg);
     ```
 
 3. No, there is no third step; It's done!
