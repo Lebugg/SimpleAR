@@ -2,13 +2,13 @@
 namespace SimpleAR;
 
 /**
- * This file contains the ApiDuplicateKeyException class.
+ * This file contains the DuplicateKeyException class.
  *
- * @author Damien Launay
+ * @author Lebugg
  */
 
 /**
- * This class extends ApiException class.
+ * Specific exception for database unique constraint failure.
  *
  * @package core
  */

@@ -2,35 +2,22 @@
 namespace SimpleAR;
 
 /**
- * This file contains the DataBase class.
+ * This file contains the Database class.
  *
- * @author Damien Launay
+ * @author Lebugg
  */
 
 /**
- * This class abstracts a data base connection.
+ * This class abstracts a database connection.
  *
  * It follows a Singleton pattern. It is not vulnerable to SQL injection, every
  * request is processed by binding parameters to it. So use parameters binding
  * every time you can in your SQL strings.
  *
- * There is two way of executing a request:
- * 1) The quick way:
- *      $oDb->query($sQuery, $aParams);
- * 2) The two-steps way:
- *      $oDb->prepare($sQuery);
- *      $oDb->execute($aParams);
- *
- * The second method allows you to execute several times your query. Actually, 
- * you could call execute() after query(), but don't do this.
- *
- * Every request is cached is an PHP array. This way, if you try to execute the 
- * same request in different places of your script, it won't bother to call 
- * database to prepare the query a second time, it will simply fetch the 
- * corresponding prepared statement stored in caching array.
- *
- * @author Damien Launay
- * @package core
+ * How to execute a query:
+ *  ```php
+ *  $oDb->query($sQuery, $aParams);
+ *  ```
  */
 class Database
 {
@@ -46,7 +33,7 @@ class Database
      * The static instance of the class for Singleton
      * pattern.
      *
-     * @var DataBase
+     * @var Database
      */
     private static $_o = NULL;
 
@@ -59,13 +46,53 @@ class Database
      */
     private $_oSth;
 
+    /**
+     * Are we in debug mode?
+     *
+     * @var bool
+     */
     private $_bDebug;
+
+    /**
+     * Database name.
+     *
+     * @var string
+     */
     private $_sDatabase;
-    private $_aQueries    = array();
-    private $_aQueryTimes = array();
+
+    /**
+     * Executed query array.
+     *
+     * This array contains every executed queries. It is constructed as follows:
+     *  ```php
+     *  array(
+     *      // First query executed.
+     *      array(
+     *          'sql'  => <The SQL query string>,
+     *          'time' => <The query execution time in milliseconds>
+     *      ),
+     *      // Second query.
+     *      array(
+     *          ...
+     *      ),
+     *      ...,
+     *  )
+     *  ```
+     *
+     * You can retrieve this array with the following:
+     *  ```php
+     *  $oDbInstance->queries();
+     *  ```
+     *
+     * @see Database::queries()
+     * @var array
+     */
+    private $_aQueries = array();
 
     /**
      * Constructor.
+     *
+     * Private because we use Singleton pattern.
      */
     private function __construct()
     {
@@ -78,7 +105,8 @@ class Database
         $aOptions[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
         $aOptions[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
 
-        try {
+        try
+        {
             $this->_oPdo = new \PDO($sDsn, $aDsn['user'], $aDsn['password'], $aOptions);
         }
         catch (\PDOException $oEx)
@@ -91,25 +119,15 @@ class Database
     }
 
     /**
-     * Executes a prepared statement.
+     * __clone magic function.
      *
-     * @param array $aParams The parameters to bind to the SQL request.
-     *
-     * @return PDOStatement
+     * Private because we use Singleton pattern.
      */
-    public function execute($aParams = array())
-    {
-        if ($this->_oSth)
-        {
-            $this->_oSth->execute((array) $aParams);
-            return $this->_oSth;
-        }
+    private function __clone() {}
 
-        return false;
-    }
 
     /**
-     * Singleton implementation. Returns the Singleton instance.
+     * Singleton implementation. Returns the Database instance.
      *
      * @return DataBase
      */
@@ -136,32 +154,13 @@ class Database
     }
 
     /**
-     * Prepares an SQL statement.
-     *
-     * @param string $sQuery The SQL query to prepare.
-     *
-     * @return void
-     */
-    public function prepare($sQuery)
-    {
-        try
-        {
-            return $this->_oSth = $this->_oPdo->prepare($sQuery);
-        }
-        catch (\PDOException $oEx)
-        {
-            throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
-        }
-    }
-
-    /**
      * Executes a query.
      *
      * Actually, it prepares and executes the request in two steps. It provides
      * security against SQL injection.
      *
-     * @param string $sQuery The SQL query.
-     * @param array $aParams The query parameters.
+     * @param string $sQuery  The SQL query.
+     * @param array  $aParams The query parameters.
      *
      * @return PDOStatement
      */
@@ -169,18 +168,6 @@ class Database
     {
         if ($this->_bDebug)
         {
-            $sQueryDebug  = $sQuery;
-            $aParamsDebug = $aParams;
-
-            //$s = str_replace(array_pad(array(), count($aParams), '?'), $aParams, $sQuery);
-            $sQueryDebug = preg_replace_callback( '/\?/', function( $match) use( &$aParamsDebug) {
-                if (!is_array($aParamsDebug)) {
-                    $aParamsDebug = array($aParamsDebug);
-                }
-                return array_shift($aParamsDebug);
-            }, $sQueryDebug);
-
-            $this->_aQueries[] = $sQueryDebug;
             $time = microtime(TRUE);
         }
 
@@ -191,7 +178,21 @@ class Database
 
             if ($this->_bDebug)
             {
-                $this->_aQueryTimes[] = (microtime(TRUE) - $time) * 1000;
+                $sQueryDebug  = $sQuery;
+                $aParamsDebug = $aParams;
+
+                //$s = str_replace(array_pad(array(), count($aParams), '?'), $aParams, $sQuery);
+                $sQueryDebug = preg_replace_callback( '/\?/', function( $match) use( &$aParamsDebug) {
+                    if (!is_array($aParamsDebug)) {
+                        $aParamsDebug = array($aParamsDebug);
+                    }
+                    return array_shift($aParamsDebug);
+                }, $sQueryDebug);
+
+                $this->_aQueries[] = array(
+                    'sql'  => $sQueryDebug,
+                    'time' => (microtime(TRUE) - $time) * 1000;
+                );
             }
         }
         catch (\PDOException $oEx)
@@ -202,17 +203,24 @@ class Database
         return $oSth;
     }
 
-    // FOR CI.
+    /**
+     * Database name getter.
+     *
+     * @return string The current database name.
+     */
     public function database()
     {
         return $this->_sDatabase;
     }
+
+    /**
+     * Executed queries getter.
+     *
+     * @return array The executed queries.
+     * @see Database::$_aQueries for further information on how returned array is constructed.
+     */
     public function queries()
     {
         return $this->_aQueries;
-    }
-    public function queryTimes()
-    {
-        return $this->_aQueryTimes;
     }
 }

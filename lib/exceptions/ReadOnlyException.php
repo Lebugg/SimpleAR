@@ -4,16 +4,19 @@ namespace SimpleAR;
 /**
  * This file contains the ReadOnlyException class.
  *
- * @author Damien Launay
+ * @author Lebugg
  */
 
 /**
  * This exception is thrown by ReadOnlyModel.
- *
- * @package core
  */
 class ReadOnlyException extends Exception
 {
+    /**
+     * Constructor.
+     *
+     * @param string $sMethodName The method the user tried to use.
+     */
 	public function __construct($sMethodName)
 	{
 		parent::__construct('You cannot use "' . $sMethodName . '" method because your model extends ReadOnlyModel.');

@@ -2,20 +2,24 @@
 namespace SimpleAR;
 
 /**
- * This file contains the ApiResourceNotFoundException class.
+ * This file contains the RecordNotFoundException class.
  *
- * @author Damien Launay
+ * @author Lebugg
  */
 
 /**
- * This class extends ApiException class.
- *
- * @package core
+ * Specific exception for when a specific record has not been found in database.
  */
 class RecordNotFoundException extends Exception
 {
-	public function __construct($mPK)
+    /**
+     * Constructor.
+     *
+     * @param mixed $mId ID of Model instance that user tried to retrieve.
+     */
+	public function __construct($mId)
 	{
-		parent::__construct('Record not found with ID: "' . $mPK . '".');
+        $sId = (is_string($mId) ? $mId : '(' .  implode(', ', $mId) . ')');
+		parent::__construct('Record not found with ID: "' . $sId . '".');
 	}
 }
