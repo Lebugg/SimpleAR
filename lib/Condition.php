@@ -23,11 +23,6 @@ class Condition
     public $relation;
     public $table;
 
-    /**
-     * Used from to_conditions_* function in order to manually set SQL.
-     */
-    public $rawSql;
-
     public function __construct($sAttribute, $sOperator, $mValue, $sLogic = 'or')
     {
         $this->attribute = $sAttribute;
@@ -322,11 +317,6 @@ class Condition
 
     public function toSql($bUseAliases = true, $bToColumn = true)
     {
-        if ($this->rawSql !== NULL)
-        {
-            return $this->rawSql;
-        }
-
         if (!$bUseAliases && $this->table)
         {
             $this->table->alias = '';
