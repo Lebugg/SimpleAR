@@ -26,9 +26,9 @@ abstract class Where extends \SimpleAR\Query
      * @return array
      *      To be used as `list($aArborescence, $oLastRelation) = $this->_addToArborescence(<>);`
      */
-    protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER)
+    protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
     {
-        if (!$aRelationNames) { return; }
+        if (!$aRelationNames) { return array($this->_aArborescence, null); }
 
         // Add related model(s) in join arborescence.
         $aArborescence =& $this->_aArborescence;
@@ -45,6 +45,9 @@ abstract class Where extends \SimpleAR\Query
 
             // Go forward in arborescence.
             $aArborescence = &$aArborescence[$sRelation];
+
+            $aArborescence['_TYPE_'] = $iJoinType;
+
             $sCurrentModel = $oRelation->lm->class;
         }
 
@@ -67,21 +70,24 @@ abstract class Where extends \SimpleAR\Query
             }
         }
 
-		if ($oRelation instanceof \SimpleAR\HasMany)
-		{
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'and');
-		}
-		elseif ($oRelation instanceof \SimpleAR\ManyMany)
-		{
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'or');
-		}
-		elseif ($oRelation instanceof \SimpleAR\HasOne)
-		{
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null);
-		}
-        else
+        if ($bForceJoin)
         {
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('notid', null, null);
+            if ($oRelation instanceof \SimpleAR\HasMany)
+            {
+                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'and');
+            }
+            elseif ($oRelation instanceof \SimpleAR\ManyMany)
+            {
+                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'or');
+            }
+            elseif ($oRelation instanceof \SimpleAR\HasOne)
+            {
+                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null);
+            }
+            else
+            {
+                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('notid', null, null);
+            }
         }
 
         return array(&$aArborescence, $oRelation);
@@ -145,7 +151,10 @@ abstract class Where extends \SimpleAR\Query
 			$sAttribute = array_pop($aPieces);
 
 			// Add related model(s) into join arborescence.
-            list($aArborescence, $oRelation) = $this->_addToArborescence($aPieces);
+            $a = $this->_addToArborescence($aPieces);
+            $aArborescence =& $a[0];
+            $oRelation     =  $a[1];
+
             $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
 
             // Let the condition know which relation it is associated with.
@@ -218,13 +227,14 @@ abstract class Where extends \SimpleAR\Query
 			elseif ($aConditions)
 			{
                 // Already joined? Don't process it.
-                if (isset($this->_aJoinedTables[$iDepth][$oRelation->lm->table]))
+                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
                 {
 				    $sTmp  = $oRelation->joinAsLast($aConditions, $iDepth, $this->_aJoinTypes[$iJoinType]);
-                    $sRes .= $sTmp;
 
                     if ($sTmp)
                     {
+                        $sRes .= $sTmp;
+
                         // Add it to joined tables array.
                         $this->_aJoinedTables[$iDepth][] = $sTable;
                     }

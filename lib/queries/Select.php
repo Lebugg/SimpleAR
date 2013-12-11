@@ -173,6 +173,7 @@ class Select extends \SimpleAR\Query\Where
 		}
 		// Go forward in arborescence.
 		$aArborescence =& $aArborescence[$sRelation];
+        $aArborescence['_TYPE_'] = self::JOIN_INNER;
 
 		if ($oRelation instanceof \SimpleAR\HasMany)
 		{
@@ -197,7 +198,6 @@ class Select extends \SimpleAR\Query\Where
 		}
 		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
 		{
-			unset($aArborescence);
 			$sTableAlias = $oRelation->cm->alias;
 			$sKey		 = $oRelation->cm->column;
 		}
@@ -240,7 +240,7 @@ class Select extends \SimpleAR\Query\Where
 
         foreach($a as $sRelation)
         {
-            list($a, $oRelation) = $this->_addToArborescence(explode('/', $sRelation));
+            list($a, $oRelation) = $this->_addToArborescence(explode('/', $sRelation), self::JOIN_LEFT, true);
 
             $sLM = $oRelation->lm->class;
             $this->_aSelects = array_merge(

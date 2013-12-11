@@ -28,7 +28,7 @@ function init()
 
     if ($oConfig->convertDateToObject)
     {
-        require 'DateTime.php';
+        require 'lib/DateTime.php';
 
         DateTime::setFormat($oConfig->dateFormat);
     }
