@@ -22,10 +22,8 @@ require 'lib/exceptions/RecordNotFoundException.php';
 require 'lib/exceptions/ReadOnlyException.php';
 require 'lib/Tools.php';
 
-function init()
+function init($oConfig)
 {
-    $oConfig = Config::instance();
-
     if ($oConfig->convertDateToObject)
     {
         require 'lib/DateTime.php';
