@@ -38,7 +38,7 @@ class Select extends \SimpleAR\Query\Where
 
 		if (isset($aOptions['order_by']))
 		{
-			$this->_analyzeOrderBy($aOptions['order_by']);
+			$this->_analyzeOrderBy((array) $aOptions['order_by']);
 		}
 
 		if (isset($aOptions['group_by']))
@@ -163,6 +163,13 @@ class Select extends \SimpleAR\Query\Where
         // entries of static::$_aOrder will be overwritten.
         foreach (array_merge($this->_oRootTable->orderBy, $aOrderBy) as $sAttribute => $sOrder)
         {
+            // Allows for without ASC/DESC syntax.
+            if (is_int($sAttribute))
+            {
+                $sAttribute = $sOrder;
+                $sOrder     = 'ASC';
+            }
+
             $aPieces = explode('/', $sAttribute);
             //$iCount  = count($aPieces);
 
