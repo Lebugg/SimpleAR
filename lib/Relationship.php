@@ -6,29 +6,14 @@ abstract class Relationship
     protected static $_oDb;
     protected static $_oConfig;
 
-    protected static $_aArrayOperators = array(
-        '='  => 'IN',
-        '!=' => 'NOT IN',
-        '<'  => '< ANY',
-        '>'  => '> ANY',
-        '<=' => '<= ANY',
-        '>=' => '>= ANY',
-        'IN' => 'IN',
-        'NOT IN' => 'NOT IN',
-    );
-
     public $lm;
     public $cm;
 
-    public $onDeleteCascade = false;
-    public $filter          = null;
-    public $name;
 	public $conditions = array();
 	public $order      = array();
-
-    private static $_aDefaults = array(
-        'load_mode' => 'explicit',
-    );
+    public $filter          = null;
+    public $name;
+    public $onDeleteCascade = false;
 
     private static $_aTypeToClass = array(
         'belongs_to' => 'BelongsTo',
@@ -63,7 +48,13 @@ abstract class Relationship
 
     public abstract function condition($o);
 
-    public static function construct($sName, $a, $sCMClass)
+    public function deleteLinkedModel($mValue)
+    {
+        $oQuery = Query::delete(array($this->lm->attribute => $mValue), $this->lm->class);
+        $oQuery->run();
+    }
+
+    public static function forge($sName, $a, $sCMClass)
     {
         $s = 'SimpleAR\\' . self::$_aTypeToClass[$a['type']];
 
@@ -73,21 +64,6 @@ abstract class Relationship
         return $o;
     }
 
-    public static function constructConditionRightHandSide($iValuesCount)
-    {
-        return $iValuesCount > 1
-            ? '(' . str_repeat('?,', $iValuesCount - 1) . '?)'
-            : '?';
-    }
-
-    public function deleteLinkedModel($mValue)
-    {
-        $oQuery = Query::delete(array($this->lm->attribute => $mValue), $this->lm->class);
-        $oQuery->run();
-    }
-
-    public abstract function insert($oCM, $oLM);
-
     public function joinLinkedModel($iDepth, $sJoinType)
     {
 		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
@@ -96,19 +72,6 @@ abstract class Relationship
     public function joinAsLast($aConditions, $iDepth, $sJoinType)
     {
         return $this->joinLinkedModel($iDepth, $sJoinType);
-    }
-
-    protected static function _checkConditionValidity($o)
-    {
-        if (isset($o->value[1]) && !isset(self::$_aArrayOperators[$o->operator]))
-        {
-            throw new Exception('Operator "' . $o->operator . '" is not valid for multiple values.');
-        }
-
-        if ($o->logic != 'or' && $o->logic != 'and')
-        {
-            throw new Exception('Logical operator "' . $o->logic . '" is not valid.');
-        }
     }
 }
 
@@ -132,7 +95,11 @@ class BelongsTo extends Relationship
 
     public function condition($o)
     {
-        static::_checkConditionValidity($o);
+        // We check that condition makes sense.
+        if ($o->logic === 'and' && isset($o->value[1]))
+        {
+            throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
+        }
 
         // Get attribute column name.
         if ($o->attribute === 'id')
@@ -152,10 +119,6 @@ class BelongsTo extends Relationship
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
     }
 
-    public function insert($oCM, $oLM)
-    {
-    }
-
     public function joinAsLast($aConditions, $iDepth, $sJoinType)
     {
 		foreach ($aConditions as $o)
@@ -165,17 +128,6 @@ class BelongsTo extends Relationship
 			}
 		}
     }
-
-    protected static function _checkConditionValidity($o)
-    {
-        parent::_checkConditionValidity($o);
-
-        if ($o->logic === 'and' && isset($o->value[1]))
-        {
-            throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
-        }
-    }
-
 }
 
 class HasOne extends Relationship
@@ -198,28 +150,18 @@ class HasOne extends Relationship
 
     public function condition($o)
     {
-        static::_checkConditionValidity($o);
+        // We check that condition makes sense.
+        if ($o->logic === 'and' && isset($o->value[1]))
+        {
+            throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
+        }
+
 
         $mColumn = $this->lm->t->columnRealName($o->attribute);
         $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
-    }
-
-    public function insert($oCM, $oLM)
-    {
-    }
-
-    protected static function _checkConditionValidity($o)
-    {
-        parent::_checkConditionValidity($o);
-
-        if ($o->logic === 'and' && isset($o->value[1]))
-        {
-            throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
-        }
-
     }
 
 }
@@ -244,8 +186,6 @@ class HasMany extends Relationship
 
     public function condition($o)
     {
-        self::_checkConditionValidity($o);
-
         $oLM = $this->lm;
         $oCM = $this->cm;
 
@@ -316,10 +256,6 @@ class HasMany extends Relationship
         }
     }
 
-    public function insert($oCM, $oLM)
-    {
-    }
-
     public function joinAsLast($aConditions, $iDepth, $sJoinType)
     {
 		foreach ($aConditions as $o)
@@ -371,8 +307,6 @@ class ManyMany extends Relationship
 
     public function condition($o)
     {
-        self::_checkConditionValidity($o);
-
 		$mColumn = $this->lm->t->columnRealName($o->attribute);
 
         if ($o->logic === 'or')
@@ -450,16 +384,6 @@ class ManyMany extends Relationship
                     )";
 
         self::$_oDb->query($sQuery, $mValue);
-    }
-
-    public function insert($oCM, $oLM)
-    {
-        $sQuery = 'INSERT INTO ' . $this->jm->table . ' (' . $this->jm->from . ',' . $this->jm->to . ') VALUES (?,?)';
-        try {
-            self::$_oDb->query($sQuery, array($oCM->{$this->cm->attribute}, $oLM->{$this->lm->attribute}));
-        } catch(Exception $oEx) {
-            throw new DuplicateKeyException(get_class($oCM) . '(' . $oCM->id . ') is already linked to ' . get_class($oLM) . '(' . $oLM->id . ').');
-        }
     }
 
     public function joinLinkedModel($iDepth, $sJoinType)

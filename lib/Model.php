@@ -1016,7 +1016,7 @@ abstract class Model
 			// If relation is not yet initlialized, do it.
 			if (!is_object(static::$_aRelations[$sRelationName]))
 			{
-				static::$_aRelations[$sRelationName] = Relationship::construct($sRelationName, static::$_aRelations[$sRelationName], get_called_class());
+				static::$_aRelations[$sRelationName] = Relationship::forge($sRelationName, static::$_aRelations[$sRelationName], get_called_class());
 			}
 
 			// Return the Relationship object.

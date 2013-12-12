@@ -26,9 +26,9 @@ class Condition
     public function __construct($sAttribute, $sOperator, $mValue, $sLogic = 'or')
     {
         $this->attribute = $sAttribute;
-        $this->operator  = $sOperator ?: '=';
-        $this->logic     = $sLogic;
 
+        // Set operator and check its validity.
+        $this->operator  = $sOperator ?: '=';
         if (! isset(self::$_aOperators[$this->operator]))
         {
             $sMessage  = 'Unknown SQL operator: "' . $this->operator .  '".' .  PHP_EOL;
@@ -36,6 +36,17 @@ class Condition
 
             throw new Exception($sMessage);
         }
+
+        // Set logic and check its validity.
+        $this->logic     = $sLogic;
+        if (! ($this->logic === 'or' || $o->logic === 'and'))
+        {
+            throw new Exception('Logical operator "' . $o->logic . '" is not valid.');
+        }
+
+        // Set value.
+        // $mValue can be: an object, a scalar value or an array.
+        // If $mValue is an array, it can contain: objects, scalar values or 1-dimension array.
 
         // Specific case: applying (array) on object would transform it, not wrap it.
         if (is_object($mValue))
