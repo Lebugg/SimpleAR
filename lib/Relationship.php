@@ -9,6 +9,29 @@ namespace SimpleAR;
 /**
  * This class modelizes a Relationship between two Models.
  *
+ * There are four different possible relations: BelongsTo, HasOne, HasMany and ManyMany.
+ *
+ * Examples:
+ * ---------
+ *
+ * * BelongsTo:
+ * A Beer is brewed by a Brewery. In database, you would have a `brewery_id` in `beer` table. So a
+ * Beer *belongs to* a Brewery.
+ * 
+ * * HasMany
+ * At the opposite, a Brewery brews one or several beers, maybe thousands (want to go there !).
+ * So, a Brewery *has many* Beers.
+ *
+ * * HasOne
+ * Someone owns the Brewery, let's say, the BrewerInChief. According to where you want to put the
+ * dependancy relation, you have a different relationship. If in `brewery` table, you define a
+ * `owner_id`, then the Brewery *belongs to* the BrewerInChief. Conversely, if you define a
+ * `brewery_id` in the `brewersinchief` table, then a Brewery *has one* BrewerInChief and the
+ * BrewerInChief *belongs to* a Brewery.
+ * 
+ * * ManyMany
+ * A beer can be drunk by several drinkers and drinkers can drink several different beers (Sure!).
+ * So, we end with a *many to many* relationship.
  */
 abstract class Relationship
 {
