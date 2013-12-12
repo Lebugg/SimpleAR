@@ -57,28 +57,21 @@ class Table
      */
     public function columnRealName($mKey)
     {
-        if (is_string($mKey))
-        {
-            return $mKey === 'id'
-                ? $this->primaryKeyColumns
-                : $this->columns[$mKey]
-                ;
-        }
-
-        // Else it is an array.
         $aRes = array();
-        foreach ($mKey as $sKey)
+        foreach ((array) $mKey as $sKey)
         {
             $aRes[] = $sKey === 'id'
                 ? $this->primaryKeyColumns
                 : $this->columns[$sKey]
                 ;
         }
-        return $aRes;
+
+        // Return a string if only one element.
+        return isset($aRes[1]) ? $aRes : $aRes[0];
     }
 
     public function hasColumn($s)
     {
-        return $s == 'id' || isset($this->columns[$s]);
+        return $s == 'id' || (isset($this->columns[$s]) || array_key_exists($this->columns[$s]));
     }
 }

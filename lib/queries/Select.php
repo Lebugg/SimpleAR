@@ -180,21 +180,21 @@ class Select extends \SimpleAR\Query\Where
 			$sTableAlias = $oRelation->lm->alias;
 			$sKey		 = $oRelation->lm->column;
 
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'and');
+            $aArborescence['_FORCE_'] = true;
 		}
 		elseif ($oRelation instanceof \SimpleAR\ManyMany)
 		{
 			$sTableAlias = $oRelation->jm->alias;
 			$sKey		 = $oRelation->jm->from;
 
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'or');
+            $aArborescence['_FORCE_'] = true;
 		}
 		elseif ($oRelation instanceof \SimpleAR\HasOne)
 		{
 			$sTableAlias = $oRelation->lm->alias;
 			$sKey		 = $oRelation->lm->column;
 
-			$aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null);
+            $aArborescence['_FORCE_'] = true;
 		}
 		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
 		{

@@ -64,31 +64,13 @@ abstract class Where extends \SimpleAR\Query
             {
                 $aArborescence['_TYPE_'] = $iJoinType;
             }
-            elseif ($iCurrentType / 10 === $iJoinType / 10)
+            elseif ($iCurrentType !== $iJoinType && $iCurrentType / 10 === $iJoinType / 10)
             {
                 $aArborescence['_TYPE_'] = self::JOIN_INNER;
             }
         }
 
-        if ($bForceJoin)
-        {
-            if ($oRelation instanceof \SimpleAR\HasMany)
-            {
-                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'and');
-            }
-            elseif ($oRelation instanceof \SimpleAR\ManyMany)
-            {
-                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null, 'or');
-            }
-            elseif ($oRelation instanceof \SimpleAR\HasOne)
-            {
-                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('id', null, null);
-            }
-            else
-            {
-                $aArborescence['_CONDITIONS_'][] = new \SimpleAR\Condition('notid', null, null);
-            }
-        }
+        $aArborescence['_FORCE_'] = $bForceJoin;
 
         return array(&$aArborescence, $oRelation);
     }
@@ -194,7 +176,6 @@ abstract class Where extends \SimpleAR\Query
 	private function _joinArborescenceToSql($aArborescence, $sCurrentModel, $iDepth = 1)
 	{
 		$sRes = '';
-
         // Construct joined table array according to depth.
         if (! isset($this->_aJoinedTables[$iDepth]))
         {
@@ -208,6 +189,7 @@ abstract class Where extends \SimpleAR\Query
 
             $aConditions =  isset($aValues['_CONDITIONS_']) ? $aValues['_CONDITIONS_'] : false; unset($aValues['_CONDITIONS_']);
             $iJoinType   =  isset($aValues['_TYPE_'])       ? $aValues['_TYPE_']       : false; unset($aValues['_TYPE_']);
+            $bForce      =  isset($aValues['_FORCE_'])      ? $aValues['_FORCE_']      : false; unset($aValues['_FORCE_']);
 
 			// If relation arborescence continues, process it.
 			if ($aValues)
@@ -223,13 +205,24 @@ abstract class Where extends \SimpleAR\Query
 
 				$sRes .= $this->_joinArborescenceToSql($aValues, $oRelation->lm->class, $iDepth + 1);
 			}
+            // If we are forced to join relation, do it.
+            elseif ($bForce)
+            {
+                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
+                {
+                    $sRes .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$iJoinType]);
+
+                    // Add it to joined tables array.
+                    $this->_aJoinedTables[$iDepth][] = $sTable;
+                }
+            }
             // If there are conditions to apply on linked model, we may have to join it.
 			elseif ($aConditions)
 			{
                 // Already joined? Don't process it.
                 if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
                 {
-				    $sTmp  = $oRelation->joinAsLast($aConditions, $iDepth, $this->_aJoinTypes[$iJoinType]);
+                    $sTmp = $oRelation->joinAsLast($aConditions, $iDepth, $this->_aJoinTypes[$iJoinType]);
 
                     if ($sTmp)
                     {
