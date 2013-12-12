@@ -20,7 +20,7 @@ class Update extends \SimpleAR\Query\Where
         $this->values    = array_merge($aOptions['values'], $this->values);
 
 		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
-        $this->sql .= implode(' = ?, ', $this->_aColumns) . ' = ?';
+        $this->sql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
 		$this->sql .= $this->_sWhere;
 	}
 }

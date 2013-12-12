@@ -3,7 +3,7 @@ namespace SimpleAR;
 
 class Condition
 {
-    protected static $_aArrayOperators = array(
+    protected static $_aOperators = array(
         '='  => 'IN',
         '!=' => 'NOT IN',
         '<'  => '< ANY',
@@ -27,41 +27,44 @@ class Condition
     {
         $this->attribute = $sAttribute;
         $this->operator  = $sOperator ?: '=';
-        $this->value     = $mValue;
         $this->logic     = $sLogic;
 
-        if (! isset(self::$_aArrayOperators[$this->operator]))
+        if (! isset(self::$_aOperators[$this->operator]))
         {
             $sMessage  = 'Unknown SQL operator: "' . $this->operator .  '".' .  PHP_EOL;
-            $sMessage .= 'List of available operators: ' . implode(', ', array_keys(self::$_aArrayOperators)); 
+            $sMessage .= 'List of available operators: ' . implode(', ', array_keys(self::$_aOperators)); 
+
             throw new Exception($sMessage);
         }
 
-        if (is_array($this->value))
+        // Specific case: applying (array) on object would transform it, not wrap it.
+        if (is_object($mValue))
         {
-            if (! $this->value)
-            {
-                throw new Exception('Invalid condition value "' . $this->value . '" for attribtue "' . $this->attribtue . '".');
-            }
-
-            // Convert objects to object ID's.
-            if (is_object($this->value[0]))
-            {
-                for ($i = 0, $iCount = count($this->value) ; $i < $iCount ; ++$i)
-                {
-                    $this->value[$i] = $this->value[$i]->id;
-                }
-
-            }
-
-            $this->operator = self::arrayfyOperator($this->operator);
+            $this->value = $mValue->id;
         }
         else
         {
-            // Concert objects to object ID's.
-            if (is_object($this->value))
+            $this->value = array();
+            // Extract IDs if objects are passed.
+            foreach ((array) $mValue as $mVal)
             {
-                $this->value = $this->value->id;
+                $this->value[] = is_object($mVal) ? $mVal->id : $mVal;
+            }
+
+            if (!isset($this->value[0]))
+            {
+                throw new Exception('Invalid condition value: ' . $mValue . '.');
+            }
+
+            // Several values, we have to *arrayfy* the operator.
+            if (isset($this->value[1]))
+            {
+                $this->operator = self::$_aOperators[$this->operator];
+            }
+            // Else, we do not need an array.
+            else
+            {
+                $this->value = $this->value[0];
             }
         }
     }
@@ -105,16 +108,12 @@ class Condition
         return array($sSql, $aValues);
     }
 
-    public static function arrayfyOperator($sOperator)
-    {
-        if (! isset(self::$_aArrayOperators[$sOperator]))
-        {
-            throw new Exception('Operator "' . $sOperator . '" can not be "arrayfied".');
-        }
-
-        return self::$_aArrayOperators[$sOperator];
-    }
-
+    /**
+     * This function is used to format value array for PDO.
+     *
+     * @return array
+     *      Condition values.
+     */
     public function flattenValues()
     {
         if (is_array($this->value))
@@ -135,54 +134,74 @@ class Condition
     }
 
 
-    public static function leftHandSide($mAttributes, $oTable, $bToColumn = true, $sTableAliasSuffix = '')
+    /**
+     * Creates the left hand side of an SQL condition.
+     *
+     * @param string|array  $mColumns    One or several attributes the condition is made on.
+     * @param string|Table  $oTable      Table object needed to get the alias or to transform
+     * attributes to column. If it is a string, it the table alias. It *must* be a Table object if
+     * $bToColumn is true.
+     * @param bool          $bToColumn  Should passed attributes have to be transformed to columns?
+     * @param string        $sTableAliasSuffix A optional suffix to add to the table alias (i.e. An
+     * number to indicate nested depth.)
+     *
+     * @return string A valid left hand side SQL condition.
+     */
+    public static function leftHandSide($mColumns, $oTable, $bToColumn = true, $sTableAliasSuffix = '')
     {
-        $mColumns = $bToColumn
-            ? $oTable->columnRealName($mAttributes)
-            : $mAttributes
-            ;
-
         // Construct alias.
         $sTableAlias = (is_object($oTable) ? $oTable->alias : $oTable) .  $sTableAliasSuffix;
+
+        // Add dot to prevent additional concatenations in foreach.
         if ($sTableAlias !== '')
         {
             $sTableAlias .= '.';
         }
 
-        if (is_array($mColumns))
+        $a = array();
+        foreach ((array) $mColumns as $sColumn)
         {
-            $a = array();
-            foreach ($mColumns as $sColumn)
-            {
-                $a[] = $sTableAlias . $sColumn;
-            }
+            $a[] = $sTableAlias . $sColumn;
+        }
 
-            return '(' . implode(',', $a) . ')';
-        }
-        else
-        {
-            return $sTableAlias . $mColumns;
-        }
+        // If several conditions, we have to wrap them with brackets in order to assure about
+        // conditional operators priority.
+        return isset($a[1]) ? '(' . implode(',', $a) . ')' : $a[0];
     }
 
+    /**
+     * Creates the left hand side of an SQL condition.
+     *
+     * Condition is constructed with '?'. So values must be bind to query in some other place.
+     * @see Condition::flattenValues()
+     *
+     * @return string A valid right hand side SQL condition.
+     */
     public static function rightHandSide($mValue)
     {
         $iCount = count($mValue);
 
-        // $mValue is a multidimensional array. Actually it is a array of
+        // $mValue is a multidimensional array. Actually, it is a array of
         // tuples.
-        if (is_array($mValue[0]))
+        if (is_array($mValue))
         {
-            // Tuple cardinal.
-            $iTupleSize = count($mValue[0]);
-            
-            $sTuple = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
-            $sRes   = '(' . str_repeat($sTuple . ',', $iCount - 1) . $sTuple .  ')';
+            if (is_array($mValue[0]))
+            {
+                // Tuple cardinal.
+                $iTupleSize = count($mValue[0]);
+                
+                $sTuple = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
+                $sRes   = '(' . str_repeat($sTuple . ',', $iCount - 1) . $sTuple .  ')';
+            }
+            // Simple array.
+            else
+            {
+                $sRes = '(' . str_repeat('?,', $iCount - 1) . '?)';
+            }
         }
-        // Simple array.
         else
         {
-            $sRes = '(' . str_repeat('?,', $iCount - 1) . '?)';
+            $sRes = '?';
         }
 
         return $sRes;
@@ -192,35 +211,35 @@ class Condition
      *
 	 * We accept two forms of conditions:
 	 * 1) Basic conditions:
-     * <code>
+     *  ```php
 	 *      array(
 	 *          'my/attribute' => 'myValue',
 	 *          ...
 	 *      )
-     * </code>
+     *  ```
 	 * 2) Conditions with operator:
-     * <code>
+     *  ```php
 	 *      array(
 	 *          array('my/attribute', 'myOperator', 'myValue'),
 	 *          ...
 	 *      )
-     * </code>
+     *  ```
      *
      * Of course, you can combine both form in a same condition array.
      *
      * By default, conditions are linked with a AND operator but you can use an
      * OR by specifying it in condition array:
-     * <code>
+     *  ```php
 	 *      array(
 	 *          'attr1' => 'val1',
      *          'OR',
      *          'attr2' => 'val2',
      *          'attr3' => 'val3,
 	 *      )
-     * </code>
+     *  ```
      *
      * This correspond to the following exhaustive array:
-     * <code>
+     *  ```php
 	 *      array(
 	 *          'attr1' => 'val1',
      *          'OR',
@@ -228,10 +247,10 @@ class Condition
      *          'AND',
      *          'attr3' => 'val3,
 	 *      )
-     * </code>
+     *  ```
 	 *
      * You can nest condition arrays. Example:
-     * <code>
+     *  ```php
 	 *      array(
 	 *          array(
 	 *              'attr1' => 'val1',
@@ -243,10 +262,10 @@ class Condition
      *              'attr1' => 'val4,
 	 *          )
 	 *      )
-     * </code>
+     *  ```
      *
      * So we come with this condition array syntax tree:
-     * <code>
+     *  ```php
      *  condition_array:
      *      array(
      *          [condition | condition_array | (OR | AND)] *
@@ -261,9 +280,13 @@ class Condition
      *  attribute: <string>
      *  operator: <string>
      *  value: <mixed>
-     * </code>
+     *  ```
      *
-	 * Operator: =, !=, IN, NOT IN, >, <, <=, >=.
+	 * Operators: =, !=, IN, NOT IN, >, <, <=, >=.
+     *
+     * @param array $aArray The condition array to parse.
+     *
+     * @return array A well formatted condition array.
 	 */
     public static function parseConditionArray($aArray)
     {
@@ -315,6 +338,14 @@ class Condition
         return $aRes;
     }
 
+    /**
+     * This function transforms the Condition object into SQL.
+     *
+     * @param bool $bUseAliases Should table aliases be used?
+     * @param bool $bToColumn   Should attributes be transformed to columns?
+     *
+     * @retutn string A valid SQL condition string.
+     */
     public function toSql($bUseAliases = true, $bToColumn = true)
     {
         if (!$bUseAliases && $this->table)
@@ -335,7 +366,8 @@ class Condition
             }
             */
 
-            $sLHS = self::leftHandSide($mAttribute, $this->table, $bToColumn);
+            $mColumns = $this->table->columnRealName($mAttribute);
+            $sLHS = self::leftHandSide($mColumns, $this->table, $bToColumn);
             $sRHS = self::rightHandSide($this->value);
 
             return $sLHS . ' ' . $this->operator . ' ' . $sRHS;

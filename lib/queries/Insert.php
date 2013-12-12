@@ -19,7 +19,7 @@ class Insert extends \SimpleAR\Query
         }
 
         // INTO clause.
-        $this->sql  = 'INSERT INTO ' . $sTable . '(`' . implode('`,`', $aColumns) . '`) VALUES';
+        $this->sql  = 'INSERT INTO ' . $sTable . '(`' . implode('`,`', (array) $aColumns) . '`) VALUES';
 
         // VALUES clause.
         $iCount = count($this->values);

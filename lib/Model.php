@@ -785,18 +785,10 @@ abstract class Model
      */
     public function exclude($mKey)
     {
-        if (!is_array($mKey))
+        foreach ((array) $mKey as $sKey)
         {
-            static::$_aExcludedKeys[] = $mKey;
-			unset($this->_aAttributes[$mKey]);
-        }
-        else
-        {
-			foreach ($mKey as $sKey)
-			{
-				static::$_aExcludedKeys[] = $sKey;
-				unset($this->_aAttributes[$sKey]);
-			}
+            static::$_aExcludedKeys[] = $sKey;
+            unset($this->_aAttributes[$sKey]);
         }
 
         return $this;
@@ -805,29 +797,31 @@ abstract class Model
     /**
      * Tests if a model instance represented by its ID exists.
      *
-     * @param int $iId The ID to test on.
+     * @param mixed $m              Can be either the ID to test on or a condition array.
+     * @param bool  $bByPrimaryKey  Should $m be considered as a primary key or as a condition
+     * array?
      *
      * @return bool True if it exists, false otherwise.
      */
-    public static function exists($m)
+    public static function exists($m, $bByPrimaryKey = true)
     {
-        // It is an associative array. We want to test record existence by an
-        // array of condtitions.
-        if (is_array($m) && !isset($m[0]))
+        // Classic exists(): By primary key.
+        if ($byPrimaryKey)
         {
-            return (bool) static::find('first', array('conditions' => $m));
+            try
+            {
+                static::findByPK($m);
+                return true;
+            }
+            catch (RecordNotFoundException $oEx)
+            {
+                return false;
+            }
         }
 
-        // Classic exists() (By primary key.)
-        try
-        {
-            static::findByPK($m);
-            return true;
-        }
-        catch (RecordNotFoundException $oEx)
-        {
-            return false;
-        }
+        // We want to test record existence by an array of condtitions.
+        return (bool) static::find('first', array('conditions' => $m));
+
     }
 
 
@@ -851,6 +845,25 @@ abstract class Model
         return $this;
     }
 
+    /**
+     * General finder method.
+     *
+     * This methods allows you to retrieve models from database. You can process several differents
+     * finds. First parameter specifies find type:
+     *
+     * * "all": Retrieve several Model instances. Function will return an array;
+     * * "first": Retrieve first found Model. Function will return a Model instance;
+     * * "last": Retrieve last found Model. Function will return a Model instance;
+     * * "count": Return number of found Models.
+     * 
+     * @param mixed $mFirst Can be a ID to search on (shorthand for `Model::findByPK()`) or the find
+     * type. For this to be considered as an ID, you must pass an integer or an array.
+     * @param array $aOptions An option array to find models.
+     *
+     * @return mixed
+     *
+     * @throws Exception When first parameter is invalid.
+     */
     public static function find($mFirst, $aOptions = array())
     {
         // Find by primary key. It can be an array when using compound primary 
