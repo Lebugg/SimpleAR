@@ -70,7 +70,7 @@ class Table
         return isset($aRes[1]) ? $aRes : $aRes[0];
     }
 
-    public function hasColumn($s)
+    public function hasAttribute($s)
     {
         return $s == 'id' || (isset($this->columns[$s]) || array_key_exists($this->columns[$s]));
     }

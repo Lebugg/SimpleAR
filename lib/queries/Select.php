@@ -7,6 +7,8 @@ class Select extends \SimpleAR\Query\Where
 	private $_sOrderBy;
 	private $_aGroupBy		= array();
 
+    private $_aPendingRow = false;
+
     public function all()
     {
         $aRes = array();
@@ -37,6 +39,11 @@ class Select extends \SimpleAR\Query\Where
 		if (isset($aOptions['order_by']))
 		{
 			$this->_analyzeOrderBy($aOptions['order_by']);
+		}
+
+		if (isset($aOptions['group_by']))
+		{
+			$this->_analyzeGroupBy((array) $aOptions['group_by']);
 		}
 
         if (isset($aOptions['with']))
@@ -72,13 +79,20 @@ class Select extends \SimpleAR\Query\Where
 
         // We want one resulting object. But we may have to process several lines in case that eager
         // load of related models have been made with has_many or many_many relations.
-        while (($aRow = $this->_oSth->fetch(\PDO::FETCH_ASSOC)) !== false)
-        {
+        while (
+               ($aRow = $this->_aPendingRow)                    !== false ||
+               ($aRow = $this->_oSth->fetch(\PDO::FETCH_ASSOC)) !== false
+        ) {
+
+            // Prevent infinite loop.
+            if ($this->_aPendingRow) { $this->_aPendingRow = false; }
+
             $aParsedRow = $this->_parseRow($aRow);
 
             // New main object, we are finished.
             if ($aRes && $aResId !== array_intersect_key($aParsedRow, $aReversedPK)) // Compare IDs
             {
+                $this->_aPendingRow = $aRow;
                 break;
             }
 
@@ -107,6 +121,38 @@ class Select extends \SimpleAR\Query\Where
 
         return $aRes;
     }
+
+	private function _analyzeGroupBy($aGroupBy)
+	{
+        $aRes		= array();
+		$sRootAlias = $this->_oRootTable->alias;
+
+        foreach ($aGroupBy as $sAttribute)
+        {
+            $aPieces = explode('/', $sAttribute);
+
+			// One or several attributes of a related model.
+            $aAttributes = explode(',', array_pop($aPieces));
+
+			// Add related model(s) in join arborescence.
+            $a = $this->_addToArborescence($aPieces);
+            $aArborescence =& $a[0];
+            $oRelation     =  $a[1];
+
+            $sResultAlias    = $oRelation ? $oRelation->name  : '_';
+            $oTableToGroupOn = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
+
+            foreach ((array) $aAttributes as $sAttribute)
+            {
+                if (! $oTableToGroupOn->hasAttribute($sAttribute))
+                {
+                    throw new Exception('Attribute "' . $sAttribute . '" does not exist for model "' . $oTableToGroupOn->modelBaseName . '" in group_by option.');
+                }
+
+                $this->_aGroupBy[] = '`' . $sResultAlias . '.' .  $sAttribute . '`';
+            }
+        }
+	}
 
 	private function _analyzeOrderBy($aOrderBy)
 	{
@@ -171,7 +217,7 @@ class Select extends \SimpleAR\Query\Where
 			}
             else
             {
-                $oCurrentTable = $oRelation ? $oRelation->lm->t : call_user_func(array($this->_sRootModel, 'table'));
+                $oCurrentTable = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
 
                 $aRes[] = $oCurrentTable->alias . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
             }
