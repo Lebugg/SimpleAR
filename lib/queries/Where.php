@@ -22,13 +22,24 @@ abstract class Where extends \SimpleAR\Query
     );
 
     /**
+     * Add a relation array into the join arborescence of the query.
      *
+     * @param array $aRelationNames Array containing relations ordered by depth to add to join
+     * arborescence.
+     * @param int $iJoinType The type of join to use to join this relation. Default: inner join.
+     * @param bool $bForceJoin Does relation *must* be joined?
+     *
+     * To be used as:
+     *  ```php
+     *  $a = $this->_addToArborescence(...);
+     *  $aArborescence = &$a[0];
+     *  $oRelation     = $a[1];
+     *  ```
      * @return array
-     *      To be used as `list($aArborescence, $oLastRelation) = $this->_addToArborescence(<>);`
      */
     protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
     {
-        if (!$aRelationNames) { return array($this->_aArborescence, null); }
+        if (!$aRelationNames) { return array(&$this->_aArborescence, null); }
 
         // Add related model(s) in join arborescence.
         $aArborescence =& $this->_aArborescence;

@@ -118,8 +118,9 @@ class Select extends \SimpleAR\Query\Where
         foreach (array_merge($this->_oRootTable->orderBy, $aOrderBy) as $sAttribute => $sOrder)
         {
             $aPieces = explode('/', $sAttribute);
-            $iCount  = count($aPieces);
+            //$iCount  = count($aPieces);
 
+            /*
 			// Attribute of root model.
 			if ($iCount === 1)
 			{
@@ -132,22 +133,48 @@ class Select extends \SimpleAR\Query\Where
 				$aRes[] = $sRootAlias . '.' .  $this->_oRootTable->columnRealName($sAttribute) . ' ' . $sOrder;
 				continue;
 			}
+            */
 
 			// Attribute of a related model.
 			$sAttribute = array_pop($aPieces);
 
+            // Result alias will be the last-but-one relation name.
+            if ($aPieces)
+            {
+                $sResultAlias = end($aPieces); reset($aPieces);
+            }
+            // Or the root model symbol.
+            else
+            {
+                $sResultAlias = '_';
+            }
+
+
+            // If the order is made on a relation count, re-push the relation name in the relation
+            // array.
+			if ($sAttribute[0] === '#')
+            {
+                // Without "#".
+                array_push($aPieces, substr($sAttribute, 1));
+            }
+
 			// Add related model(s) in join arborescence.
-            list($aArborescence, $oRelation) = $this->_addToArborescence($aPieces);
-            $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
+            $a = $this->_addToArborescence($aPieces);
+            $aArborescence =& $a[0];
+            $oRelation     =  $a[1];
 
 			if ($sAttribute[0] === '#')
 			{
-				$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $sCurrentModel, $oRelation->name, $aArborescence);
-				continue;
-			}
+                $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_sRootModel;
 
-			$oCurrentTable = $sCurrentModel::table();
-			$aRes[] = $oCurrentTable->alias . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
+				$aRes[] = $this->_orderByCount($oRelation, $sOrder, $oTableToGroupOn, $sResultAlias, $aArborescence);
+			}
+            else
+            {
+                $oCurrentTable = $oRelation ? $oRelation->lm->t : call_user_func(array($this->_sRootModel, 'table'));
+
+                $aRes[] = $oCurrentTable->alias . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
+            }
         }
 
         $this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
@@ -158,24 +185,14 @@ class Select extends \SimpleAR\Query\Where
 		return $this->_aGroupBy ? ' GROUP BY ' . implode(',', $this->_aGroupBy) : '';
 	}
 
-	private function _orderByCount($sRelation, $sOrder, $sClass, $sResultAlias, &$aArborescence)
+	private function _orderByCount($oRelation, $sOrder, $oTableToGroupOn, $sResultAlias, &$aArborescence)
 	{
-        // $sCountAlias: `#<Relation name>`;
-		$sCountAlias = '`' . $sResultAlias . '.' . $sRelation . '`';
-		$sRelation   = substr($sRelation, 1);
+        // $sCountAlias: `<result alias>.#<relation name>`;
+		$sCountAlias = '`' . $sResultAlias . '.#' . $oRelation->name . '`';
 
-		$oRelation   = $sClass::relation($sRelation);
-		$oTable		 = $sClass::table();
-
-		if (! isset($aArborescence[$sRelation]))
-		{
-			$aArborescence[$sRelation] = array();
-		}
-		// Go forward in arborescence.
-		$aArborescence =& $aArborescence[$sRelation];
         $aArborescence['_TYPE_'] = self::JOIN_INNER;
 
-		if ($oRelation instanceof \SimpleAR\HasMany)
+		if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
 		{
 			$sTableAlias = $oRelation->lm->alias;
 			$sKey		 = $oRelation->lm->column;
@@ -189,21 +206,14 @@ class Select extends \SimpleAR\Query\Where
 
             $aArborescence['_FORCE_'] = true;
 		}
-		elseif ($oRelation instanceof \SimpleAR\HasOne)
-		{
-			$sTableAlias = $oRelation->lm->alias;
-			$sKey		 = $oRelation->lm->column;
-
-            $aArborescence['_FORCE_'] = true;
-		}
-		elseif ($oRelation instanceof \SimpleAR\BelongsTo)
+		else // BelongsTo
 		{
 			$sTableAlias = $oRelation->cm->alias;
 			$sKey		 = $oRelation->cm->column;
 		}
 
 		$this->_aSelects[] = 'COUNT(' . $sTableAlias . '.' .  $sKey . ') AS ' . $sCountAlias;
-		$this->_aGroupBy[] = $oTable->alias . '.' . $oTable->primaryKey;
+		$this->_aGroupBy[] = $oTableToGroupOn->alias . '.' . $oTableToGroupOn->primaryKey;
 
 		return $sCountAlias . ' ' . $sOrder;
 	}

@@ -4,6 +4,7 @@ namespace SimpleAR\Query;
 class Update extends \SimpleAR\Query\Where
 {
     protected static $_isCriticalQuery = true;
+
     protected $_bUseAlias = false;
 
 	public function build($aOptions)
