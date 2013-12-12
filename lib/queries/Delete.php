@@ -1,11 +1,32 @@
 <?php
 namespace SimpleAR\Query;
+/**
+ * This file contains the Update class.
+ *
+ * @author Lebugg
+ */
+
+/**
+ * This class handles UPDATE statements.
+ */
 
 class Delete extends \SimpleAR\Query\Where
 {
-    protected static $_isCriticalQuery = true;
+    /**
+     * This query is critical.
+     *
+     * @var bool true
+     */
+    protected static $_bIsCriticalQuery = true;
 
-	public function build($aConditions)
+    /**
+     * This function builds the query.
+     *
+     * @param array $aOptions The option array.
+     *
+     * @return void
+     */
+	public function _build($aConditions)
 	{
         $this->_where($aConditions);
 

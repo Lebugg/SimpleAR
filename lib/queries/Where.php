@@ -1,6 +1,14 @@
 <?php
 namespace SimpleAR\Query;
+/**
+ * This file contains the Where class.
+ *
+ * @author Lebugg
+ */
 
+/**
+ * This class is the super classe for queries that handle conditions (WHERE statements).
+ */
 abstract class Where extends \SimpleAR\Query
 {
 	protected $_aArborescence = array();

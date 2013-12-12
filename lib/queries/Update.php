@@ -1,13 +1,38 @@
 <?php
 namespace SimpleAR\Query;
+/**
+ * This file contains the Update class.
+ *
+ * @author Lebugg
+ */
 
+/**
+ * This class handles UPDATE statements.
+ */
 class Update extends \SimpleAR\Query\Where
 {
-    protected static $_isCriticalQuery = true;
+    /**
+     * This query is critical.
+     *
+     * @var bool true
+     */
+    protected static $_bIsCriticalQuery = true;
 
+    /**
+     * Never use aliases.
+     *
+     * @var bool
+     */
     protected $_bUseAlias = false;
 
-	public function build($aOptions)
+    /**
+     * This function builds the query.
+     *
+     * @param array $aOptions The option array.
+     *
+     * @return void
+     */
+	public function _build($aOptions)
 	{
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;

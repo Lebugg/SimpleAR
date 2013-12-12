@@ -1,14 +1,48 @@
 <?php
 namespace SimpleAR\Query;
+/**
+ * This file contains the Select class.
+ *
+ * @author Lebugg
+ */
 
+/**
+ * This class handles SELECT statements.
+ */
 class Select extends \SimpleAR\Query\Where
 {
+    /**
+     * Contains all attributes to fetch.
+     *
+     * @var array
+     */
 	private $_aSelects		= array();
+
+    /**
+     * Contains ORDER BY clause.
+     *
+     * @var string
+     */
 	private $_sOrderBy;
+
+    /**
+     * Contains attributes to GROUP BY on.
+     *
+     * @var array
+     */
 	private $_aGroupBy		= array();
 
     private $_aPendingRow = false;
 
+    /**
+     * Return all fetch Model instances.
+     *
+     * This function is just a foreach wrapper around `row()`.
+     *
+     * @see Select::row()
+     *
+     * @return array
+     */
     public function all()
     {
         $aRes = array();
@@ -21,55 +55,11 @@ class Select extends \SimpleAR\Query\Where
         return $aRes;
     }
 
-	public function build($aOptions)
-	{
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
-
-		$this->_aSelects = (isset($aOptions['filter']))
-			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias, '_')
-			: $sRootModel::columnsToSelect(null, $sRootAlias, '_')
-			;
-
-		if (isset($aOptions['conditions']))
-		{
-            $this->_where($aOptions['conditions']);
-		}
-
-		if (isset($aOptions['order_by']))
-		{
-			$this->_analyzeOrderBy((array) $aOptions['order_by']);
-		}
-
-		if (isset($aOptions['group_by']))
-		{
-			$this->_analyzeGroupBy((array) $aOptions['group_by']);
-		}
-
-        if (isset($aOptions['with']))
-        {
-			$this->_with($aOptions['with']);
-        }
-
-        $this->_arborescenceToSql();
-
-		$this->sql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
-		$this->sql .= $this->_sWhere;
-		$this->sql .= $this->_groupBy();
-		$this->sql .= $this->_sOrderBy;
-
-		if (isset($aOptions['limit']))
-		{
-			$this->sql .= ' LIMIT ' . $aOptions['limit'];
-		}
-
-		if (isset($aOptions['offset']))
-		{
-			$this->sql .= ' OFFSET ' . $aOptions['offset'];
-		}
-	}
-
+    /**
+     * Return first fetch Model instance.
+     *
+     * @return Model
+     */
     public function row()
     {
         $aRes = array();
@@ -171,22 +161,6 @@ class Select extends \SimpleAR\Query\Where
             }
 
             $aPieces = explode('/', $sAttribute);
-            //$iCount  = count($aPieces);
-
-            /*
-			// Attribute of root model.
-			if ($iCount === 1)
-			{
-				if ($sAttribute[0] === '#')
-				{
-					$aRes[] = $this->_orderByCount($sAttribute, $sOrder, $this->_sRootModel, '_', $this->_aArborescence);
-					continue;
-				}
-
-				$aRes[] = $sRootAlias . '.' .  $this->_oRootTable->columnRealName($sAttribute) . ' ' . $sOrder;
-				continue;
-			}
-            */
 
 			// Attribute of a related model.
 			$sAttribute = array_pop($aPieces);
@@ -232,6 +206,58 @@ class Select extends \SimpleAR\Query\Where
 
         $this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
 	}
+
+    /**
+     * This function builds the query.
+     *
+     * @param array $aOptions The option array.
+     *
+     * @return void
+     */
+	public function _build($aOptions)
+	{
+		$sRootModel = $this->_sRootModel;
+		$sRootAlias = $this->_oRootTable->alias;
+
+		$this->_aSelects = (isset($aOptions['filter']))
+			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias, '_')
+			: $sRootModel::columnsToSelect(null, $sRootAlias, '_')
+			;
+
+		if (isset($aOptions['conditions']))
+		{
+            $this->_where($aOptions['conditions']);
+		}
+
+		if (isset($aOptions['order_by']))
+		{
+			$this->_analyzeOrderBy($aOptions['order_by']);
+		}
+
+        if (isset($aOptions['with']))
+        {
+			$this->_with($aOptions['with']);
+        }
+
+        $this->_arborescenceToSql();
+
+		$this->sql  = 'SELECT ' . implode(', ', $this->_aSelects);
+		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
+		$this->sql .= $this->_sWhere;
+		$this->sql .= $this->_groupBy();
+		$this->sql .= $this->_sOrderBy;
+
+		if (isset($aOptions['limit']))
+		{
+			$this->sql .= ' LIMIT ' . $aOptions['limit'];
+		}
+
+		if (isset($aOptions['offset']))
+		{
+			$this->sql .= ' OFFSET ' . $aOptions['offset'];
+		}
+	}
+
 
 	private function _groupBy()
 	{

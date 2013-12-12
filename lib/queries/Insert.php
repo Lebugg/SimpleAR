@@ -1,9 +1,24 @@
 <?php
 namespace SimpleAR\Query;
+/**
+ * This file contains the Insert class.
+ *
+ * @author Lebugg
+ */
 
+/**
+ * This class handles INSERT statements.
+ */
 class Insert extends \SimpleAR\Query
 {
-	public function build($aOptions)
+    /**
+     * This function builds the query.
+     *
+     * @param array $aOptions The option array.
+     *
+     * @return void
+     */
+	public function _build($aOptions)
 	{
         $this->values = $aOptions['values'];
 
