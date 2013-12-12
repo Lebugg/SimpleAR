@@ -11,6 +11,11 @@ namespace SimpleAR\Query;
  */
 class Insert extends \SimpleAR\Query
 {
+    public function insertId()
+    {
+        return self::$_oDb->lastInsertId();
+    }
+
     /**
      * This function builds the query.
      *

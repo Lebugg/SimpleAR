@@ -183,7 +183,7 @@ folder sounds good, for example).
     ```php
     include 'libraries/SimpleAR/SimpleAR.php';
     
-    $oCfg = SimpleAR\Config::instance();
+    $oCfg = new SimpleAR\Config();
     $oCfg->dsn = array(
         'driver'   => DB_DRIVER,
         'host'     => DB_HOST,

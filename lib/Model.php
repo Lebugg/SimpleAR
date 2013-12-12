@@ -371,10 +371,10 @@ abstract class Model
      * and that https://bugs.php.net/bug.php?id=49105)
      *
      * There is one Table for each Model and this Table is instanciated and
-     * stored into this array from within `Model::init()` function.
+     * stored into this array from within `Model::wakeup()` function.
      *
      * @var array
-     * @see SimpleAR\Model::init()
+     * @see SimpleAR\Model::wakeup()
      */
     private static $_aTables = array();
 
@@ -940,49 +940,10 @@ abstract class Model
         return self::find('first', $aOptions);
     }
 
-    public static function init()
+    public static function init($oConfig, $oDatabase)
     {
-        if (!self::$_oConfig) { self::$_oConfig = Config::instance();   }
-		if (!self::$_oDb)     { self::$_oDb     = Database::instance(); }
-
-		// get_called_class() returns the namespaced class. So we have to parse
-		// it.
-		$a = explode('\\', get_called_class());
-		$sCurrentClass = array_pop($a);
-
-		// Set defaults for model classes
-		if ($sCurrentClass != 'Model')
-		{
-            $sSuffix        = self::$_oConfig->modelClassSuffix;
-            $sModelBaseName = $sSuffix ? strstr($sCurrentClass, self::$_oConfig->modelClassSuffix, true) : $sCurrentClass;
-
-            $sTableName  = static::$_sTableName  ?: call_user_func(self::$_oConfig->classToTable, $sModelBaseName);
-            $mPrimaryKey = static::$_mPrimaryKey ?: self::$_oConfig->primaryKey;
-
-            // Columns are defined in model, perfect!
-			if (static::$_aColumns)
-			{
-                $aColumns = static::$_aColumns;
-			}
-			// They are not, fetch them from database.
-            else
-            {
-				$aColumns = self::$_oDb->query('SHOW COLUMNS FROM ' . $sTableName)->fetchAll(\PDO::FETCH_COLUMN);
-
-                // We do not want to insert primary key in
-                // static::$_aColumns unless it is a compound key.
-                if (is_string($mPrimaryKey))
-                {
-                    unset($aColumns[$mPrimaryKey]);
-                }
-            }
-
-            $oTable = new Table($sTableName, $mPrimaryKey, $aColumns);
-            $oTable->orderBy       = static::$_aOrderBy;
-            $oTable->modelBaseName = $sModelBaseName;
-
-            self::$_aTables[$sCurrentClass] = $oTable;
-		}
+        self::$_oConfig = $oConfig;
+        self::$_oDb     = $oDatabase;
     }
 
     public static function last($aOptions = array())
@@ -1140,6 +1101,48 @@ abstract class Model
         $aRes = $this->attributes();
 
         return self::_arrayToArray($aRes);
+    }
+
+    public static function wakeup()
+    {
+		// get_called_class() returns the namespaced class. So we have to parse
+		// it.
+		$a = explode('\\', get_called_class());
+		$sCurrentClass = array_pop($a);
+
+		// Set defaults for model classes
+		if ($sCurrentClass != 'Model')
+		{
+            $sSuffix        = self::$_oConfig->modelClassSuffix;
+            $sModelBaseName = $sSuffix ? strstr($sCurrentClass, self::$_oConfig->modelClassSuffix, true) : $sCurrentClass;
+
+            $sTableName  = static::$_sTableName  ?: call_user_func(self::$_oConfig->classToTable, $sModelBaseName);
+            $mPrimaryKey = static::$_mPrimaryKey ?: self::$_oConfig->primaryKey;
+
+            // Columns are defined in model, perfect!
+			if (static::$_aColumns)
+			{
+                $aColumns = static::$_aColumns;
+			}
+			// They are not, fetch them from database.
+            else
+            {
+				$aColumns = self::$_oDb->query('SHOW COLUMNS FROM ' . $sTableName)->fetchAll(\PDO::FETCH_COLUMN);
+
+                // We do not want to insert primary key in
+                // static::$_aColumns unless it is a compound key.
+                if (is_string($mPrimaryKey))
+                {
+                    unset($aColumns[$mPrimaryKey]);
+                }
+            }
+
+            $oTable = new Table($sTableName, $mPrimaryKey, $aColumns);
+            $oTable->orderBy       = static::$_aOrderBy;
+            $oTable->modelBaseName = $sModelBaseName;
+
+            self::$_aTables[$sCurrentClass] = $oTable;
+		}
     }
 
     private static function _arrayToArray($aArray)
@@ -1413,7 +1416,7 @@ abstract class Model
             $oQuery->run();
 
             // We fetch the ID.
-            $this->_mId = (int) self::$_oDb->lastInsertId();
+            $this->_mId = $oQuery->insertId();
 
             // Process linked models.
             foreach ($aLinkedModels as $a)

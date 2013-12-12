@@ -45,7 +45,7 @@ function init($oConfig)
                  */
                 if (is_subclass_of($sClass, 'SimpleAR\Model'))
                 {
-                    $sClass::init();
+                    $sClass::wakeup();
                 }
 
                 // We have included our model, stop here.
@@ -53,4 +53,9 @@ function init($oConfig)
             }
         }
     });
+
+    $oDatabase = new Database($oConfig);
+
+    Model::init($oConfig, $oDatabase);
+    Relationship::init($oConfig, $oDatabase);
 }

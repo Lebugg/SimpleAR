@@ -219,21 +219,6 @@ class Config
     private $_primaryKey = 'id';
 
     /**
-     * @var object Config instance.
-     */
-    private static $_o = null;
-
-    /**
-     * Config __constructor is private because we use Singleton pattern.
-     */
-    private function __construct() {}
-
-    /**
-     * Config __clone is private because we use Singleton pattern.
-     */
-    private function __clone()     {}
-
-    /**
      * Allows developer to not write the underscore of attribute name.
      *
      * @param string $s The option name (same as attribute name without

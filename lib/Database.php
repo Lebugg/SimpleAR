@@ -30,14 +30,6 @@ class Database
     private $_oPdo;
 
     /**
-     * The static instance of the class for Singleton
-     * pattern.
-     *
-     * @var Database
-     */
-    private static $_o = NULL;
-
-    /**
      * The current/last PDO Statement used.
      * @link http://www.php.net/manual/en/class.pdostatement.php The
      * PDOStatement class documentation.
@@ -94,9 +86,8 @@ class Database
      *
      * Private because we use Singleton pattern.
      */
-    private function __construct()
+    public function __construct($oConfig)
     {
-        $oConfig = Config::instance();
         $aDsn    = $oConfig->dsn;
 
         $sDsn = $aDsn['driver'].':host='.$aDsn['host'] .';dbname='.$aDsn['name'] .';charset='.$aDsn['charset'].';';
@@ -116,29 +107,6 @@ class Database
 
         $this->_sDatabase = $aDsn['name'];
         $this->_bDebug    = $oConfig->debug;
-    }
-
-    /**
-     * __clone magic function.
-     *
-     * Private because we use Singleton pattern.
-     */
-    private function __clone() {}
-
-
-    /**
-     * Singleton implementation. Returns the Database instance.
-     *
-     * @return DataBase
-     */
-    public static function instance()
-    {
-        if (self::$_o === null)
-        {
-            self::$_o = new DataBase();
-        }
-
-        return self::$_o;
     }
 
     /**

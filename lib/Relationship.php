@@ -1,11 +1,17 @@
 <?php
+/**
+ * This file contains the Relationship class and its subclasses.
+ *
+ * @author Lebugg
+ */
 namespace SimpleAR;
 
+/**
+ * This class modelizes a Relationship between two Models.
+ *
+ */
 abstract class Relationship
 {
-    protected static $_oDb;
-    protected static $_oConfig;
-
     public $lm;
     public $cm;
 
@@ -22,11 +28,11 @@ abstract class Relationship
         'many_many'  => 'ManyMany',
     );
 
+    private static $_sModelClassSuffix;
+    private static $_sForeignKeySuffix;
+
     protected function __construct($a, $sCMClass)
     {
-        if (! self::$_oDb)     { self::$_oDb     = Database::instance(); }
-        if (! self::$_oConfig) { self::$_oConfig = Config::instance();   }
-
         $this->cm = new \StdClass();
         $this->cm->class     = $sCMClass;
         $this->cm->t         = $sCMClass::table();
@@ -34,7 +40,7 @@ abstract class Relationship
         $this->cm->alias     = $this->cm->t->alias;
 
         $this->lm = new \StdClass();
-        $this->lm->class = $s = $a['model'] . self::$_oConfig->modelClassSuffix;
+        $this->lm->class = $s = $a['model'] . self::$_sModelClassSuffix;
         $this->lm->t     = $s::table();
         $this->lm->table = $this->lm->t->name;
         $this->lm->alias = $this->lm->t->alias;
@@ -64,6 +70,14 @@ abstract class Relationship
         return $o;
     }
 
+    public static function init($oConfig, $oDatabase)
+    {
+        self::$_sModelClassSuffix = $oConfig->modelClassSuffix;
+        self::$_sForeignKeySuffix = $oConfig->foreignKeySuffix;
+
+        self::$_oDb = $oDatabase;
+    }
+
     public function joinLinkedModel($iDepth, $sJoinType)
     {
 		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
@@ -83,7 +97,7 @@ class BelongsTo extends Relationship
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
-            : strtolower($this->lm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix;
+            : strtolower($this->lm->t->modelBaseName) . self::$_sForeignKeySuffix;
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -142,7 +156,7 @@ class HasOne extends Relationship
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            : strtolower($this->cm->t->modelBaseName) . self::$_sForeignKeySuffix
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -178,7 +192,7 @@ class HasMany extends Relationship
 
         $this->lm->attribute = (isset($a['key_to']))
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_oConfig->foreignKeySuffix
+            : strtolower($this->cm->t->modelBaseName) . self::$_sForeignKeySuffix
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -288,11 +302,11 @@ class ManyMany extends Relationship
 
         if (isset($a['join_model']))
         {
-            $this->jm->class = $s = $a['join_model'] . self::$_oConfig->modelClassSuffix;
+            $this->jm->class = $s = $a['join_model'] . self::$_sModelClassSuffix;
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->t->modelClassSuffix) . self::$_oConfig->foreignKeySuffix);
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->t->modelClassSuffix) . self::$_oConfig->foreignKeySuffix);
+            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->t->modelClassSuffix) . self::$_sForeignKeySuffix);
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->t->modelClassSuffix) . self::$_sForeignKeySuffix);
         }
         else
         {

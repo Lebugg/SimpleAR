@@ -28,6 +28,13 @@ require 'queries/Update.php';
 abstract class Query
 {
     /**
+     * The database handler instance.
+     *
+     * @var \SimpleAR\Database
+     */
+    protected static $_oDb;
+
+    /**
      * Is this query class critical?
      *
      * A critical query cannot be executed without a WHERE clause. Critical queries are:
@@ -150,6 +157,11 @@ abstract class Query
 		return $oQuery;
 	}
 
+    public static function init($oDatabase)
+    {
+        self::$_oDb = $oDatabase;
+    }
+
     /**
      * Construct a Insert query.
      *
@@ -187,8 +199,6 @@ abstract class Query
      */
     public function run()
     {
-        $oDb = Database::instance();
-
         if (static::$_bIsCriticalQuery)
         {
             if (! $this->_sWhere)
@@ -197,7 +207,7 @@ abstract class Query
             }
         }
 
-        $this->_oSth = $oDb->query($this->sql, $this->values);
+        $this->_oSth = self::$_oDb->query($this->sql, $this->values);
 
         return $this;
     }
