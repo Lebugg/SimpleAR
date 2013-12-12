@@ -137,22 +137,14 @@ class Condition
     /**
      * Creates the left hand side of an SQL condition.
      *
-     * @param string|array  $mColumns    One or several attributes the condition is made on.
-     * @param string|Table  $oTable      Table object needed to get the alias or to transform
-     * attributes to column. If it is a string, it the table alias. It *must* be a Table object if
-     * $bToColumn is true.
-     * @param bool          $bToColumn  Should passed attributes have to be transformed to columns?
-     * @param string        $sTableAliasSuffix A optional suffix to add to the table alias (i.e. An
-     * number to indicate nested depth.)
+     * @param string|array  $mColumns    One or several columns the condition is made on.
+     * @param string|Table  $sTableAlias The table alias to use to prefix columns.
      *
      * @return string A valid left hand side SQL condition.
      */
-    public static function leftHandSide($mColumns, $oTable, $bToColumn = true, $sTableAliasSuffix = '')
+    public static function leftHandSide($mColumns, $sTableAlias = '')
     {
-        // Construct alias.
-        $sTableAlias = (is_object($oTable) ? $oTable->alias : $oTable) .  $sTableAliasSuffix;
-
-        // Add dot to prevent additional concatenations in foreach.
+        // Add dot to alias to prevent additional concatenations in foreach.
         if ($sTableAlias !== '')
         {
             $sTableAlias .= '.';
@@ -356,18 +348,10 @@ class Condition
         // If condition does not depend of a relation. Construct SQL here.
         if ($this->relation === null)
         {
-            $mAttribute = explode(',', $this->attribute);
+            $mColumns = $this->table->columnRealName($this->attribute);
+            $sAlias   = $bUseAliases ? $this->table->alias : '';
 
-            // It is a compound attribute.
-            /*
-            if (isset($mAttribute[1]))
-            {
-                $sOperator = self::arrayfyOperator($this->operator);
-            }
-            */
-
-            $mColumns = $this->table->columnRealName($mAttribute);
-            $sLHS = self::leftHandSide($mColumns, $this->table, $bToColumn);
+            $sLHS = self::leftHandSide($mColumns, $sAlias);
             $sRHS = self::rightHandSide($this->value);
 
             return $sLHS . ' ' . $this->operator . ' ' . $sRHS;

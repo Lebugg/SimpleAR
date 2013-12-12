@@ -146,7 +146,7 @@ class BelongsTo extends Relationship
             $oTable  = $this->lm->t;
         }
 
-        $sLHS = self::leftHandSide($mColumn, $oTable, false);
+        $sLHS = self::leftHandSide($mColumn, $oTable->alias);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -201,7 +201,7 @@ class HasOne extends Relationship
         static::_checkConditionValidity($o);
 
         $mColumn = $this->lm->t->columnRealName($o->attribute);
-        $sLHS = Condition::leftHandSide($mColumn, $this->lm->t);
+        $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -252,11 +252,11 @@ class HasMany extends Relationship
         if ($o->logic === 'or')
         {
             $mColumn = $oLM->t->columnRealName($o->attribute);
-            $sLHS = Condition::leftHandSide($mColumn, $oLM->t, true, '2');
+            $sLHS = Condition::leftHandSide($mColumn, $oLM->t->alias . '2');
             $sRHS = Condition::rightHandSide($o->value);
 
-            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t, false, '2');
-            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t, false);
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '2');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias);
 
             return "EXISTS (
                         SELECT NULL
@@ -268,12 +268,12 @@ class HasMany extends Relationship
         else // logic == 'and'
         {
             $mColumn = $oLM->t->columnRealName($o->attribute);
-            $sLHS2 = Condition::leftHandSide($mColumn, $oLM->t, true, '2');
-            $sLHS3 = Condition::leftHandSide($mColumn, $oLM->t, true, '3');
+            $sLHS2 = Condition::leftHandSide($mColumn, $oLM->t->alias . '2');
+            $sLHS3 = Condition::leftHandSide($mColumn, $oLM->t->alias . '3');
             $sRHS  = Condition::rightHandSide($o->value);
 
-            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t, false, '3');
-            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t, false);
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '3');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias);
 
             return "NOT EXISTS (
                         SELECT NULL
@@ -380,12 +380,12 @@ class ManyMany extends Relationship
             $sRHS = Condition::rightHandSide($o->value);
             if ($o->attribute === 'id')
             {
-                $sLHS = Condition::leftHandSide($this->jm->to, $this->jm->alias, false);
+                $sLHS = Condition::leftHandSide($this->jm->to, $this->jm->alias);
             }
             else
             {
                 $mColumn = $this->lm->t->columnRealName($o->attribute);
-                $sLHS = Condition::leftHandSide($mColumn, $this->lm->t, true);
+                $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
             }
 
             return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -393,13 +393,13 @@ class ManyMany extends Relationship
         else // $o->logic === 'and'
         {
             $mColumn = $this->lm->t->columnRealName($o->attribute);
-            $sLHS = Condition::leftHandSide($mColumn, $this->lm->t, false);
+            $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
             $sRHS = Condition::rightHandSide($o->value);
 
-            $sCond_JMFrom  = Condition::leftHandSide($this->jm->from,   $this->jm->alias, false);
-            $sCond_JMFrom2 = Condition::leftHandSide($this->jm->from,   $this->jm->alias, false, '2');
-            $sCond_JMTo2   = Condition::leftHandSide($this->jm->to,     $this->jm->alias, false, '2');
-            $sCond_LM2     = Condition::leftHandSide($this->lm->column, $this->lm->alias, false, '2');
+            $sCond_JMFrom  = Condition::leftHandSide($this->jm->from,   $this->jm->alias);
+            $sCond_JMFrom2 = Condition::leftHandSide($this->jm->from,   $this->jm->alias . '2');
+            $sCond_JMTo2   = Condition::leftHandSide($this->jm->to,     $this->jm->alias . '2');
+            $sCond_LM2     = Condition::leftHandSide($this->lm->column, $this->lm->alias . '2');
 
             return "NOT EXISTS (
                         SELECT NULL
@@ -437,8 +437,8 @@ class ManyMany extends Relationship
 
     public function deleteLinkedModel($mValue)
     {
-        $sLHS = Condition::leftHandSide($this->lm->pk, 'a', false);
-        $sRHS = Condition::leftHandSide($this->jm->to, 'b', false);
+        $sLHS = Condition::leftHandSide($this->lm->pk, 'a');
+        $sRHS = Condition::leftHandSide($this->jm->to, 'b');
         $sCondition = $sLHS . ' = ' . $sRHS;
 
         $sQuery =  "DELETE FROM {$this->lm->table} a
