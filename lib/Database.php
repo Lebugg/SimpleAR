@@ -191,7 +191,7 @@ class Database
 
                 $this->_aQueries[] = array(
                     'sql'  => $sQueryDebug,
-                    'time' => (microtime(TRUE) - $time) * 1000;
+                    'time' => (microtime(TRUE) - $time) * 1000,
                 );
             }
         }
