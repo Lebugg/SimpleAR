@@ -1,10 +1,10 @@
 <?php
-namespace SimpleAR\Query;
 /**
  * This file contains the Insert class.
  *
  * @author Lebugg
  */
+namespace SimpleAR\Query;
 
 /**
  * This class handles INSERT statements.

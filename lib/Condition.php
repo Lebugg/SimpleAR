@@ -1,8 +1,24 @@
 <?php
+/**
+ * This file contains the Condition class.
+ *
+ * @author Lebugg
+ */
 namespace SimpleAR;
 
+/**
+ * The Condition class modelize a SQL condition (in a WHERE clause).
+ */
 class Condition
 {
+    /**
+     * List of available operators.
+     *
+     * The keys are the available operators; The values are the corresponding operators when
+     * condition is made on multiple values.
+     *
+     * @var array
+     */
     protected static $_aOperators = array(
         '='  => 'IN',
         '!=' => 'NOT IN',
@@ -14,15 +30,64 @@ class Condition
         'NOT IN' => 'NOT IN',
     );
 
+    /**
+     * The condition logic.
+     *
+     * Can take these values: "and" or "or".
+     *
+     * @var string
+     */
     public $logic;
 
+    /**
+     * Attribute(s) the condition is made on.
+     *
+     * @var string|array
+     */
     public $attribute;
+
+    /**
+     * The condition operator.
+     *
+     * @var string
+     */
     public $operator;
+
+    /**
+     * The condition value(s).
+     *
+     * It contains one or several values that attribute(s) must verify to make condition true.
+     *
+     * @var mixed
+     */
     public $value;
     
+    /**
+     * A Relationship object used when condition is made through a Model relation.
+     *
+     * Optional
+     *
+     * @var Relationship
+     */
     public $relation;
+
+    /**
+     * A Table object corresponding to the attribute's Model.
+     *
+     * @var Table
+     */
     public $table;
 
+    /**
+     * Constructor
+     *
+     * @param string|array $sAttribute Attribute(s) of condition.
+     * @param string       $sOperator  Operator to use.
+     * @param mixed        $mValue     Value(s) to test attribute(s) against.
+     * @param string       $sLogic     The logic of the condition.
+     *
+     * @throws Exception if operator, value, or logic is invalid.
+     */
     public function __construct($sAttribute, $sOperator, $mValue, $sLogic = 'or')
     {
         $this->attribute = $sAttribute;
@@ -80,6 +145,15 @@ class Condition
         }
     }
 
+    /**
+     * Generate a valid SQL string out of a Condition array.
+     *
+     * @param array $aArray         The Condition array.
+     * @param bool  $bUseAliases    Should we prefix columns with aliases? Default: true.
+     * @param bool  $bToColumn      Do condition's attribute have to be converted to column's names?Have
+     *
+     * @return string The SQL string.
+     */
     public static function arrayToSql($aArray, $bUseAliases = true, $bToColumn = true)
     {
         $sSql    = '';

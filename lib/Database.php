@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the Database class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * This class abstracts a database connection.

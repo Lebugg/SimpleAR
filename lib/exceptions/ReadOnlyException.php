@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the ReadOnlyException class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * This exception is thrown by ReadOnlyModel.

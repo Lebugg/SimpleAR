@@ -1,10 +1,10 @@
 <?php
-namespace SimpleAR;
 /**
  * This file contains the ReadOnlyModel class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * This class limits object operations to read-only.

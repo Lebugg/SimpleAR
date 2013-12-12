@@ -1,4 +1,36 @@
 <?php
+/**
+ * This file is the entry point of the library.
+ *
+ * It does the following:
+ *
+ * 1. Checks PHP version.
+ * 2. Defines library version.
+ * 3. Includes all library files.
+ * 4. Defines the `init()` function.
+ *
+ * To initialize the library, just call `init()` passing your Config object as parameter:
+ *
+ *  ```php
+ *  include 'libraries/SimpleAR/SimpleAR.php';
+ *  
+ *  $oCfg = SimpleAR\Config::instance();
+ *  $oCfg->dsn = array(
+ *      'driver'   => DB_DRIVER,
+ *      'host'     => DB_HOST,
+ *      'name'     => DB_NAME,
+ *      'user'     => DB_USER,
+ *      'password' => DB_PASS,
+ *  );
+ *  
+ *  // Note trailing slash.
+ *  $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
+ *  
+ *  SimpleAR\init($oCfg);
+ *  ```
+ *
+ * @author Lebugg
+ */
 namespace SimpleAR;
 
 if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
@@ -22,6 +54,13 @@ require 'lib/exceptions/RecordNotFoundException.php';
 require 'lib/exceptions/ReadOnlyException.php';
 require 'lib/Tools.php';
 
+/**
+ * This function initializes the library.
+ *
+ * @param Config $oConfig Your configuration object.
+ *
+ * @see Config
+ */
 function init($oConfig)
 {
     if ($oConfig->convertDateToObject)

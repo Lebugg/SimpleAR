@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the Exception class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * Main SimpleAR exception class.

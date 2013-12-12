@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the DuplicateKeyException class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * Specific exception for database unique constraint failure.

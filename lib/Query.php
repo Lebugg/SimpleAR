@@ -1,10 +1,10 @@
 <?php
-namespace SimpleAR;
 /**
  * This file contains the Query class that is the main class to manipulate SQL queries.
  *
  * It handles subclasses and Condition class includes.
  */
+namespace SimpleAR;
 
 require 'Condition.php';
 require 'queries/Where.php';

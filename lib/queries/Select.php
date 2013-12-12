@@ -1,10 +1,10 @@
 <?php
-namespace SimpleAR\Query;
 /**
  * This file contains the Select class.
  *
  * @author Lebugg
  */
+namespace SimpleAR\Query;
 
 /**
  * This class handles SELECT statements.

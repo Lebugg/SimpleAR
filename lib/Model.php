@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the Model class.
  *
  * @author Damien Launay
  */
+namespace SimpleAR;
 
 /**
  * This class is the super class of all models.

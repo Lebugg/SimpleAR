@@ -1,10 +1,10 @@
 <?php
-namespace SimpleAR\Query;
 /**
  * This file contains the Where class.
  *
  * @author Lebugg
  */
+namespace SimpleAR\Query;
 
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).

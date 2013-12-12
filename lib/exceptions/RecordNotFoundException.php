@@ -1,11 +1,10 @@
 <?php
-namespace SimpleAR;
-
 /**
  * This file contains the RecordNotFoundException class.
  *
  * @author Lebugg
  */
+namespace SimpleAR;
 
 /**
  * Specific exception for when a specific record has not been found in database.
