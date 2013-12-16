@@ -374,6 +374,7 @@ class Condition
         foreach ($aArray as $mKey => $mValue)
         {
             // It is bound to be a condition.
+            // 'myAttribute' => 'myValue'
             if (is_string($mKey))
             {
                 $aRes[] = array($sLogicalOperator, new Condition($mKey, null, $mValue));
@@ -396,7 +397,7 @@ class Condition
                 else
                 {
                     // Condition.
-                    if (is_string($mValue[0]))
+                    if (isset($mValue[0]) && is_string($mValue[0]))
                     {
                         $aRes[] = array($sLogicalOperator, new Condition($mValue[0], $mValue[1], $mValue[2]));
                     }

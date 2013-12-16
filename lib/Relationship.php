@@ -303,7 +303,7 @@ class BelongsTo extends Relationship
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
-            : self::$_oCfg->buildForeignKey($this->lm->t->modelBaseName);
+            : call_user_func(self::$_oCfg->buildForeignKey, $this->lm->t->modelBaseName);
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -362,7 +362,7 @@ class HasOne extends Relationship
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']
-            : self::$_oCfg->buildForeignKey($this->cm->t->modelBaseName);
+            : call_user_func(self::$_oCfg->buildForeignKey, $this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -398,7 +398,7 @@ class HasMany extends Relationship
 
         $this->lm->attribute = (isset($a['key_to']))
             ? $a['key_to']
-            : self::$_oCfg->buildForeignKey($this->cm->t->modelBaseName);
+            : call_user_func(self::$_oCfg->buildForeignKey, $this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
