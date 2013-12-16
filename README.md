@@ -231,3 +231,70 @@ A PHPDoc generated documentation can be found
 [here](https://github.com/Lebugg/SimpleAR/blob/master/doc/index.html
 "Documentation").
 
+### Create a Model class ###
+
+#### Database settings ####
+
+Most simple case:
+
+```php
+class User extends SimpleAR\Model
+{
+}
+```
+
+##### Set table and primary key #####
+
+Conventions:
+
+* User database table will be named according to `Config::classToTable` item. By default, it applies
+the PHP `strtolower()` function. So, here our table is supposed to be named “user”.
+
+* Table primary key will be named according to `Config::primaryKey` item. By default, it is “id”.
+
+
+You can still explicitly set your values:
+```php
+class User extends SimpleAR\Model
+{
+    // Database table name.
+    protected $_sTableName = 'users';
+
+    // Table primary key.
+    protected $_mPrimaryKey = 'id';
+}
+```
+
+##### Set columns #####
+
+If you don't specify them, columns will be retrieved thanks to a `SHOW COLUMNS` query. I recommend
+to specify them, it will save one database query for each loaded model:
+
+```php
+class User extends SimpleAR\Model
+{
+    ...
+
+    protected $_aColumns = array(
+        'last_name',
+        'first_name',
+        'age',
+    );
+}
+```
+
+You can set a different name for your attribute if column name does not suit you:
+
+```php
+class User extends SimpleAR\Model
+{
+    ...
+
+    protected $_aColumns = array(
+        'last_name',
+        'first_name',
+        // “age” will be used for “years_since_birth” column.
+        'age' => 'years_since_birth',
+    );
+}
+```
