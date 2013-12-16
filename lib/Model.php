@@ -805,7 +805,7 @@ abstract class Model
     public static function exists($m, $bByPrimaryKey = true)
     {
         // Classic exists(): By primary key.
-        if ($byPrimaryKey)
+        if ($bByPrimaryKey)
         {
             try
             {
