@@ -18,7 +18,7 @@ class Count extends \SimpleAR\Query\Where
      *
      * @return void
      */
-	public function build($aOptions)
+	public function _build($aOptions)
 	{
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;

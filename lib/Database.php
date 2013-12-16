@@ -83,28 +83,34 @@ class Database
     /**
      * Constructor.
      *
-     * Private because we use Singleton pattern.
+     * @param Config $oConfig The configuration object. Database is instanciate by SimpleAR.php.
+     *
+     * Used PDO configuration:
+     *
+     * * PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+     *
+     * @see SimpleAR.php
+     * @see http://www.php.net/manual/en/pdo.construct.php
      */
     public function __construct($oConfig)
     {
-        $aDsn    = $oConfig->dsn;
-
-        $sDsn = $aDsn['driver'].':host='.$aDsn['host'] .';dbname='.$aDsn['name'] .';charset='.$aDsn['charset'].';';
+        $a    = $oConfig->dsn;
+        $sDsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $aOptions = array();
         $aOptions[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
-        $aOptions[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
+        //$aOptions[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
 
         try
         {
-            $this->_oPdo = new \PDO($sDsn, $aDsn['user'], $aDsn['password'], $aOptions);
+            $this->_oPdo = new \PDO($sDsn, $a['user'], $a['password'], $aOptions);
         }
         catch (\PDOException $oEx)
 		{
             throw new DatabaseException($oEx->getMessage(), null, $oEx);
         }
 
-        $this->_sDatabase = $aDsn['name'];
+        $this->_sDatabase = $a['name'];
         $this->_bDebug    = $oConfig->debug;
     }
 

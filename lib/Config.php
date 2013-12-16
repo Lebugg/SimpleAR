@@ -277,23 +277,6 @@ class Config
     }
 
     /**
-     * Returns the config instance.
-     *
-     * Returns the config instance. It part of Singleton pattern.
-     *
-     * @return Config The config instance.
-     */
-    public static function instance()
-    {
-        if (self::$_o === null)
-        {
-            self::$_o = new Config();
-        }
-
-        return self::$_o;
-    }
-
-    /**
      * Setter for DSN ("dsn" option).
      *
      * This function checks that given array is complete.

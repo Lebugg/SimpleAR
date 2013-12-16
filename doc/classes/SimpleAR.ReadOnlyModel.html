@@ -139,28 +139,28 @@
                                 <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1111330674"></a>
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-330962691"></a>
                                 <a href="../namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
             </div>
-            <div id="namespace-1111330674" class="accordion-body collapse in">
+            <div id="namespace-330962691" class="accordion-body collapse in">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-611763116"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1651728027"></a>
                                 <a href="../namespaces/SimpleAR.html" style="margin-left: 30px; padding-left: 0">SimpleAR</a>
             </div>
-            <div id="namespace-611763116" class="accordion-body collapse ">
+            <div id="namespace-1651728027" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1137809980"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1938199336"></a>
                                 <a href="../namespaces/SimpleAR.Query.html" style="margin-left: 30px; padding-left: 0">Query</a>
             </div>
-            <div id="namespace-1137809980" class="accordion-body collapse ">
+            <div id="namespace-1938199336" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -269,6 +269,7 @@
                                                                     <a href="../classes/SimpleAR.Model.html#method_search" class="">search()</a><br />
                                                                     <a href="../classes/SimpleAR.Model.html#method_table" class="">table()</a><br />
                                                                     <a href="../classes/SimpleAR.Model.html#method_toArray" class="">toArray()</a><br />
+                                                                    <a href="../classes/SimpleAR.Model.html#method_wakeup" class="">wakeup()</a><br />
                                                             </section>
                             <section class="span4">
                                                                     <em>No public properties found</em>
@@ -1022,7 +1023,7 @@ http://stackoverflow.com/questions/1203810/is-there-a-way-to-have-php-subclasses
 and that https://bugs.php.net/bug.php?id=49105)</p>
 
 <p>There is one Table for each Model and this Table is instanciated and
-stored into this array from within <code>Model::init()</code> function.</p>
+stored into this array from within <code>Model::wakeup()</code> function.</p>
 
 
                                 <h4>Type</h4>
@@ -2021,11 +2022,26 @@ type. For this to be considered as an ID, you must pass an integer or an array.<
             <article class="method">
                 <h3 class="public ">init()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">init()</pre>
+                <pre class="signature" style="margin-right: 54px;">init( <span class="argument">$oConfig</span>,  <span class="argument">$oDatabase</span>)</pre>
                 <p><em></em></p>
                 
 
 
+                                    <h4>Parameters</h4>
+                    <table class="table table-condensed table-hover">
+                                                    <tr>
+                                <td></td>
+                                <td>$oConfig</td>
+                                <td>
+</td>
+                            </tr>
+                                                    <tr>
+                                <td></td>
+                                <td>$oDatabase</td>
+                                <td>
+</td>
+                            </tr>
+                                            </table>
                 
                 
                             </article>
@@ -2263,6 +2279,35 @@ type. For this to be considered as an ID, you must pass an integer or an array.<
         </div>
         <aside class="span4 detailsbar">
             <h1><i class="icon-arrow-down"></i></h1>
+                                                            <dl>
+                                                    <dt>Inherited from</dt>
+                    <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
+                                                            </dl>
+            <h2>Tags</h2>
+            <table class="table table-condensed">
+                                    <tr><td colspan="2"><em>None found</em></td></tr>
+                            </table>
+        </aside>
+    </div>
+
+                                    <div class="row-fluid">
+        <div class="span8 content class">
+            <a id="method_wakeup" name="method_wakeup" class="anchor"></a>
+            <article class="method">
+                <h3 class="public ">wakeup()</h3>
+                <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
+                <pre class="signature" style="margin-right: 54px;">wakeup()</pre>
+                <p><em></em></p>
+                
+
+
+                
+                
+                            </article>
+        </div>
+        <aside class="span4 detailsbar">
+            <h1><i class="icon-arrow-down"></i></h1>
+                            <span class="label label-info">static</span>
                                                             <dl>
                                                     <dt>Inherited from</dt>
                     <dd><a href="../classes/SimpleAR.Model.html"><div class="path-wrapper">\SimpleAR\Model</div></a></dd>
@@ -3040,7 +3085,7 @@ correspond to attribute name, not to column's (@see columnsToSelect()).</p>
                 <section class="span10 offset1">
                     <hr />
                     Documentation is powered by <a href="http://www.phpdoc.org/">phpDocumentor </a> and authored
-                    on December 12th, 2013 at 15:51.
+                    on December 13th, 2013 at 09:12.
                 </section>
             </section>
         </section>

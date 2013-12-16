@@ -97,4 +97,7 @@ function init($oConfig)
 
     Model::init($oConfig, $oDatabase);
     Relationship::init($oConfig, $oDatabase);
+    Query::init($oDatabase);
+
+    return $oDatabase;
 }

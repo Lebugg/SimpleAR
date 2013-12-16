@@ -35,15 +35,175 @@ namespace SimpleAR;
  */
 abstract class Relationship
 {
+    protected static $_oDb;
+
+    /**
+     * Contains information about linked model (lm).
+     *
+     * @var object
+     */
     public $lm;
+
+    /**
+     * Contains information about current model (cm).
+     *
+     * Current Model is the Model that defines this Relationship.
+     *
+     * @var object
+     */
     public $cm;
 
+    /**
+     * Conditions specified for this relation.
+     *
+     * If the relation defines some conditions, only linked model instances that verify these
+     * conditions will be associated by this relation.
+     *
+     * To specify conditions for a relation, just add a "conditions" entry in the relation array.
+     * Example:
+     *  ```php
+     *  class Zoo
+     *  {
+     *      protected $_aRelations = array(
+     *          'birds' => array(
+     *              'type'  => 'has_many',
+     *              'model' => 'Animal',
+     *
+     *              'conditions' => array('hasWings' => true), // Will only retrieve Animal that
+     *                                                         // have wings (birds).
+     *          ),
+     *      );
+     *  }
+     *  ```
+     *
+     * @var array
+     */
 	public $conditions = array();
-	public $order      = array();
-    public $filter          = null;
+
+    /**
+     * Defines a sort order for linked model instances.
+     *
+     * If the relation defines an order, linked model instances will be sorted with this order. It
+     * just adds an ORDER BY clause to the SQL query.
+     *
+     * To specify an order for a relation, just add an "order_by" entry in the relation array.
+     * Example:
+     *  ```php
+     *  class School
+     *  {
+     *      protected $_aRelations = array(
+     *          'students' => array(
+     *              'type'  => 'has_many',
+     *              'model' => 'Student',
+     *
+     *              'order_by' => array('lastName', 'firstName'), // Students will be ordered by
+     *                                                            // last name, then first name.
+     *          ),
+     *      );
+     *  }
+     *  ```
+     * @var string|array
+     */
+	public $order;
+
+    /**
+     * Defines a filter to apply to linked model instances.
+     *
+     * If the relation defines a filter, it will be apply to linked model instances. This allows you
+     * to retrieve only needed information instead of a bunch of useless data.
+     *
+     * To specify an order for a relation, just add an "order_by" entry in the relation array.
+     * Example:
+     *  ```php
+     *  // Person with information retrieved by NSA.
+     *  class NSA_Person
+     *  {
+     *      protected $_aFilters = array(
+     *          'restricted' => array(
+     *              'age',
+     *              'firstName',
+     *              'lastName',
+     *          ),
+     *      );
+     *  }
+     *
+     *  class Company
+     *  {
+     *      protected $_aRelations = array(
+     *          'workers' => array(
+     *              'type'  => 'has_many',
+     *              'model' => 'NSA_Person',
+     *
+     *              'filter' => 'restricted',
+     *          ),
+     *      );
+     *  }
+     *  ```
+     *
+     * @var string
+     */
+    public $filter;
+
+    /**
+     * The relation name.
+     *
+     * It corresponds to the key in `Model::$_aRelations`.
+     *
+     * @var string
+     */
     public $name;
+
+    /**
+     * Does linked models instances have to be deleted on cascade?
+     *
+     * @note This parameter is only used when `Config::$_doForeignKeyWork` is set to true.
+     *
+     * Use "on_delete_cascade" entry in relation definition array to set this parameter.
+     *
+     * @var bool
+     */
     public $onDeleteCascade = false;
 
+    /**
+     * This array does the translation between relation-entry like relation type and matching class
+     * name.
+     *
+     * To define the type of relation you want use the "type" entry in the relation definition
+     * array.
+     *
+     * Example:
+     * --------
+     *  ```php
+     *  class Monkey
+     *  {
+     *      protected $_aRelations = array(
+     *          // A monkey can have several children.
+     *          'children' => array(
+     *              'type'  => 'has_many',
+     *              'model' => 'Monkey',
+     *          ),
+     *          // Fruits this monkey eats.
+     *          'eatenFruits' => array(
+     *              'type'       => 'many_many',
+     *              'model'      => 'Fruit',
+     *              'table_join' => 'EATS'
+     *          ),
+     *          // Forest where this monkey lives.
+     *          'forest' => array(
+     *              'type'  => 'belongs_to',
+     *              'model' => 'Forest',
+     *          ),
+     *          // His wife.
+     *          'wife' => array(
+     *              'type'  => 'has_one',
+     *              'model' => 'Monkey',
+     *          ),
+     *      );
+     *  }
+     *  ```
+     *
+     *  @var array
+     */
     private static $_aTypeToClass = array(
         'belongs_to' => 'BelongsTo',
         'has_one'    => 'HasOne',
@@ -51,9 +211,30 @@ abstract class Relationship
         'many_many'  => 'ManyMany',
     );
 
-    private static $_sModelClassSuffix;
-    private static $_sForeignKeySuffix;
+    /**
+     * Stores the model class suffix defined by `Config::$_modelClassSuffix`
+     *
+     * @see Config::$_modelClassSuffix
+     *
+     * @var string
+     */
+    protected static $_sModelClassSuffix;
 
+    /**
+     * Stores the model class suffix defined by `Config::$_foreignKeySuffix`
+     *
+     * @see Config::$_foreignKeySuffix
+     *
+     * @var string
+     */
+    protected static $_sForeignKeySuffix;
+
+    /**
+     * Constructor.
+     *
+     * @param array  $a         The relation definition array define in the current model.
+     * @param string $sCMClass  The Current Model (CM). This is the Model that defines the relation.
+     */
     protected function __construct($a, $sCMClass)
     {
         $this->cm = new \StdClass();
