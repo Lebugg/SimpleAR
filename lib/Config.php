@@ -64,6 +64,22 @@ class Config
     private $_charset = 'utf8';
 
     /**
+     * Build a default foreign key name out of model base name.
+     *
+     * By default this function is set in the constructor. Here is its content:
+     *  ```php
+     *  return strtolower($sModelBaseName) . $this->_foreignKeySuffix;
+     *  ```
+     *
+     * `$this` is the Config instance.
+     *
+     * @see Config::__construct().
+     * 
+     * @var function
+     */
+    private $_buildForeignKey;
+
+    /**
      * Function used to "guess" model's table name.
      *
      * If table name is not set in model class. SimpleAR will use this function
@@ -217,6 +233,21 @@ class Config
      * keys.
      */
     private $_primaryKey = 'id';
+
+    /**
+     * Constructor.
+     *
+     * Set default values for configuration items that cannot be initialized outside a function:
+     *
+     * * buildForeignKey
+     *
+     */
+    public function __construct()
+    {
+        $this->_buildForeignKey = function($sModelBaseName) {
+            return strtolower($sModelBaseName) . $this->_foreignKeySuffix;
+        };
+    }
 
     /**
      * Allows developer to not write the underscore of attribute name.

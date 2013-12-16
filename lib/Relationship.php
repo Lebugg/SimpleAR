@@ -36,6 +36,7 @@ namespace SimpleAR;
 abstract class Relationship
 {
     protected static $_oDb;
+    protected static $_oCfg;
 
     /**
      * Contains information about linked model (lm).
@@ -279,7 +280,8 @@ abstract class Relationship
         self::$_sModelClassSuffix = $oConfig->modelClassSuffix;
         self::$_sForeignKeySuffix = $oConfig->foreignKeySuffix;
 
-        self::$_oDb = $oDatabase;
+        self::$_oDb  = $oDatabase;
+        self::$_oCfg = $oConfig;
     }
 
     public function joinLinkedModel($iDepth, $sJoinType)
@@ -301,7 +303,7 @@ class BelongsTo extends Relationship
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
-            : strtolower($this->lm->t->modelBaseName) . self::$_sForeignKeySuffix;
+            : self::$_oCfg->buildForeignKey($this->lm->t->modelBaseName);
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -360,7 +362,7 @@ class HasOne extends Relationship
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_sForeignKeySuffix
+            : self::$_oCfg->buildForeignKey($this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -396,7 +398,7 @@ class HasMany extends Relationship
 
         $this->lm->attribute = (isset($a['key_to']))
             ? $a['key_to']
-            : strtolower($this->cm->t->modelBaseName) . self::$_sForeignKeySuffix
+            : self::$_oCfg->buildForeignKey($this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
