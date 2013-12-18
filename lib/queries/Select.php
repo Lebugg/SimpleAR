@@ -182,13 +182,54 @@ class Select extends \SimpleAR\Query\Where
 			if ($sAttribute[0] !== '#')
 			{
                 // Add related model(s) in join arborescence.
-                list(, $oRelation) = $this->_addToArborescence($aRelationPieces);
-                $oCurrentTable = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
-                $iDepth = count($aRelationPieces);
-                $iDepth = $iDepth ?: '';
+                list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces);
+
+                $oCMTable = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
+                $oLMTable = $oRelation ? $oRelation->lm->t : null;
+
+                $iDepth        = count($aRelationPieces) ?: '';
+
+                // We *have to* include relation if we have to order on one of 
+                // its fields.
+                if ($sAttribute !== 'id')
+                {
+                    $oNode->__force = true;
+                }
+
+                if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
+                {
+                    $oNode->__force = true;
+                    $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                }
+                elseif ($oRelation instanceof \SimpleAR\ManyMany)
+                {
+                    if ($sAttribute === 'id')
+                    {
+                        $aRes[] = $oRelation->jm->alias . $iDepth . '.' .  $oRelation->jm->to . ' ' . $sOrder;
+                    }
+                    else
+                    {
+                        $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                    }
+                }
+                elseif ($oRelation instanceof \SimpleAR\BelongsTo)
+                {
+                    if ($sAttribute === 'id')
+                    {
+                        $aRes[] = $oCMTable->alias . ($iDepth - 1 ?: '') . '.' .  $oRelation->cm->column . ' ' . $sOrder;
+                    }
+                    else
+                    {
+                        $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                    }
+                }
+                else
+                {
+                    $aRes[] = $oCMTable->alias . '.' .  $oCMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                }
 
                 // Previously, ORDER BY was made on table alias and column name:
-                $aRes[] = $oCurrentTable->alias . $iDepth . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                //$aRes[] = $oCurrentTable->alias . $iDepth . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
 
                 // Now, it is made on result alias and attribute name:
                 //$aRes[] = '`' . $sResultAlias . '.' . $sAttribute . '` ' . $sOrder;

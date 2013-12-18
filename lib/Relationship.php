@@ -288,7 +288,7 @@ abstract class Relationship
     {
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
 
-		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->lm->alias}$iDepth.{$this->lm->column}";
+		return " $sJoinType JOIN `{$this->lm->table}` {$this->lm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->lm->alias}$iDepth.{$this->lm->column}";
     }
 
     public function joinAsLast($aConditions, $iDepth, $sJoinType)
@@ -664,12 +664,12 @@ class ManyMany extends Relationship
     {
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
 
-		return " $sJoinType JOIN {$this->jm->table} {$this->jm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->jm->alias}$iDepth.{$this->jm->from}";
+		return " $sJoinType JOIN `{$this->jm->table}` {$this->jm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->jm->alias}$iDepth.{$this->jm->from}";
     }
 
     private function _joinLM($iDepth, $sJoinType)
     {
-		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias}$iDepth ON {$this->jm->alias}$iDepth.{$this->jm->to} = {$this->lm->alias}$iDepth.{$this->lm->pk}";
+		return " $sJoinType JOIN `{$this->lm->table}` {$this->lm->alias}$iDepth ON {$this->jm->alias}$iDepth.{$this->jm->to} = {$this->lm->alias}$iDepth.{$this->lm->pk}";
     }
 
 }
