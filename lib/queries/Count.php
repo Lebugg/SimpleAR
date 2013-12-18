@@ -28,7 +28,7 @@ class Count extends \SimpleAR\Query\Where
             $this->_where($aOptions['conditions']);
 		}
 
-        $this->_arborescenceToSql();
+        $this->_processArborescence();
 
 		$this->sql  = 'SELECT COUNT(*)';
 		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;

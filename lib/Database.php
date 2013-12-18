@@ -159,7 +159,7 @@ class Database
                     if (!is_array($aParamsDebug)) {
                         $aParamsDebug = array($aParamsDebug);
                     }
-                    return array_shift($aParamsDebug);
+                    return var_export(array_shift($aParamsDebug), true);
                 }, $sQueryDebug);
 
                 $this->_aQueries[] = array(
@@ -167,6 +167,7 @@ class Database
                     'time' => (microtime(TRUE) - $time) * 1000,
                 );
             }
+
         }
         catch (\PDOException $oEx)
         {

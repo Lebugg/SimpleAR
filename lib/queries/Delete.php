@@ -27,21 +27,21 @@ class Delete extends \SimpleAR\Query\Where
      */
 	public function _build($aConditions)
 	{
-        $this->_where($aConditions);
+        $this->_conditions($aConditions);
 
         if ($this->_bUseModel)
         {
-            $this->_arborescenceToSql();
+            $this->_processArborescence();
             $sUsingClause = $this->_sJoin ? ' USING ' . $this->_sJoin : '';
 
             $this->sql .= 'DELETE ' . $this->_oRootTable->alias . ' FROM ' . $this->_oRootTable->name . ' AS ' .  $this->_oRootTable->alias;
             $this->sql .= $sUsingClause;
-            $this->sql .= $this->_sWhere;
+            $this->sql .= $this->_where();
         }
         else
         {
             $this->sql .= 'DELETE FROM ' . $this->_sRootTable;
-            $this->sql .= $this->_sWhere;
+            $this->sql .= $this->_where();
         }
 	}
 }

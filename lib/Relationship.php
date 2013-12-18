@@ -257,7 +257,7 @@ abstract class Relationship
 		if (isset($a['order']))				{ $this->order           = $a['order']; }
     }
 
-    public abstract function condition($o);
+    public abstract function condition($o, $iDepth);
 
     public function deleteLinkedModel($mValue)
     {
@@ -286,7 +286,9 @@ abstract class Relationship
 
     public function joinLinkedModel($iDepth, $sJoinType)
     {
-		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->lm->alias}.{$this->lm->column}";
+        $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+
+		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->lm->alias}$iDepth.{$this->lm->column}";
     }
 
     public function joinAsLast($aConditions, $iDepth, $sJoinType)
@@ -313,13 +315,15 @@ class BelongsTo extends Relationship
         $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
-    public function condition($o)
+    public function condition($o, $iDepth)
     {
         // We check that condition makes sense.
         if ($o->logic === 'and' && isset($o->value[1]))
         {
             throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
+
+        $iDepth = $iDepth ?: '';
 
         // Get attribute column name.
         if ($o->attribute === 'id')
@@ -333,7 +337,7 @@ class BelongsTo extends Relationship
             $oTable  = $this->lm->t;
         }
 
-        $sLHS = self::leftHandSide($mColumn, $oTable->alias);
+        $sLHS = self::leftHandSide($mColumn, $oTable->alias . $iDepth);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -368,7 +372,7 @@ class HasOne extends Relationship
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
-    public function condition($o)
+    public function condition($o, $iDepth)
     {
         // We check that condition makes sense.
         if ($o->logic === 'and' && isset($o->value[1]))
@@ -376,9 +380,11 @@ class HasOne extends Relationship
             throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
 
+        $iDepth = $iDepth ?: '';
+
 
         $mColumn = $this->lm->t->columnRealName($o->attribute);
-        $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
+        $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias . $iDepth);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -404,23 +410,27 @@ class HasMany extends Relationship
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
 
-    public function condition($o)
+    public function condition($o, $iDepth)
     {
         $oLM = $this->lm;
         $oCM = $this->cm;
 
+        $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+        $iDepth = $iDepth ?: '';
+
+
         if ($o->logic === 'or')
         {
             $mColumn = $oLM->t->columnRealName($o->attribute);
-            $sLHS = Condition::leftHandSide($mColumn, $oLM->t->alias . '2');
+            $sLHS = Condition::leftHandSide($mColumn, $oLM->t->alias . '_sub');
             $sRHS = Condition::rightHandSide($o->value);
 
-            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '2');
-            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias);
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '_sub');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias . $iPreviousDepth);
 
             return "EXISTS (
                         SELECT NULL
-                        FROM $oLM->table {$oLM->alias}2
+                        FROM $oLM->table {$oLM->alias}_sub
                         WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
                         AND   {$sLHS} {$o->operator} {$sRHS}
                     )";
@@ -428,20 +438,20 @@ class HasMany extends Relationship
         else // logic == 'and'
         {
             $mColumn = $oLM->t->columnRealName($o->attribute);
-            $sLHS2 = Condition::leftHandSide($mColumn, $oLM->t->alias . '2');
-            $sLHS3 = Condition::leftHandSide($mColumn, $oLM->t->alias . '3');
+            $sLHS2 = Condition::leftHandSide($mColumn, $oLM->t->alias . '_sub');
+            $sLHS3 = Condition::leftHandSide($mColumn, $oLM->t->alias . '_sub2');
             $sRHS  = Condition::rightHandSide($o->value);
 
-            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '3');
-            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias);
+            $sLHS_LMColumn = Condition::leftHandSide($oLM->column, $oLM->t->alias . '_sub2');
+            $sLHS_CMColumn = Condition::leftHandSide($oCM->column, $oCM->t->alias . $iPreviousDepth);
 
             return "NOT EXISTS (
                         SELECT NULL
-                        FROM $oLM->table {$oLM->alias}2
+                        FROM $oLM->table {$oLM->alias}_sub
                         WHERE {$sLHS2} {$o->operator} {$sRHS}
                         AND {$sLHS2} NOT IN (
                             SELECT {$sLHS3}
-                            FROM $oLM->table {$oLM->alias}3
+                            FROM $oLM->table {$oLM->alias}_sub2
                             WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
                             AND   {$sLHS3}         = {$sLHS2}
                         )
@@ -511,35 +521,38 @@ class ManyMany extends Relationship
             $this->jm->class = $s = $a['join_model'] . self::$_sModelClassSuffix;
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : strtolower($this->cm->t->modelClassSuffix) . self::$_sForeignKeySuffix);
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : strtolower($this->lm->t->modelClassSuffix) . self::$_sForeignKeySuffix);
+            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : call_user_func(self::$_oCfg->buildForeignKey, $this->cm->t->modelBaseName));
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : call_user_func(self::$_oCfg->buildForeignKey, $this->lm->t->modelBaseName));
         }
         else
         {
             $this->jm->class = null;
             $this->jm->table = isset($a['join_table']) ? $a['join_table'] : $this->cm->table . '_' . $this->lm->table;
-            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : $this->cm->pk;
-            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : $this->lm->pk;
+            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : (strtolower($this->cm->t->modelBaseName) . '_id');
+            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : (strtolower($this->lm->t->modelBaseName) . '_id');
         }
 
         $this->jm->alias = strtolower($this->jm->table);
     }
 
-    public function condition($o)
+    public function condition($o, $iDepth)
     {
 		$mColumn = $this->lm->t->columnRealName($o->attribute);
+
+        $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+        $iDepth = $iDepth ?: '';
 
         if ($o->logic === 'or')
         {
             $sRHS = Condition::rightHandSide($o->value);
             if ($o->attribute === 'id')
             {
-                $sLHS = Condition::leftHandSide($this->jm->to, $this->jm->alias);
+                $sLHS = Condition::leftHandSide($this->jm->to, $this->jm->alias . $iDepth);
             }
             else
             {
                 $mColumn = $this->lm->t->columnRealName($o->attribute);
-                $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
+                $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias . $iDepth);
             }
 
             return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -547,21 +560,21 @@ class ManyMany extends Relationship
         else // $o->logic === 'and'
         {
             $mColumn = $this->lm->t->columnRealName($o->attribute);
-            $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias);
+            $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias . $iDepth);
             $sRHS = Condition::rightHandSide($o->value);
 
-            $sCond_JMFrom  = Condition::leftHandSide($this->jm->from,   $this->jm->alias);
-            $sCond_JMFrom2 = Condition::leftHandSide($this->jm->from,   $this->jm->alias . '2');
-            $sCond_JMTo2   = Condition::leftHandSide($this->jm->to,     $this->jm->alias . '2');
-            $sCond_LM2     = Condition::leftHandSide($this->lm->column, $this->lm->alias . '2');
+            $sCond_JMFrom  = Condition::leftHandSide($this->jm->from,   $this->jm->alias . $iDepth);
+            $sCond_JMFrom2 = Condition::leftHandSide($this->jm->from,   $this->jm->alias . '_sub');
+            $sCond_JMTo2   = Condition::leftHandSide($this->jm->to,     $this->jm->alias . '_sub');
+            $sCond_LM2     = Condition::leftHandSide($this->lm->column, $this->lm->alias . '_sub');
 
             return "NOT EXISTS (
                         SELECT NULL
-                        FROM {$this->lm->table} {$this->lm->alias}2
+                        FROM {$this->lm->table} {$this->lm->alias}_sub
                         WHERE {$sLHS} {$o->operator} {$sRHS}
                         AND NOT EXISTS (
                             SELECT NULL
-                            FROM {$this->jm->table} {$this->jm->alias}2
+                            FROM {$this->jm->table} {$this->jm->alias}_sub
                             WHERE {$sCond_JMFrom} = {$sCond_JMFrom2}
                             AND   {$sCond_JMTo2}  = {$sCond_LM2}
                         )
@@ -649,12 +662,14 @@ class ManyMany extends Relationship
 
     private function _joinJM($iDepth, $sJoinType)
     {
-		return " $sJoinType JOIN {$this->jm->table} {$this->jm->alias} ON {$this->cm->alias}.{$this->cm->column} = {$this->jm->alias}.{$this->jm->from}";
+        $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+
+		return " $sJoinType JOIN {$this->jm->table} {$this->jm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->jm->alias}$iDepth.{$this->jm->from}";
     }
 
     private function _joinLM($iDepth, $sJoinType)
     {
-		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias} ON {$this->jm->alias}.{$this->jm->to} = {$this->lm->alias}.{$this->lm->pk}";
+		return " $sJoinType JOIN {$this->lm->table} {$this->lm->alias}$iDepth ON {$this->jm->alias}$iDepth.{$this->jm->to} = {$this->lm->alias}$iDepth.{$this->lm->pk}";
     }
 
 }

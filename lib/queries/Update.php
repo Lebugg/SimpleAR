@@ -39,11 +39,13 @@ class Update extends \SimpleAR\Query\Where
 
 		if (isset($aOptions['conditions']))
 		{
-            $this->_where($aOptions['conditions']);
+            $this->_conditions($aOptions['conditions']);
+            $this->_where();
 		}
 
         $this->_aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
         $this->values    = array_merge($aOptions['values'], $this->values);
+
 
 		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
         $this->sql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';

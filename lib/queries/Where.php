@@ -11,23 +11,34 @@ namespace SimpleAR\Query;
  */
 abstract class Where extends \SimpleAR\Query
 {
-	protected $_aArborescence = array();
+	protected $_oArborescence;
+	protected $_aConditions = array();
+
     protected $_sJoin         = '';
     protected $_sWhere        = '';
 
     protected $_aJoinedTables = array();
 
-    const JOIN_INNER = 10;
+    const JOIN_INNER = 30;
     const JOIN_LEFT  = 20;
     const JOIN_RIGHT = 21;
-    const JOIN_OUTER = 30;
+    const JOIN_OUTER = 10;
 
     protected $_aJoinTypes = array(
-        10 => 'INNER',
+        30 => 'INNER',
         20 => 'LEFT',
         21 => 'RIGHT',
-        30 => 'OUTER',
+        10 => 'OUTER',
     );
+
+    public function __construct($sRoot)
+    {
+        parent::__construct($sRoot);
+
+        $this->_oArborescence = new \StdClass();
+        $this->_oArborescence->__relations  = array();
+        $this->_oArborescence->__conditions = array();
+    }
 
     /**
      * Add a relation array into the join arborescence of the query.
@@ -47,214 +58,250 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
     {
-        if (!$aRelationNames) { return array(&$this->_aArborescence, null); }
+        if (!$aRelationNames) { return array(&$this->_oArborescence, null); }
 
         // Add related model(s) in join arborescence.
-        $aArborescence =& $this->_aArborescence;
-        $sCurrentModel =  $this->_sRootModel;
-        $oRelation     =  null;
+        $oNode         = $this->_oArborescence;
+        $sCurrentModel = $this->_sRootModel;
+        $oRelation     = null;
 
+        // Foreach relation to add, set some "config" elements.
         foreach ($aRelationNames as $sRelation)
         {
-            $oRelation = $sCurrentModel::relation($sRelation);
-            if (! isset($aArborescence[$sRelation]))
+            // Add a new node if needed.
+            if (! isset($oNode->__relations[$sRelation]))
             {
-                $aArborescence[$sRelation] = array();
+                $oNode = $oNode->__relations[$sRelation] = new \StdClass();
+
+                $oNode->__type       = $iJoinType;
+                $oNode->__conditions = array();
+                $oNode->__force      = false;
+                $oNode->__relations  = array();
+            }
+            // Already present? We may have to change some values.
+            else
+            {
+                $oNode = $oNode->__relations[$sRelation];
+
+                // Choose right join type.
+                $iCurrentType = $oNode->__type;
+
+                // If new join type is *stronger* (more restrictive) than old join type, use new
+                // type.
+                if ($iCurrentType / 10 < $iJoinType / 10)
+                {
+                    $oNode->__type = $iJoinType;
+                }
+                // Special case for LEFT and RIGHT conflict. Use INNER.
+                elseif ($iCurrentType !== $iJoinType && $iCurrentType / 10 === $iJoinType / 10)
+                {
+                    $oNode->__type = self::JOIN_INNER;
+                }
             }
 
-            // Go forward in arborescence.
-            $aArborescence = &$aArborescence[$sRelation];
+            // Force join on last node if required.
+            $oNode->__force = $bForceJoin || $oNode->__force;
 
-            $aArborescence['_TYPE_'] = $iJoinType;
-
+            $oRelation     = $sCurrentModel::relation($sRelation);
             $sCurrentModel = $oRelation->lm->class;
         }
 
-        if (! isset($aArborescence['_TYPE_']))
+        // Return arborescence leaf and current Relation object.
+        return array($oNode, $oRelation);
+    }
+
+    protected function _conditions($aConditions)
+    {
+        $this->_aConditions = $this->_conditionsParse($aConditions);
+    }
+    
+    protected function _conditionsParse($aConditions)
+    {
+        $aRes = array();
+
+        $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+        $oCondition       = null;
+
+        foreach ($aConditions as $mKey => $mValue)
         {
-            $aArborescence['_TYPE_'] = $iJoinType;
+            // It is bound to be a condition. 'myAttribute' => 'myValue'
+            if (is_string($mKey))
+            {
+                $oCondition = new \SimpleAR\Condition($mKey, null, $mValue);
+                $aRes[]     = array($sLogicalOperator, $oCondition);
+
+                // Reset operator.
+                $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+            }
+
+            // It can be a condition, a condition group, or a logical operator.
+            else
+            {
+                // It is a logical operator.
+                if     ($mValue === 'OR'  || $mValue === '||') { $sLogicalOperator = 'OR';  }
+                elseif ($mValue === 'AND' || $mValue === '&&') { $sLogicalOperator = 'AND'; }
+
+                // Condition or condition group.
+                else
+                {
+                    // Condition.
+                    if (isset($mValue[0]) && is_string($mValue[0]))
+                    {
+                        $oCondition = new \SimpleAR\Condition($mValue[0], $mValue[1], $mValue[2]);
+                        $aRes[]     = array($sLogicalOperator, $oCondition);
+                    }
+
+                    // Condition group.
+                    else
+                    {
+                        $aRes[] = array($sLogicalOperator, $this->_conditionsParse($mValue));
+                    }
+
+                    // Reset operator.
+                    $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+                }
+            }
+
+            // Condition object may contains an arborescence string as an attribute.
+            if ($oCondition && $this->_bUseModel)
+            {
+                $this->_conditionsExtractArborescence($oCondition);
+            }
+
+            $oCondition = null;
+        }
+
+        return $aRes;
+    }
+
+	private function _conditionsExtractArborescence($oCondition)
+	{
+        $sAttribute = $oCondition->attribute;
+        $sOperator  = $oCondition->operator;
+        $mValue     = $oCondition->value;
+
+        // We want to save arborescence without attribute name for later use.
+        $sArborescence = ($i = strrpos($sAttribute, '/')) ? substr($sAttribute, 0, $i + 1) : '';
+
+        $aRelationPieces = explode('/', $sAttribute);
+        $sAttribute      = array_pop($aRelationPieces);
+
+        // Add related model(s) into join arborescence.
+        list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces);
+
+        $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
+
+        // Update Condition data.
+        $oCondition->relation  = $oRelation;
+        $oCondition->table     = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
+        $oCondition->attribute = $sAttribute;
+
+        // Is there a method to handle this attribute? Useful for *virtual* attributes.
+        $sToConditionsMethod = 'to_conditions_' . $sAttribute;
+        if (method_exists($sCurrentModel, $sToConditionsMethod))
+        {
+            $aSubConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
+
+             // to_conditions_* may return nothing when they directly modify
+             // the Condition object.
+            if ($aSubConditions)
+            {
+                $oCondition->virtual = true;
+                $aSubConditions      = $this->_conditionsParse($aSubConditions);
+                /*
+                foreach($aSubConditions as $oSubCondition)
+                {
+                    $oSubCondition->table    = $oCondition->table;
+                    $oSubCondition->relation = $oCondition->relation;
+                }
+                */
+                $oCondition->subconditions = $aSubConditions;
+            }
         }
         else
         {
-            // Choose right join type.
-            $iCurrentType = $aArborescence['_TYPE_'];
-
-            if ($iCurrentType / 10 > $iJoinType / 10)
-            {
-                $aArborescence['_TYPE_'] = $iJoinType;
-            }
-            elseif ($iCurrentType !== $iJoinType && $iCurrentType / 10 === $iJoinType / 10)
-            {
-                $aArborescence['_TYPE_'] = self::JOIN_INNER;
-            }
+            $oNode->__conditions[] = $oCondition;
         }
-
-        $aArborescence['_FORCE_'] = $bForceJoin;
-
-        return array(&$aArborescence, $oRelation);
-    }
-
-    protected function _arborescenceToSql()
-    {
-        $this->_sJoin = $this->_joinArborescenceToSql($this->_aArborescence, $this->_sRootModel);
-    }
-
-    protected function _where($aConditions)
-    {
-        // Transform user syntax formatted condition array into a object
-        // formatted array.
-        $aConditions = \SimpleAR\Condition::parseConditionArray($aConditions);
-
-        // Arborescence feature is only available when using models (it is based
-        // on model relationships).
-        if ($this->_bUseModel)
-        {
-            $aConditions = $this->_extractArborescenceFromConditions($aConditions);
-        }
-
-        // We made all wanted treatments; get SQL out of Condition array.
-        // We update values because Condition::arrayToSql() will flatten them in
-        // order to bind them to SQL string with PDO.
-        list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($aConditions, $this->_bUseAlias, $this->_bUseModel);
-
-		$this->_sWhere = ($sSql) ? ' WHERE ' . $sSql : '';
-    }
-
-	private function _extractArborescenceFromConditions($aConditions)
-	{
-        for ($i = 0, $iCount = count($aConditions) ; $i < $iCount ; ++$i)
-        {
-            $sLogicalOperator = $aConditions[$i][0];
-            $mItem            = $aConditions[$i][1];
-
-            // Group of conditions.
-            if (is_array($mItem))
-            {
-                $aConditions[$i][1] = $this->_extractArborescenceFromConditions($mItem);
-                continue;
-            }
-
-            // It necessarily is a Condition instance.
-
-            $oCondition = $mItem;
-            $sAttribute = $oCondition->attribute;
-            $sOperator  = $oCondition->operator;
-            $mValue     = $oCondition->value;
-
-            // We want to save arborescence without attribute name for later
-            // use.
-            $sArborescence = strrpos($sAttribute, '/') ? substr($sAttribute, 0, strrpos($sAttribute, '/') + 1) : '';
-
-            // Explode relation arborescence.
-            $aPieces = explode('/', $sAttribute);
-
-            // Attribute name only.
-			$sAttribute = array_pop($aPieces);
-
-			// Add related model(s) into join arborescence.
-            $a = $this->_addToArborescence($aPieces);
-            $aArborescence =& $a[0];
-            $oRelation     =  $a[1];
-
-            $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
-
-            // Let the condition know which relation it is associated with.
-			$oCondition->relation  = $oRelation;
-            $oCondition->table     = clone $sCurrentModel::table();
-            // Remove arborescence from Condition attribute string.
-            $oCondition->attribute = $sAttribute;
-
-            // Call a user method in order to deal with complex/custom attributes.
-            $sToConditionsMethod = 'to_conditions_' . $sAttribute;
-            if (method_exists($sCurrentModel, $sToConditionsMethod))
-            {
-                $aSubConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
-
-                /**
-                 * to_conditions_* may return nothing when they directly modify
-                 * the Condition object.
-                 */
-                if ($aSubConditions)
-                {
-                    $aSubConditions     = \SimpleAR\Condition::parseConditionArray($aSubConditions);
-                    $aConditions[$i][1] = $this->_extractArborescenceFromConditions($aSubConditions);
-                }
-                continue;
-            }
-
-            if ($oRelation !== null)
-            {
-                // Add actual attribute to arborescence.
-                $aArborescence['_CONDITIONS_'][] = $oCondition;
-            }
-		}
-
-        return $aConditions;
 	}
 
-	private function _joinArborescenceToSql($aArborescence, $sCurrentModel, $iDepth = 1)
+    protected function _processArborescence()
+    {
+        // Process root node here.
+        $oRoot = $this->_oArborescence;
+        // Nothing to do?
+
+        // Cross down the tree.
+        $this->_processArborescenceRecursive($oRoot, $this->_sRootModel);
+    }
+
+	private function _processArborescenceRecursive($oArborescence, $sCurrentModel, $iDepth = 1)
 	{
-		$sRes = '';
         // Construct joined table array according to depth.
         if (! isset($this->_aJoinedTables[$iDepth]))
         {
             $this->_aJoinedTables[$iDepth] = array();
         }
 
-		foreach ($aArborescence as $sRelationName => $aValues)
+		foreach ($oArborescence->__relations as $sRelation => $oNextNode)
 		{
-			$oRelation = $sCurrentModel::relation($sRelationName);
+			$oRelation = $sCurrentModel::relation($sRelation);
             $sTable    = $oRelation->lm->table;
 
-            $aConditions =  isset($aValues['_CONDITIONS_']) ? $aValues['_CONDITIONS_'] : false; unset($aValues['_CONDITIONS_']);
-            $iJoinType   =  isset($aValues['_TYPE_'])       ? $aValues['_TYPE_']       : false; unset($aValues['_TYPE_']);
-            $bForce      =  isset($aValues['_FORCE_'])      ? $aValues['_FORCE_']      : false; unset($aValues['_FORCE_']);
-
-			// If relation arborescence continues, process it.
-			if ($aValues)
-			{
-                // Join it if not done yet.
-                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
-                {
-                    $sRes .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$iJoinType]);
-
-                    // Add it to joined tables array.
-                    $this->_aJoinedTables[$iDepth][] = $sTable;
-                }
-
-				$sRes .= $this->_joinArborescenceToSql($aValues, $oRelation->lm->class, $iDepth + 1);
-			}
-            // If we are forced to join relation, do it.
-            elseif ($bForce)
+            // We *have to* to join table if not already joined *and* there it is not the last
+            // relation.
+            // __force bypasses the last relation condition. True typically when we have to join
+            // this table for a "with" option.
+            if (! in_array($sTable, $this->_aJoinedTables[$iDepth]) && ($oNextNode->__relations || $oNextNode->__force) )
             {
-                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
-                {
-                    $sRes .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$iJoinType]);
+                $this->_sJoin .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$oNextNode->__type]);
 
-                    // Add it to joined tables array.
-                    $this->_aJoinedTables[$iDepth][] = $sTable;
-                }
+                // Add it to joined tables array.
+                $this->_aJoinedTables[$iDepth][] = $sTable;
             }
-            // If there are conditions to apply on linked model, we may have to join it.
-			elseif ($aConditions)
-			{
-                // Already joined? Don't process it.
+
+            // If there is some other relations to join, join them.
+            if ($oNextNode->__relations)
+            {
+				$this->_sJoin .= $this->_processArborescenceRecursive($oNextNode, $oRelation->lm->class, $iDepth + 1);
+            }
+
+            
+            // We have stuff to do with conditions:
+            // 1. Tell them their depth.
+            // 2. Join the relation as last if not already joined (to be able to apply potential
+            // conditions).
+            if ($oNextNode->__conditions)
+            {
+                // Tell conditions their depth because they did not knwow it until now.
+                foreach ($oNextNode->__conditions as $oCondition)
+                {
+                    $oCondition->depth = $iDepth;
+                }
+
+                // If not already joined, do it as last relation.
                 if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
                 {
-                    $sTmp = $oRelation->joinAsLast($aConditions, $iDepth, $this->_aJoinTypes[$iJoinType]);
-
-                    if ($sTmp)
+                    // $s is false if joining table was not necessary.
+                    if ($s = $oRelation->joinAsLast($oNextNode->__conditions, $iDepth, $this->_aJoinTypes[$oNextNode->__type]));
                     {
-                        $sRes .= $sTmp;
+                        $this->_sJoin .= $s;
 
                         // Add it to joined tables array.
                         $this->_aJoinedTables[$iDepth][] = $sTable;
                     }
                 }
-			}
-
+            }
 		}
-
-		return $sRes;
 	}
+
+    protected function _where()
+    {
+        // We made all wanted treatments; get SQL out of Condition array.
+        // We update values because Condition::arrayToSql() will flatten them in
+        // order to bind them to SQL string with PDO.
+        list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
+
+		return $this->_sWhere = ($sSql ? ' WHERE ' . $sSql : '');
+    }
+
 }

@@ -30,6 +30,8 @@ class Condition
         'NOT IN' => 'NOT IN',
     );
 
+    const DEFAULT_LOGICAL_OP = 'AND';
+
     /**
      * The condition logic.
      *
@@ -77,6 +79,10 @@ class Condition
      * @var Table
      */
     public $table;
+
+    public $depth = 0;
+    public $virtual = false;
+    public $subconditions = array();
 
     /**
      * Constructor
@@ -177,15 +183,25 @@ class Condition
 
             if ($mItem instanceof Condition)
             {
-                $sSql   .= ' ' . $mItem->toSql($bUseAliases, $bToColumn);
-                $aValues = array_merge($aValues, $mItem->flattenValues());
+                if ($mItem->virtual)
+                {
+                    list($s, $a) = self::arrayToSql($mItem->subconditions, $bUseAliases, $bToColumn);
+
+                    $sSql   .= '(' . $s . ')';
+                    $aValues = array_merge($aValues, $a);
+                }
+                else
+                {
+                    $sSql   .= ' ' . $mItem->toSql($bUseAliases, $bToColumn);
+                    $aValues = array_merge($aValues, $mItem->flattenValues());
+                }
             }
             // $mItem is an array of Conditions.
             else
             {
                 list($s, $a) = self::arrayToSql($mItem, $bUseAliases, $bToColumn);
 
-                $sSql   .= $s;
+                $sSql   .= '(' . $s . ')';
                 $aValues = array_merge($aValues, $a);
             }
         }
@@ -426,15 +442,10 @@ class Condition
      */
     public function toSql($bUseAliases = true, $bToColumn = true)
     {
-        if (!$bUseAliases && $this->table)
-        {
-            $this->table->alias = '';
-        }
-
         // If condition does not depend of a relation. Construct SQL here.
         if ($this->relation === null)
         {
-            $mColumns = $this->table->columnRealName($this->attribute);
+            $mColumns = $bToColumn   ? $this->table->columnRealName($this->attribute) : $this->attribute;
             $sAlias   = $bUseAliases ? $this->table->alias : '';
 
             $sLHS = self::leftHandSide($mColumns, $sAlias);
@@ -445,7 +456,7 @@ class Condition
         // Relation class is better placed to do it.
         else
         {
-			return $this->relation->condition($this);
+			return $this->relation->condition($this, $this->depth);
         }
     }
 }
