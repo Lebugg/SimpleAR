@@ -183,6 +183,15 @@ class Config
      */
     private $_foreignKeySuffix = 'Id';
 
+    /**
+     * Abbreviation of language to use.
+     *
+     * @var string
+     *
+     * Default value: 'en'
+     */
+    private $_lang = 'en';
+
 	/**
      * The suffix appended to model class's base name.
 	 * For example, if model class suffix is "Model", model classes must be
