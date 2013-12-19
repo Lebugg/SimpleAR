@@ -528,8 +528,8 @@ class ManyMany extends Relationship
         {
             $this->jm->class = null;
             $this->jm->table = isset($a['join_table']) ? $a['join_table'] : $this->cm->table . '_' . $this->lm->table;
-            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : (strtolower($this->cm->t->modelBaseName) . '_id');
-            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : (strtolower($this->lm->t->modelBaseName) . '_id');
+            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : (strtolower($this->cm->t->name) . '_id');
+            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : (strtolower($this->lm->t->name) . '_id');
         }
 
         $this->jm->alias = strtolower($this->jm->table);
