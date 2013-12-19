@@ -141,8 +141,7 @@ class Select extends \SimpleAR\Query\Where
 
                 $iDepth = count($aPieces) ?: '';
 
-                $this->_aSelects[] = '`' . $oTableToGroupOn->alias . $iDepth . '`.' .  $oTableToGroupOn->columnRealName($sAttribute) . ' AS `' . $sResultAlias . '.' .  $sAttribute . '`';
-                $this->_aGroupBy[] = '`' . $sResultAlias . '.' .  $sAttribute . '`';
+                $this->_aGroupBy[] = '`' . $oTableToGroupOn->alias . $iDepth . '`.' .  $oTableToGroupOn->columnRealName($sAttribute);
             }
         }
 	}
