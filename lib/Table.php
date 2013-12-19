@@ -57,6 +57,8 @@ class Table
      */
     public function columnRealName($mKey)
     {
+        if (! $mKey) { return array(); }
+
         $aRes = array();
         foreach ((array) $mKey as $sKey)
         {

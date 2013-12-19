@@ -45,7 +45,14 @@ class Insert extends \SimpleAR\Query
             $sTable   = $this->_sRootTable;
         }
 
-        $this->sql = 'INSERT INTO ' . $sTable . '(`' . implode('`,`', (array) $aColumns) . '`) VALUES';
+        // If user did not specified any column.
+        if (! $aColumns)
+        {
+            $this->sql = 'INSERT INTO `' . $sTable . '` VALUES()';
+            return;
+        }
+
+        $this->sql = 'INSERT INTO `' . $sTable . '`(`' . implode('`,`', (array) $aColumns) . '`) VALUES';
         $iCount    = count($this->values);
 
         // $this->values is a multidimensional array. Actually, it is an array of
