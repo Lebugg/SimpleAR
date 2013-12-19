@@ -253,8 +253,9 @@ class Config
      */
     public function __construct()
     {
-        $this->_buildForeignKey = function($sModelBaseName) {
-            return strtolower($sModelBaseName) . $this->_foreignKeySuffix;
+        $sSuffix = $this->_foreignKeySuffix;
+        $this->_buildForeignKey = function($sModelBaseName) use ($sSuffix) {
+            return strtolower($sModelBaseName) . $sSuffix;
         };
     }
 
