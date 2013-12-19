@@ -127,9 +127,7 @@ class Select extends \SimpleAR\Query\Where
             $aAttributes = explode(',', array_pop($aPieces));
 
 			// Add related model(s) in join arborescence.
-            $a = $this->_addToArborescence($aPieces);
-            $aArborescence =& $a[0];
-            $oRelation     =  $a[1];
+            list(, $oRelation) = $this->_addToArborescence($aPieces, self::JOIN_INNER, true);
 
             $sResultAlias    = $oRelation ? $oRelation->name  : self::ROOT_RESULT_ALIAS;
             $oTableToGroupOn = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
@@ -141,6 +139,9 @@ class Select extends \SimpleAR\Query\Where
                     throw new Exception('Attribute "' . $sAttribute . '" does not exist for model "' . $oTableToGroupOn->modelBaseName . '" in group_by option.');
                 }
 
+                $iDepth = count($aPieces) ?: '';
+
+                $this->_aSelects[] = '`' . $oTableToGroupOn->alias . $iDepth . '`.' .  $oTableToGroupOn->columnRealName($sAttribute) . ' AS `' . $sResultAlias . '.' .  $sAttribute . '`';
                 $this->_aGroupBy[] = '`' . $sResultAlias . '.' .  $sAttribute . '`';
             }
         }
