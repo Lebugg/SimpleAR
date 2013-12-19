@@ -1537,7 +1537,15 @@ abstract class Model
                 }
                 else
                 {
-                    $this->_attr($sRelation, $aRow['_WITH_'][$sRelation]);
+                    $a = array();
+                    foreach ($aValue as $aVal)
+                    {
+                        $o = new $sLMClass();
+                        $o->_load($aValue);
+
+                        $a[] = $o;
+                    }
+                    $this->_attr($sRelation, $a);
                 }
             }
 
