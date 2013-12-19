@@ -60,10 +60,11 @@ abstract class Where extends \SimpleAR\Query
     {
         if (!$aRelationNames) { return array(&$this->_oArborescence, null); }
 
-        // Add related model(s) in join arborescence.
         $oNode         = $this->_oArborescence;
         $sCurrentModel = $this->_sRootModel;
-        $oRelation     = null;
+
+        $oRelation         = null;
+        $oPreviousRelation = null;
 
         // Foreach relation to add, set some "config" elements.
         foreach ($aRelationNames as $sRelation)
@@ -102,12 +103,13 @@ abstract class Where extends \SimpleAR\Query
             // Force join on last node if required.
             $oNode->__force = $bForceJoin || $oNode->__force;
 
+            $oPreviousRelation = $oRelation;
             $oRelation     = $sCurrentModel::relation($sRelation);
             $sCurrentModel = $oRelation->lm->class;
         }
 
         // Return arborescence leaf and current Relation object.
-        return array($oNode, $oRelation);
+        return array($oNode, $oRelation, $oPreviousRelation);
     }
 
     protected function _conditions($aConditions)
@@ -186,6 +188,13 @@ abstract class Where extends \SimpleAR\Query
         $aRelationPieces = explode('/', $sAttribute);
         $sAttribute      = array_pop($aRelationPieces);
 
+        if ($sAttribute[0] === '#')
+        {
+            $this->_having($oCondition->attribute, $sOperator, $mValue);
+            $oCondition->virtual = true;
+            return;
+        }
+
         // Add related model(s) into join arborescence.
         list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces);
 
@@ -208,13 +217,7 @@ abstract class Where extends \SimpleAR\Query
             {
                 $oCondition->virtual = true;
                 $aSubConditions      = $this->_conditionsParse($aSubConditions);
-                /*
-                foreach($aSubConditions as $oSubCondition)
-                {
-                    $oSubCondition->table    = $oCondition->table;
-                    $oSubCondition->relation = $oCondition->relation;
-                }
-                */
+
                 $oCondition->subconditions = $aSubConditions;
             }
         }
@@ -223,6 +226,11 @@ abstract class Where extends \SimpleAR\Query
             $oNode->__conditions[] = $oCondition;
         }
 	}
+
+    protected function _having($sAttribute, $sOperator, $mValue)
+    {
+        throw new Exception('Cannot add this condition "' . $sAttribute . '" in a ' .  get_class($this) . ' query.');
+    }
 
     protected function _processArborescence()
     {
@@ -299,7 +307,9 @@ abstract class Where extends \SimpleAR\Query
         // We made all wanted treatments; get SQL out of Condition array.
         // We update values because Condition::arrayToSql() will flatten them in
         // order to bind them to SQL string with PDO.
-        list($sSql, $this->values) = \SimpleAR\Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
+        list($sSql, $aValues) = \SimpleAR\Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
+
+        $this->values = array_merge($this->values, $aValues);
 
 		return $this->_sWhere = ($sSql ? ' WHERE ' . $sSql : '');
     }

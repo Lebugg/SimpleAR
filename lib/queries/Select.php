@@ -31,6 +31,7 @@ class Select extends \SimpleAR\Query\Where
      * @var array
      */
 	private $_aGroupBy		= array();
+    private $_aHaving = array();
 
     private $_aPendingRow = false;
 
@@ -339,6 +340,7 @@ class Select extends \SimpleAR\Query\Where
 		$this->sql .= $this->_sWhere;
 		$this->sql .= $this->_groupBy();
 		$this->sql .= $this->_sOrderBy;
+        $this->sql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
 
 		if (isset($aOptions['limit']))
 		{
@@ -356,6 +358,43 @@ class Select extends \SimpleAR\Query\Where
 	{
 		return $this->_aGroupBy ? ' GROUP BY ' . implode(',', $this->_aGroupBy) : '';
 	}
+
+    protected function _having($sAttribute, $sOperator, $mValue)
+    {
+        $aPieces    = explode('/', $sAttribute);
+        $sAttribute = array_pop($aPieces);
+
+        $sPrefix    = $sAttribute[0];
+        $sAttribute = substr($sAttribute, 1);
+        $aPieces[]  = $sAttribute;
+        $iDepth     = count($aPieces) ?: '';
+
+        list(, $oRelation, $oPreviousRelation) = $this->_addToArborescence($aPieces, self::JOIN_LEFT, true);
+        $sResultAlias = $oPreviousRelation ? $oPreviousRelation->name : self::ROOT_RESULT_ALIAS;
+        $oTable     = $oPreviousRelation ? $oPreviousRelation : $this->_oRootTable;
+        $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
+
+        switch ($sPrefix)
+        {
+            case '#':
+                $this->_aSelects[] = 'COUNT(`' . $oRelation->lm->t->alias . $iDepth . '`.' .  $sColumnToCountOn . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
+                // We need a GROUP BY.
+                if ($oTable->isSimplePrimaryKey)
+                {
+                    $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
+                }
+                else
+                {
+                    foreach ($oTable->primaryKey as $sPK)
+                    {
+                        $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
+                    }
+                }
+                $this->_aHaving[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
+                $this->values[]    = $mValue;
+                break;
+        }
+    }
 
     private function _parseRow($aRow)
     {

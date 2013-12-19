@@ -185,10 +185,13 @@ class Condition
             {
                 if ($mItem->virtual)
                 {
-                    list($s, $a) = self::arrayToSql($mItem->subconditions, $bUseAliases, $bToColumn);
+                    if ($mItem->subconditions)
+                    {
+                        list($s, $a) = self::arrayToSql($mItem->subconditions, $bUseAliases, $bToColumn);
 
-                    $sSql   .= '(' . $s . ')';
-                    $aValues = array_merge($aValues, $a);
+                        $sSql   .= '(' . $s . ')';
+                        $aValues = array_merge($aValues, $a);
+                    }
                 }
                 else
                 {
