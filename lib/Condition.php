@@ -135,7 +135,9 @@ class Condition
 
             if (!isset($this->value[0]))
             {
-                throw new Exception('Invalid condition value: ' . $mValue . '.');
+                $this->value    = NULL;
+                $this->operator = '<=>';
+                //throw new Exception('Invalid condition value: ' . $mValue . '.');
             }
 
             // Several values, we have to *arrayfy* the operator.

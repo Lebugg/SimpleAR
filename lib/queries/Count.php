@@ -25,10 +25,11 @@ class Count extends \SimpleAR\Query\Where
 
 		if (isset($aOptions['conditions']))
 		{
-            $this->_where($aOptions['conditions']);
+            $this->_conditions($aOptions['conditions']);
 		}
 
         $this->_processArborescence();
+        $this->_where();
 
 		$this->sql  = 'SELECT COUNT(*)';
 		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
