@@ -62,6 +62,11 @@ class Table
         $aRes = array();
         foreach ((array) $mKey as $sKey)
         {
+            if (! isset($this->columns[$sKey]) && $sKey !== 'id')
+            {
+                throw new Exception('Attribute “' . $sKey . '” does not exist for model “' .  $this->modelBaseName . '”.');
+            }
+
             $aRes[] = $sKey === 'id'
                 ? $this->primaryKeyColumns
                 : $this->columns[$sKey]

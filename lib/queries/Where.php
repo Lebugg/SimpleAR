@@ -36,8 +36,13 @@ abstract class Where extends \SimpleAR\Query
         parent::__construct($sRoot);
 
         $this->_oArborescence = new \StdClass();
-        $this->_oArborescence->__relations  = array();
-        $this->_oArborescence->__conditions = array();
+        $this->_oArborescence->next  = array();
+        $this->_oArborescence->conditions = array();
+        $this->_oArborescence->relation = null;
+        $this->_oArborescence->previousRelation = null;
+        $this->_oArborescence->depth = 0;
+        $this->_oArborescence->table = $this->_oRootTable;
+
     }
 
     /**
@@ -58,7 +63,7 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
     {
-        if (!$aRelationNames) { return array(&$this->_oArborescence, null); }
+        if (!$aRelationNames) { return $this->_oArborescence; }
 
         $oNode         = $this->_oArborescence;
         $sCurrentModel = $this->_sRootModel;
@@ -67,22 +72,31 @@ abstract class Where extends \SimpleAR\Query
         $oPreviousRelation = null;
 
         // Foreach relation to add, set some "config" elements.
-        foreach ($aRelationNames as $sRelation)
+        foreach ($aRelationNames as $i => $sRelation)
         {
+            $oPreviousRelation = $oRelation;
+            $oRelation         = $sCurrentModel::relation($sRelation);
+            $sCurrentModel     = $oRelation->lm->class;
+
             // Add a new node if needed.
-            if (! isset($oNode->__relations[$sRelation]))
+            if (! isset($oNode->next[$sRelation]))
             {
-                $oNode = $oNode->__relations[$sRelation] = new \StdClass();
+                $oNode = $oNode->next[$sRelation] = new \StdClass();
 
                 $oNode->__type       = $iJoinType;
-                $oNode->__conditions = array();
+                $oNode->conditions = array();
                 $oNode->__force      = false;
-                $oNode->__relations  = array();
+                $oNode->next  = array();
+
+                $oNode->previousRelation = $oPreviousRelation;
+                $oNode->relation = $oRelation;
+                $oNode->depth    = $i + 1;
+                $oNode->table    = $oRelation->lm->t;
             }
             // Already present? We may have to change some values.
             else
             {
-                $oNode = $oNode->__relations[$sRelation];
+                $oNode = $oNode->next[$sRelation];
 
                 // Choose right join type.
                 $iCurrentType = $oNode->__type;
@@ -102,14 +116,121 @@ abstract class Where extends \SimpleAR\Query
 
             // Force join on last node if required.
             $oNode->__force = $bForceJoin || $oNode->__force;
-
-            $oPreviousRelation = $oRelation;
-            $oRelation     = $sCurrentModel::relation($sRelation);
-            $sCurrentModel = $oRelation->lm->class;
         }
 
         // Return arborescence leaf and current Relation object.
-        return array($oNode, $oRelation, $oPreviousRelation);
+        return $oNode;
+    }
+
+    protected function _attribute($sAttribute, $bOnlyRelation = false)
+    {
+        $aPieces = explode('/', $sAttribute);
+
+        $sAttribute    = array_pop($aPieces);
+        $sLastRelation = array_pop($aPieces);
+
+        if ($sLastRelation)
+        {
+            $aPieces[] = $sLastRelation;
+        }
+
+        $aAttributes = explode(',', $sAttribute);
+        if (isset($aAttributes[1]))
+        {
+            $mAttribute = $aAttributes;
+        }
+        else
+        {
+            $mAttribute = $sAttribute;
+            // (ctype_alpha tests if charachter is alphabetical ([a-z][A-Z]).)
+            $cSpecial   = ctype_alpha($sAttribute[0]) ? null : $sAttribute[0];
+
+            if ($cSpecial)
+            {
+                $mAttribute = substr($mAttribute, 1);
+            }
+        }
+
+        if ($bOnlyRelation)
+        {
+            if (is_array($mAttribute))
+            {
+                throw new Exception('Cannot have multiple attributes in “' . $sAttribute . '”.');
+            }
+
+            $aPieces[] = $mAttribute;
+        }
+
+        return (object) array(
+            'pieces'       => $aPieces,
+            'lastRelation' => $sLastRelation,
+            'attribute'    => $mAttribute,
+            'specialChar'  => $cSpecial,
+        );
+    }
+
+    protected function _conditionExists($oAttribute)
+    {
+        $oNode      = $this->_addToArborescence($oAttribute->pieces);
+        $oCondition = new \SimpleAR\Condition($oAttribute->attribute, null, null);
+
+        $oCondition->depth    = $oNode->depth;
+        $oCondition->type     = 'exists';
+        $oCondition->exists   = ! (bool)$oAttribute->specialChar;
+        $oCondition->relation = $oNode->relation;
+
+        $oNode->conditions[] = $oCondition;
+
+        return $oCondition;
+    }
+
+    protected function _condition($oAttribute, $sOperator, $mValue)
+    {
+        // Special attributes check.
+        if ($c = $oAttribute->specialChar)
+        {
+            switch ($c)
+            {
+                case '#':
+                    $this->_having($oAttribute, $sOperator, $mValue);
+                    return;
+                default:
+                    throw new Exception('Unknown symbole “' . $c . '” in attribute “' . $sAttribute . '”.');
+                    break;
+            }
+        }
+
+        $oNode = $this->_addToArborescence($oAttribute->pieces);
+        $mAttr = $oAttribute->attribute;
+
+        $oCondition = new \SimpleAR\Condition($mAttr, $sOperator, $mValue);
+        $oCondition->depth = $oNode->depth;
+        $oCondition->table = $oNode->table;
+        if ($oNode->relation)
+        {
+            $oCondition->relation = $oNode->relation;
+            $oCondition->type     = 'relation';
+        }
+
+        // Is there a Model's method to handle this attribute? Useful for virtual attributes.
+        if ($this->_bUseModel && is_string($mAttr))
+        {
+            $sModel  = $oNode->relation ? $oNode->relation->lm->class : $this->_sRootModel;
+            $sMethod = 'to_conditions_' . $mAttr;
+
+            if (method_exists($sModel, $sMethod))
+            {
+                if ($a = $sModel::$sMethod($oCondition))
+                {
+                    $oCondition->virtual = true;
+                    $oCondition->subconditions = $this->_conditionsParse($a);
+                }
+            }
+        }
+
+        $oNode->conditions[] = $oCondition;
+
+        return $oCondition;
     }
 
     protected function _conditions($aConditions)
@@ -129,8 +250,11 @@ abstract class Where extends \SimpleAR\Query
             // It is bound to be a condition. 'myAttribute' => 'myValue'
             if (is_string($mKey))
             {
-                $oCondition = new \SimpleAR\Condition($mKey, null, $mValue);
-                $aRes[]     = array($sLogicalOperator, $oCondition);
+                $oCondition = $this->_condition($this->_attribute($mKey), null, $mValue);
+                if ($oCondition)
+                {
+                    $aRes[]     = array($sLogicalOperator, $oCondition);
+                }
 
                 // Reset operator.
                 $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
@@ -146,11 +270,21 @@ abstract class Where extends \SimpleAR\Query
                 // Condition or condition group.
                 else
                 {
-                    // Condition.
-                    if (isset($mValue[0]) && is_string($mValue[0]))
+                    // An exists condition.
+                    if (is_string($mValue))
                     {
-                        $oCondition = new \SimpleAR\Condition($mValue[0], $mValue[1], $mValue[2]);
+                        $oCondition = $this->_conditionExists($this->_attribute($mValue, true));
                         $aRes[]     = array($sLogicalOperator, $oCondition);
+                    }
+
+                    // Condition.
+                    elseif (isset($mValue[0]) && is_string($mValue[0]))
+                    {
+                        $oCondition = $this->_condition($this->_attribute($mValue[0]), $mValue[1], $mValue[2]);
+                        if ($oCondition)
+                        {
+                            $aRes[]     = array($sLogicalOperator, $oCondition);
+                        }
                     }
 
                     // Condition group.
@@ -164,68 +298,11 @@ abstract class Where extends \SimpleAR\Query
                 }
             }
 
-            // Condition object may contains an arborescence string as an attribute.
-            if ($oCondition && $this->_bUseModel)
-            {
-                $this->_conditionsExtractArborescence($oCondition);
-            }
-
             $oCondition = null;
         }
 
         return $aRes;
     }
-
-	private function _conditionsExtractArborescence($oCondition)
-	{
-        $sAttribute = $oCondition->attribute;
-        $sOperator  = $oCondition->operator;
-        $mValue     = $oCondition->value;
-
-        // We want to save arborescence without attribute name for later use.
-        $sArborescence = ($i = strrpos($sAttribute, '/')) ? substr($sAttribute, 0, $i + 1) : '';
-
-        $aRelationPieces = explode('/', $sAttribute);
-        $sAttribute      = array_pop($aRelationPieces);
-
-        if ($sAttribute[0] === '#')
-        {
-            $this->_having($oCondition->attribute, $sOperator, $mValue);
-            $oCondition->virtual = true;
-            return;
-        }
-
-        // Add related model(s) into join arborescence.
-        list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces);
-
-        $sCurrentModel = $oRelation ? $oRelation->lm->class : $this->_sRootModel;
-
-        // Update Condition data.
-        $oCondition->relation  = $oRelation;
-        $oCondition->table     = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
-        $oCondition->attribute = $sAttribute;
-
-        // Is there a method to handle this attribute? Useful for *virtual* attributes.
-        $sToConditionsMethod = 'to_conditions_' . $sAttribute;
-        if (method_exists($sCurrentModel, $sToConditionsMethod))
-        {
-            $aSubConditions = $sCurrentModel::$sToConditionsMethod($oCondition, $sArborescence);
-
-             // to_conditions_* may return nothing when they directly modify
-             // the Condition object.
-            if ($aSubConditions)
-            {
-                $oCondition->virtual = true;
-                $aSubConditions      = $this->_conditionsParse($aSubConditions);
-
-                $oCondition->subconditions = $aSubConditions;
-            }
-        }
-        else
-        {
-            $oNode->__conditions[] = $oCondition;
-        }
-	}
 
     protected function _having($sAttribute, $sOperator, $mValue)
     {
@@ -250,16 +327,16 @@ abstract class Where extends \SimpleAR\Query
             $this->_aJoinedTables[$iDepth] = array();
         }
 
-		foreach ($oArborescence->__relations as $sRelation => $oNextNode)
+		foreach ($oArborescence->next as $sRelation => $oNextNode)
 		{
-			$oRelation = $sCurrentModel::relation($sRelation);
+			$oRelation = $oNextNode->relation;
             $sTable    = $oRelation->lm->table;
 
             // We *have to* to join table if not already joined *and* there it is not the last
             // relation.
             // __force bypasses the last relation condition. True typically when we have to join
             // this table for a "with" option.
-            if (! in_array($sTable, $this->_aJoinedTables[$iDepth]) && ($oNextNode->__relations || $oNextNode->__force) )
+            if (! in_array($sTable, $this->_aJoinedTables[$iDepth]) && ($oNextNode->next || $oNextNode->__force) )
             {
                 $this->_sJoin .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$oNextNode->__type]);
 
@@ -267,30 +344,16 @@ abstract class Where extends \SimpleAR\Query
                 $this->_aJoinedTables[$iDepth][] = $sTable;
             }
 
-            // If there is some other relations to join, join them.
-            if ($oNextNode->__relations)
-            {
-				$this->_sJoin .= $this->_processArborescenceRecursive($oNextNode, $oRelation->lm->class, $iDepth + 1);
-            }
-
-            
             // We have stuff to do with conditions:
-            // 1. Tell them their depth.
-            // 2. Join the relation as last if not already joined (to be able to apply potential
+            // 1. Join the relation as last if not already joined (to be able to apply potential
             // conditions).
-            if ($oNextNode->__conditions)
+            if ($oNextNode->conditions)
             {
-                // Tell conditions their depth because they did not knwow it until now.
-                foreach ($oNextNode->__conditions as $oCondition)
-                {
-                    $oCondition->depth = $iDepth;
-                }
-
                 // If not already joined, do it as last relation.
                 if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
                 {
                     // $s is false if joining table was not necessary.
-                    if ($s = $oRelation->joinAsLast($oNextNode->__conditions, $iDepth, $this->_aJoinTypes[$oNextNode->__type]));
+                    if ($s = $oRelation->joinAsLast($oNextNode->conditions, $iDepth, $this->_aJoinTypes[$oNextNode->__type]));
                     {
                         $this->_sJoin .= $s;
 
@@ -299,6 +362,13 @@ abstract class Where extends \SimpleAR\Query
                     }
                 }
             }
+
+            // Go through arborescence.
+            if ($oNextNode->next)
+            {
+				$this->_sJoin .= $this->_processArborescenceRecursive($oNextNode, $oRelation->lm->class, $iDepth + 1);
+            }
+
 		}
 	}
 

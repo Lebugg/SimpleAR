@@ -31,6 +31,7 @@ class Select extends \SimpleAR\Query\Where
      * @var array
      */
 	private $_aGroupBy		= array();
+	private $_aOrderBy		= array();
     private $_aHaving = array();
 
     private $_aPendingRow = false;
@@ -115,34 +116,24 @@ class Select extends \SimpleAR\Query\Where
         return $aRes;
     }
 
-	private function _group_by($aGroupBy)
+	private function _group_by(array $aGroupBy)
 	{
         $aRes		= array();
 		$sRootAlias = $this->_oRootTable->alias;
 
         foreach ($aGroupBy as $sAttribute)
         {
-            $aPieces = explode('/', $sAttribute);
-
-			// One or several attributes of a related model.
-            $aAttributes = explode(',', array_pop($aPieces));
+            $oAttribute = $this->_attribute($sAttribute);
 
 			// Add related model(s) in join arborescence.
-            list(, $oRelation) = $this->_addToArborescence($aPieces, self::JOIN_INNER, true);
+            $oNode           = $this->_addToArborescence($oAttribute->pieces, self::JOIN_INNER, true);
 
-            $sResultAlias    = $oRelation ? $oRelation->name  : self::ROOT_RESULT_ALIAS;
-            $oTableToGroupOn = $oRelation ? $oRelation->lm->t : $this->_oRootTable;
+            $oTableToGroupOn = $oNode->table;
+            $sTableAlias     = $oTableToGroupOn->alias . ($oNode->depth ?: '');
 
-            foreach ((array) $aAttributes as $sAttribute)
+            foreach ((array) $oTableToGroupOn->columnRealName($oAttribute->attribute) as $sColumn)
             {
-                if (! $oTableToGroupOn->hasAttribute($sAttribute))
-                {
-                    throw new Exception('Attribute "' . $sAttribute . '" does not exist for model "' . $oTableToGroupOn->modelBaseName . '" in group_by option.');
-                }
-
-                $iDepth = count($aPieces) ?: '';
-
-                $this->_aGroupBy[] = '`' . $oTableToGroupOn->alias . $iDepth . '`.' .  $oTableToGroupOn->columnRealName($sAttribute);
+                $this->_aGroupBy[] = '`' . $sTableAlias . '`.' .  $sColumn;
             }
         }
 	}
@@ -166,9 +157,9 @@ class Select extends \SimpleAR\Query\Where
                 $sOrder     = 'ASC';
             }
 
-            $aRelationPieces = explode('/', $sAttribute);
-			$sAttribute      = array_pop($aRelationPieces);
+            $oAttribute = $this->_attribute($sAttribute);
 
+            /*
             // Result alias will be the last-but-one relation name.
             if ($aRelationPieces)
             {
@@ -179,120 +170,135 @@ class Select extends \SimpleAR\Query\Where
             {
                 $sResultAlias = self::ROOT_RESULT_ALIAS;
             }
+            */
 
-			if ($sAttribute[0] !== '#')
-			{
+            if ($oAttribute->specialChar)
+            {
+                switch ($oAttribute->specialChar)
+                {
+                    case '#':
+                        // Add related model(s) in join arborescence.
+                        $oAttribute->pieces[] = $oAttribute->attribute;
+                        $oNode     = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
+                        $oRelation = $oNode->relation;
+
+                        $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
+                        $sResultAlias    = $oAttribute->lastRelation ?: self::ROOT_RESULT_ALIAS;
+
+                        // We assure that keys are string because they might be arrays.
+                        if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
+                        {
+                            $sTableAlias = $oRelation->lm->alias;
+                            $sKey		 = is_string($oRelation->lm->column) ?  $oRelation->lm->column : $oRelation->lm->column[0];
+                        }
+                        elseif ($oRelation instanceof \SimpleAR\ManyMany)
+                        {
+                            $sTableAlias = $oRelation->jm->alias;
+                            $sKey		 = is_string($oRelation->jm->from) ? $oRelation->jm->from : $oRelation->jm->from[0];
+                        }
+                        else // BelongsTo
+                        {
+                            $sTableAlias = $oRelation->cm->alias;
+                            $sKey		 = is_string($oRelation->cm->column) ?  $oRelation->cm->column : $oRelation->cm->column[0];
+
+                            // We do not *need* to join this relation since we have a corresponding
+                            // attribute in current model. Moreover, this is stupid to COUNT on a BelongsTo
+                            // relationship since it would return 0 or 1.
+                            $oNode->__force = false;
+                        }
+
+                        $sTableAlias .= ($oNode->depth ?: '');
+
+                        // Count alias: `<result alias>.#<relation name>`;
+                        $this->_aSelects[] = 'COUNT(`' . $sTableAlias . '`.' .  $sKey . ') AS `' .  $sResultAlias . '.#' . $oAttribute->attribute . '`';
+
+                        // We need a GROUP BY.
+                        if ($oTableToGroupOn->isSimplePrimaryKey)
+                        {
+                            $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
+                        }
+                        else
+                        {
+                            foreach ($oTableToGroupOn->primaryKey as $sPK)
+                            {
+                                $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
+                            }
+                        }
+
+                        $this->_aOrderBy[] = '`' . $sResultAlias . '.#' . $oAttribute->attribute .'`';
+                        break;
+                }
+            }
+            else
+            {
                 // Add related model(s) in join arborescence.
-                list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces);
+                $oNode     = $this->_addToArborescence($oAttribute->pieces);
+                $oRelation = $oNode->relation;
 
                 $oCMTable = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
                 $oLMTable = $oRelation ? $oRelation->lm->t : null;
 
-                $iDepth        = count($aRelationPieces) ?: '';
+                $iDepth = $oNode->depth ?: '';
 
-                // We *have to* include relation if we have to order on one of 
-                // its fields.
-                if ($sAttribute !== 'id')
+                // ORDER BY is made on related model's attribute.
+                if ($oNode->relation)
                 {
-                    $oNode->__force = true;
-                }
+                    // We *have to* include relation if we have to order on one of 
+                    // its fields.
+                    if ($oAttribute->attribute !== 'id')
+                    {
+                        $oNode->__force = true;
+                    }
 
-                if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
-                {
-                    $oNode->__force = true;
-                    $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                    if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
+                    {
+                        $oNode->__force = true;
+
+                        $sAlias  = $oLMTable->alias . $iDepth;
+                        $mColumn = $oLMTable->columnRealName($oAttribute->attribute);
+                    }
+                    elseif ($oRelation instanceof \SimpleAR\ManyMany)
+                    {
+                        if ($sAttribute === 'id')
+                        {
+                            $sAlias  = $oRelation->jm->alias . $iDepth;
+                            $mColumn = $oRelation->jm->to;
+                        }
+                        else
+                        {
+                            $sAlias  = $oLMTable->alias . $iDepth;
+                            $mColumn = $oLMTable->columnRealName($oAttribute->attribute);
+                        }
+                    }
+                    elseif ($oRelation instanceof \SimpleAR\BelongsTo)
+                    {
+                        if ($sAttribute === 'id')
+                        {
+                            $sAlias  = $oCMTable->alias . ($iDepth - 1 ?: '');
+                            $mColumn = $oRelation->cm->column;
+                        }
+                        else
+                        {
+                            $sAlias  = $oLMTable->alias . $iDepth;
+                            $mColumn = $oLMTable->columnRealName($oAttribute->attribute);
+                        }
+                    }
                 }
-                elseif ($oRelation instanceof \SimpleAR\ManyMany)
-                {
-                    if ($sAttribute === 'id')
-                    {
-                        $aRes[] = $oRelation->jm->alias . $iDepth . '.' .  $oRelation->jm->to . ' ' . $sOrder;
-                    }
-                    else
-                    {
-                        $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
-                    }
-                }
-                elseif ($oRelation instanceof \SimpleAR\BelongsTo)
-                {
-                    if ($sAttribute === 'id')
-                    {
-                        $aRes[] = $oCMTable->alias . ($iDepth - 1 ?: '') . '.' .  $oRelation->cm->column . ' ' . $sOrder;
-                    }
-                    else
-                    {
-                        $aRes[] = $oLMTable->alias . $iDepth . '.' .  $oLMTable->columnRealName($sAttribute) . ' ' . $sOrder;
-                    }
-                }
+                // ORDER BY is made on a current model's attribute.
                 else
                 {
-                    $aRes[] = $oCMTable->alias . '.' .  $oCMTable->columnRealName($sAttribute) . ' ' . $sOrder;
+                    $sAlias  = $oCMTable->alias;
+                    $mColumn = $oCMTable->columnRealName($oAttribute->attribute);
                 }
 
-                // Previously, ORDER BY was made on table alias and column name:
-                //$aRes[] = $oCurrentTable->alias . $iDepth . '.' .  $oCurrentTable->columnRealName($sAttribute) . ' ' . $sOrder;
-
-                // Now, it is made on result alias and attribute name:
-                //$aRes[] = '`' . $sResultAlias . '.' . $sAttribute . '` ' . $sOrder;
+                foreach ((array) $mColumn as $sColumn)
+                {
+                    $this->_aOrderBy[] = $sAlias . '.' .  $sColumn . ' ' . $sOrder;
+                }
 			}
-            // Treatment is different if have to order on a COUNT.
-            else
-            {
-                // Without "#"
-                $sAttribute = substr($sAttribute, 1);
-
-                // If the *order by* is made on a relation count, re-push the relation name in the
-                // relation array because we want to add it the arborescence.
-                array_push($aRelationPieces, $sAttribute);
-                $iDepth = count($aRelationPieces);
-
-                // Add related model(s) in join arborescence.
-                list($oNode, $oRelation) = $this->_addToArborescence($aRelationPieces, self::JOIN_LEFT, true);
-
-                $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
-
-                if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
-                {
-                    $sTableAlias = $oRelation->lm->alias;
-                    $sKey		 = $oRelation->lm->column;
-                }
-                elseif ($oRelation instanceof \SimpleAR\ManyMany)
-                {
-                    $sTableAlias = $oRelation->jm->alias;
-                    $sKey		 = $oRelation->jm->from;
-                }
-                else // BelongsTo
-                {
-                    $sTableAlias = $oRelation->cm->alias;
-                    $sKey		 = $oRelation->cm->column;
-
-                    // We do not *need* to join this relation since we have a corresponding
-                    // attribute in current model. Moreover, this is stupid to COUNT on a BelongsTo
-                    // relationship since it would return 0 or 1.
-                    $oNode->__force = false;
-                }
-
-                $sTableAlias .= ($iDepth === 0) ? '' : $iDepth;
-
-                // Count alias: `<result alias>.#<relation name>`;
-                $this->_aSelects[] = 'COUNT(' . $sTableAlias . '.' .  $sKey . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
-                
-                // We need a GROUP BY.
-                if ($oTableToGroupOn->isSimplePrimaryKey)
-                {
-                    $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
-                }
-                else
-                {
-                    foreach ($oTableToGroupOn->primaryKey as $sPK)
-                    {
-                        $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
-                    }
-                }
-            }
         }
 
-        $this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
+        //$this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
 	}
 
     /**
@@ -336,7 +342,7 @@ class Select extends \SimpleAR\Query\Where
         $this->_where();
 
 		$this->sql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
+		$this->sql .= ' FROM `' . $this->_oRootTable->name . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
 		$this->sql .= $this->_sWhere;
 		$this->sql .= $this->_groupBy();
 		$this->sql .= $this->_sOrderBy;
@@ -359,40 +365,41 @@ class Select extends \SimpleAR\Query\Where
 		return $this->_aGroupBy ? ' GROUP BY ' . implode(',', $this->_aGroupBy) : '';
 	}
 
-    protected function _having($sAttribute, $sOperator, $mValue)
+    protected function _having($oAttribute, $sOperator, $mValue)
     {
-        $aPieces    = explode('/', $sAttribute);
-        $sAttribute = array_pop($aPieces);
+        $oAttribute->pieces[] = $oAttribute->attribute;
+        $oNode = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
 
-        $sPrefix    = $sAttribute[0];
-        $sAttribute = substr($sAttribute, 1);
-        $aPieces[]  = $sAttribute;
-        $iDepth     = count($aPieces) ?: '';
-
-        list(, $oRelation, $oPreviousRelation) = $this->_addToArborescence($aPieces, self::JOIN_LEFT, true);
-        $sResultAlias = $oPreviousRelation ? $oPreviousRelation->name : self::ROOT_RESULT_ALIAS;
-        $oTable     = $oPreviousRelation ? $oPreviousRelation : $this->_oRootTable;
+        $sOperator = $sOperator ?: \SimpleAR\Condition::DEFAULT_OP;
+        $sResultAlias     = $oAttribute->lastRelation ?: self::ROOT_RESULT_ALIAS;
+        $sAttribute       = $oAttribute->attribute;
+        $oRelation = $oNode->relation;
+        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_oRootTable;
         $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
+        $iDepth           = $oNode->depth ?: '';
 
-        switch ($sPrefix)
+        if ($oAttribute->specialChar)
         {
-            case '#':
-                $this->_aSelects[] = 'COUNT(`' . $oRelation->lm->t->alias . $iDepth . '`.' .  $sColumnToCountOn . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
-                // We need a GROUP BY.
-                if ($oTable->isSimplePrimaryKey)
-                {
-                    $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
-                }
-                else
-                {
-                    foreach ($oTable->primaryKey as $sPK)
+            switch ($oAttribute->specialChar)
+            {
+                case '#':
+                    $this->_aSelects[] = 'COUNT(`' . $oRelation->lm->t->alias . $iDepth . '`.' .  $sColumnToCountOn . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
+                    // We need a GROUP BY.
+                    if ($oTable->isSimplePrimaryKey)
                     {
-                        $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
+                        $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
                     }
-                }
-                $this->_aHaving[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
-                $this->values[]    = $mValue;
-                break;
+                    else
+                    {
+                        foreach ($oTable->primaryKey as $sPK)
+                        {
+                            $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
+                        }
+                    }
+                    $this->_aHaving[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
+                    $this->values[]    = $mValue;
+                    break;
+            }
         }
     }
 
@@ -428,15 +435,13 @@ class Select extends \SimpleAR\Query\Where
 
         foreach($a as $sRelation)
         {
-            $aRelationPieces = explode('/', $sRelation);
-            $iDepth          = count($aRelationPieces); // I don't like this.
-
-            list(, $oRelation) = $this->_addToArborescence($aRelationPieces, self::JOIN_LEFT, true);
+            $oNode = $this->_addToArborescence(explode('/', $sRelation), self::JOIN_LEFT, true);
+            $oRelation = $oNode->relation;
 
             $sLM = $oRelation->lm->class;
             $this->_aSelects = array_merge(
                 $this->_aSelects,
-                $sLM::columnsToSelect($oRelation->filter, $oRelation->lm->alias . ($iDepth === 0 ?  '' : $iDepth), $sRelation)
+                $sLM::columnsToSelect($oRelation->filter, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation)
             );
         }
     }

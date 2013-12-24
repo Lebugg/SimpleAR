@@ -337,7 +337,7 @@ class BelongsTo extends Relationship
             $oTable  = $this->lm->t;
         }
 
-        $sLHS = self::leftHandSide($mColumn, $oTable->alias . $iDepth);
+        $sLHS = Condition::leftHandSide($mColumn, $oTable->alias . $iDepth);
         $sRHS = Condition::rightHandSide($o->value);
 
         return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
@@ -377,11 +377,10 @@ class HasOne extends Relationship
         // We check that condition makes sense.
         if ($o->logic === 'and' && isset($o->value[1]))
         {
-            throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
+            throw new Exception('Condition does not make sense: "' . strtoupper($o->operator) . '" operator with multiple values for a ' . __CLASS__ . ' relationship.');
         }
 
         $iDepth = $iDepth ?: '';
-
 
         $mColumn = $this->lm->t->columnRealName($o->attribute);
         $sLHS = Condition::leftHandSide($mColumn, $this->lm->t->alias . $iDepth);

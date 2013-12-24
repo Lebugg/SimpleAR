@@ -30,6 +30,8 @@ class Condition
         'NOT IN' => 'NOT IN',
     );
 
+    const DEFAULT_OP = '=';
+
     const DEFAULT_LOGICAL_OP = 'AND';
 
     /**
@@ -80,6 +82,7 @@ class Condition
      */
     public $table;
 
+    public $type = 'simple';
     public $depth = 0;
     public $virtual = false;
     public $subconditions = array();
@@ -386,6 +389,7 @@ class Condition
      *
      * @return array A well formatted condition array.
 	 */
+    /*
     public static function parseConditionArray($aArray)
     {
         $aRes = array();
@@ -436,6 +440,7 @@ class Condition
 
         return $aRes;
     }
+    */
 
     /**
      * This function transforms the Condition object into SQL.
@@ -447,21 +452,201 @@ class Condition
      */
     public function toSql($bUseAliases = true, $bToColumn = true)
     {
-        // If condition does not depend of a relation. Construct SQL here.
+        $s = 'toSql_' . $this->type;
+        return $this->$s($bUseAliases, $bToColumn);
+    }
+
+    public function toSql_exists($bUseAliases, $bToColumn)
+    {
+        $r = $this->relation;
+
+        if ($r === null)
+        {
+            throw new Exception('Cannot transform Condition to SQL because “relation” is not set.');
+        }
+
+        // True for EXISTS, false for NOT EXISTS.
+        $b = $this->exists ? '' : 'NOT';
+
+        $sCMColumn = self::leftHandSide($r->cm->column, $r->cm->alias . ($this->depth - 1 ?: ''));
+
+        // Not the same for ManyMany, we check join table.
+        if ($r instanceof ManyMany)
+        {
+            $sTable    = $r->jm->table;
+            $sLMColumn = self::leftHandSide($r->jm->from, 'a');
+        }
+        // For all other Relation type, we check linked table.
+        else
+        {
+            $sTable    = $r->lm->table;
+            $sLMColumn = self::leftHandSide($r->lm->column, 'a');
+        }
+
+        // Easy subquery.
+        // $b contains '' or 'NOT'. It relies on $this->exists value.
+        return " $b EXISTS (
+                    SELECT NULL
+                    FROM {$sTable} a
+                    WHERE {$sLMColumn} = {$sCMColumn}
+                )";
+    }
+
+    public function toSql_relation($bUseAliases, $bToColumn)
+    {
         if ($this->relation === null)
         {
-            $mColumns = $bToColumn   ? $this->table->columnRealName($this->attribute) : $this->attribute;
-            $sAlias   = $bUseAliases ? $this->table->alias : '';
+            throw new Exception('Cannot transform Condition to SQL because “relation” is not set.');
+        }
 
-            $sLHS = self::leftHandSide($mColumns, $sAlias);
+        $r = $this->relation;
+
+        if ($r instanceof BelongsTo)
+        {
+            // We check that condition makes sense.
+            if ($this->logic === 'and' && isset($this->value[1]))
+            {
+                throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
+            }
+
+            // Get attribute column name.
+            if ($this->attribute === 'id')
+            {
+                $mColumn = $r->cm->column;
+                $oTable  = $r->cm->t;
+            }
+            else
+            {
+                $mColumn = $r->lm->t->columnRealName($this->attribute);
+                $oTable  = $r->lm->t;
+            }
+
+            $sLHS = self::leftHandSide($mColumn, $oTable->alias . ($this->depth ?: ''));
+            $sRHS = self::rightHandSide($this->value);
+
+            return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
+        }
+
+        elseif ($r instanceof HasOne)
+        {
+            // We check that condition makes sense.
+            if ($this->logic === 'and' && isset($this->value[1]))
+            {
+                throw new Exception('Condition does not make sense: "' . strtoupper($this->operator) . '" operator with multiple values for a ' . __CLASS__ . ' relationship.');
+            }
+
+            $mColumn = $r->lm->t->columnRealName($this->attribute);
+            $sLHS = self::leftHandSide($mColumn, $r->lm->t->alias . ($this->depth ?: ''));
             $sRHS = self::rightHandSide($this->value);
 
             return $sLHS . ' ' . $this->operator . ' ' . $sRHS;
         }
-        // Relation class is better placed to do it.
-        else
+
+        elseif ($r instanceof HasMany)
         {
-			return $this->relation->condition($this, $this->depth);
+            $oLM = $r->lm;
+            $oCM = $r->cm;
+
+            $iPreviousDepth = $this->depth <= 1 ? '' : $this->depth - 1;
+            $iDepth = $this->depth ?: '';
+
+            if ($this->logic === 'or')
+            {
+                $mColumn = $oLM->t->columnRealName($this->attribute);
+                $sLHS = self::leftHandSide($mColumn, $oLM->t->alias . '_sub');
+                $sRHS = self::rightHandSide($this->value);
+
+                $sLHS_LMColumn = self::leftHandSide($oLM->column, $oLM->t->alias . '_sub');
+                $sLHS_CMColumn = self::leftHandSide($oCM->column, $oCM->t->alias . $iPreviousDepth);
+
+                return "EXISTS (
+                            SELECT NULL
+                            FROM $oLM->table {$oLM->alias}_sub
+                            WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
+                            AND   {$sLHS} {$this->operator} {$sRHS}
+                        )";
+            }
+            else // logic == 'and'
+            {
+                $mColumn = $oLM->t->columnRealName($this->attribute);
+                $sLHS2 = self::leftHandSide($mColumn, $oLM->t->alias . '_sub');
+                $sLHS3 = self::leftHandSide($mColumn, $oLM->t->alias . '_sub2');
+                $sRHS  = self::rightHandSide($this->value);
+
+                $sLHS_LMColumn = self::leftHandSide($oLM->column, $oLM->t->alias . '_sub2');
+                $sLHS_CMColumn = self::leftHandSide($oCM->column, $oCM->t->alias . $iPreviousDepth);
+
+                return "NOT EXISTS (
+                            SELECT NULL
+                            FROM $oLM->table {$oLM->alias}_sub
+                            WHERE {$sLHS2} {$this->operator} {$sRHS}
+                            AND {$sLHS2} NOT IN (
+                                SELECT {$sLHS3}
+                                FROM $oLM->table {$oLM->alias}_sub2
+                                WHERE {$sLHS_LMColumn} = {$sLHS_CMColumn}
+                                AND   {$sLHS3}         = {$sLHS2}
+                            )
+                        )";
+            }
         }
+
+        else // ManyMany
+        {
+            $mColumn = $r->lm->t->columnRealName($this->attribute);
+
+            $iPreviousDepth = $this->depth <= 1 ? '' : $this->depth - 1;
+            $iDepth = $this->depth ?: '';
+
+            if ($this->logic === 'or')
+            {
+                $sRHS = self::rightHandSide($this->value);
+                if ($this->attribute === 'id')
+                {
+                    $sLHS = self::leftHandSide($r->jm->to, $r->jm->alias . $iDepth);
+                }
+                else
+                {
+                    $mColumn = $r->lm->t->columnRealName($this->attribute);
+                    $sLHS = self::leftHandSide($mColumn, $r->lm->t->alias . $iDepth);
+                }
+
+                return $sLHS . ' ' . $this->operator . ' ' . $sRHS;
+            }
+            else // $this->logic === 'and'
+            {
+                $mColumn = $r->lm->t->columnRealName($this->attribute);
+                $sLHS = self::leftHandSide($mColumn, $r->lm->t->alias . $iDepth);
+                $sRHS = self::rightHandSide($this->value);
+
+                $sCond_JMFrom  = self::leftHandSide($r->jm->from,   $this->jm->alias . $iDepth);
+                $sCond_JMFrom2 = self::leftHandSide($r->jm->from,   $this->jm->alias . '_sub');
+                $sCond_JMTo2   = self::leftHandSide($r->jm->to,     $this->jm->alias . '_sub');
+                $sCond_LM2     = self::leftHandSide($r->lm->column, $this->lm->alias . '_sub');
+
+                return "NOT EXISTS (
+                            SELECT NULL
+                            FROM {$r->lm->table} {$this->lm->alias}_sub
+                            WHERE {$sLHS} {$this->operator} {$sRHS}
+                            AND NOT EXISTS (
+                                SELECT NULL
+                                FROM {$r->jm->table} {$this->jm->alias}_sub
+                                WHERE {$sCond_JMFrom} = {$sCond_JMFrom2}
+                                AND   {$sCond_JMTo2}  = {$sCond_LM2}
+                            )
+                        )";
+
+            }
+        }
+    }
+
+    public function toSql_simple($bUseAliases, $bToColumn)
+    {
+        $mColumns = $bToColumn   ? $this->table->columnRealName($this->attribute) : $this->attribute;
+        $sAlias   = $bUseAliases ? $this->table->alias : '';
+
+        $sLHS = self::leftHandSide($mColumns, $sAlias);
+        $sRHS = self::rightHandSide($this->value);
+
+        return $sLHS . ' ' . $this->operator . ' ' . $sRHS;
     }
 }
