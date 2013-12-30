@@ -131,6 +131,8 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _attribute($sAttribute, $bOnlyRelation = false)
     {
+        $sOriginal = $sAttribute;
+
         $aPieces = explode('/', $sAttribute);
 
         $sAttribute    = array_pop($aPieces);
@@ -173,6 +175,7 @@ abstract class Where extends \SimpleAR\Query
             'lastRelation' => $sLastRelation,
             'attribute'    => $mAttribute,
             'specialChar'  => $cSpecial,
+            'original'     => $sOriginal,
         );
     }
 
@@ -186,6 +189,11 @@ abstract class Where extends \SimpleAR\Query
         $oCondition->relation = $oNode->relation;
 
         $oNode->conditions[] = $oCondition;
+
+        if ($aConditions)
+        {
+            $oCondition->subconditions = $this->_conditionsParse($aConditions);
+        }
 
         return $oCondition;
     }
@@ -344,9 +352,9 @@ abstract class Where extends \SimpleAR\Query
         }
     }
 
-    protected function _having($sAttribute, $sOperator, $mValue)
+    protected function _having($oAttribute, $sOperator, $mValue)
     {
-        throw new Exception('Cannot add this condition "' . $sAttribute . '" in a ' .  get_class($this) . ' query.');
+        throw new Exception('Cannot add this condition "' . $oAttribute->original . '" in a ' .  get_class($this) . ' query.');
     }
 
     protected function _processArborescence()

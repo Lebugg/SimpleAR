@@ -32,11 +32,8 @@ class Update extends \SimpleAR\Query\Where
      *
      * @return void
      */
-	public function _build($aOptions)
+	protected function _build(array $aOptions)
 	{
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
-
 		if (isset($aOptions['conditions']))
 		{
             $this->_conditions($aOptions['conditions']);
@@ -45,10 +42,15 @@ class Update extends \SimpleAR\Query\Where
 
         $this->_aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
         $this->values    = array_merge($aOptions['values'], $this->values);
+	}
 
+    protected function _compile()
+    {
+		$sRootModel = $this->_sRootModel;
+		$sRootAlias = $this->_oRootTable->alias;
 
 		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
         $this->sql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
 		$this->sql .= $this->_sWhere;
-	}
+    }
 }

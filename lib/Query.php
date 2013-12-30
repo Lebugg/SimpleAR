@@ -10,6 +10,7 @@ require 'queries/Condition.php';
 require 'queries/Where.php';
 require 'queries/Insert.php';
 require 'queries/Select.php';
+//require 'queries/Exists.php';
 require 'queries/Count.php';
 require 'queries/Delete.php';
 require 'queries/Update.php';
@@ -102,6 +103,8 @@ abstract class Query
      */
 	protected $_sRootTable = '';
 
+    protected $_sGlobalAliasPrefix = '';
+
     /**
      * Constructor.
      *
@@ -137,6 +140,7 @@ abstract class Query
 	{
 		$oQuery = new Query\Count($sRoot);
         $oQuery->_build($aOptions);
+        $oQuery->_compile();
 
 		return $oQuery;
 	}
@@ -153,6 +157,7 @@ abstract class Query
 	{
 		$oQuery = new Query\Delete($sRoot);
         $oQuery->_build($aConditions);
+        $oQuery->_compile();
 
 		return $oQuery;
 	}
@@ -174,6 +179,7 @@ abstract class Query
 	{
 		$oQuery = new Query\Insert($sRoot);
         $oQuery->_build($aOptions);
+        $oQuery->_compile();
 
 		return $oQuery;
 	}
@@ -224,6 +230,7 @@ abstract class Query
 	{
 		$oQuery = new Query\Select($sRoot);
         $oQuery->_build($aOptions);
+        $oQuery->_compile();
 
 		return $oQuery;
 	}
@@ -240,6 +247,7 @@ abstract class Query
 	{
 		$oQuery = new Query\Update($sRoot);
         $oQuery->_build($aOptions);
+        $oQuery->_compile();
 
 		return $oQuery;
 	}
@@ -251,6 +259,8 @@ abstract class Query
      *
      * @return void
      */
-	protected abstract function _build($aOptions);
+	protected abstract function _build(array $aOptions);
+
+    protected abstract function _compile();
 
 }

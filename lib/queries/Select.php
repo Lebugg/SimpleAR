@@ -9,7 +9,7 @@ namespace SimpleAR\Query;
 /**
  * This class handles SELECT statements.
  */
-class Select extends \SimpleAR\Query\Where
+class Select extends Where
 {
     /**
      * Contains all attributes to fetch.
@@ -308,7 +308,7 @@ class Select extends \SimpleAR\Query\Where
      *
      * @return void
      */
-	public function _build($aOptions)
+	protected function _build(array $aOptions)
 	{
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;
@@ -322,6 +322,11 @@ class Select extends \SimpleAR\Query\Where
 		{
             $this->_conditions($aOptions['conditions']);
 		}
+
+        if (isset($aOptions['has']))
+        {
+            $this->_has((array) $aOptions['has']);
+        }
 
 		if (isset($aOptions['order_by']))
 		{
@@ -337,11 +342,12 @@ class Select extends \SimpleAR\Query\Where
         {
 			$this->_with($aOptions['with']);
         }
+	}
 
-        if (isset($aOptions['has']))
-        {
-            $this->_has((array) $aOptions['has']);
-        }
+    protected function _compile()
+    {
+		$sRootModel = $this->_sRootModel;
+		$sRootAlias = $this->_oRootTable->alias;
 
         $this->_processArborescence();
         $this->_where();
@@ -362,7 +368,7 @@ class Select extends \SimpleAR\Query\Where
 		{
 			$this->sql .= ' OFFSET ' . $aOptions['offset'];
 		}
-	}
+    }
 
 
 	private function _groupBy()

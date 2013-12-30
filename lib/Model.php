@@ -641,6 +641,23 @@ abstract class Model
         return self::find('all', $aOptions);
     }
 
+    public static function arrayToArray($aArray)
+    {
+        foreach ($aArray as &$m)
+        {
+            if (is_object($m) && $m instanceof Model)
+            {
+                $m = $m->toArray();
+            }
+            elseif (is_array($m))
+            {
+                $m = self::_arrayToArray($m);
+            }
+        }
+
+        return $aArray;
+    }
+
     /**
      * Return attribute array plus the object ID.
      *
@@ -1142,23 +1159,6 @@ abstract class Model
 
             self::$_aTables[$sCurrentClass] = $oTable;
 		}
-    }
-
-    private static function _arrayToArray($aArray)
-    {
-        foreach ($aArray as &$m)
-        {
-            if (is_object($m) && $m instanceof Model)
-            {
-                $m = $m->toArray();
-            }
-            elseif (is_array($m))
-            {
-                $m = self::_arrayToArray($m);
-            }
-        }
-
-        return $aArray;
     }
 
     protected function _attr($sAttributeName)

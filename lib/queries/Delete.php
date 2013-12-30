@@ -25,10 +25,13 @@ class Delete extends \SimpleAR\Query\Where
      *
      * @return void
      */
-	public function _build($aConditions)
+	protected function _build(array $aConditions)
 	{
         $this->_conditions($aConditions);
+    }
 
+    protected function _compile()
+    {
         if ($this->_bUseModel)
         {
             $this->_processArborescence();

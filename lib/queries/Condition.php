@@ -183,11 +183,14 @@ abstract class Condition
 
             if ($mItem instanceof Condition)
             {
-                if ($mItem->virtual)
+                // Clearer.
+                $oCondition = $mItem;
+
+                if ($oCondition->virtual)
                 {
-                    if ($mItem->subconditions)
+                    if ($oCondition->subconditions)
                     {
-                        list($s, $a) = self::arrayToSql($mItem->subconditions, $bUseAliases, $bToColumn);
+                        list($s, $a) = self::arrayToSql($oCondition->subconditions, $bUseAliases, $bToColumn);
 
                         $sSql   .= '(' . $s . ')';
                         $aValues = array_merge($aValues, $a);
@@ -195,8 +198,8 @@ abstract class Condition
                 }
                 else
                 {
-                    $sSql   .= ' ' . $mItem->toSql($bUseAliases, $bToColumn);
-                    $aValues = array_merge($aValues, $mItem->flattenValues());
+                    $sSql   .= ' ' . $oCondition->toSql($bUseAliases, $bToColumn);
+                    $aValues = array_merge($aValues, $oCondition->flattenValues());
                 }
             }
             // $mItem is an array of Conditions.
@@ -236,7 +239,6 @@ abstract class Condition
             return array($this->value);
         }
     }
-
 
     /**
      * Creates the left hand side of an SQL condition.

@@ -30,7 +30,7 @@ class Insert extends \SimpleAR\Query
      *
      * @return void
      */
-	public function _build($aOptions)
+	protected function _build(array $aOptions)
 	{
         $this->values = $aOptions['values'];
 
@@ -74,4 +74,8 @@ class Insert extends \SimpleAR\Query
             $this->sql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
         }
 	}
+
+    protected function _compile()
+    {
+    }
 }
