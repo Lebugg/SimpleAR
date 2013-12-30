@@ -52,6 +52,7 @@ require 'lib/exceptions/DatabaseException.php';
 require 'lib/exceptions/DuplicateKeyException.php';
 require 'lib/exceptions/RecordNotFoundException.php';
 require 'lib/exceptions/ReadOnlyException.php';
+require 'lib/exceptions/MalformedOptionException.php';
 require 'lib/Tools.php';
 
 /**

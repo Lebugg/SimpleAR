@@ -338,6 +338,11 @@ class Select extends \SimpleAR\Query\Where
 			$this->_with($aOptions['with']);
         }
 
+        if (isset($aOptions['has']))
+        {
+            $this->_has((array) $aOptions['has']);
+        }
+
         $this->_processArborescence();
         $this->_where();
 
@@ -370,7 +375,7 @@ class Select extends \SimpleAR\Query\Where
         $oAttribute->pieces[] = $oAttribute->attribute;
         $oNode = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
 
-        $sOperator = $sOperator ?: \SimpleAR\Condition::DEFAULT_OP;
+        $sOperator = $sOperator ?: Condition::DEFAULT_OP;
         $sResultAlias     = $oAttribute->lastRelation ?: self::ROOT_RESULT_ALIAS;
         $sAttribute       = $oAttribute->attribute;
         $oRelation = $oNode->relation;

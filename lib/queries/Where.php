@@ -6,6 +6,10 @@
  */
 namespace SimpleAR\Query;
 
+use SimpleAR\Query\Condition\ExistsCondition;
+use SimpleAR\Query\Condition\RelationCondition;
+use SimpleAR\Query\Condition\SimpleCondition;
+
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).
  */
@@ -122,6 +126,9 @@ abstract class Where extends \SimpleAR\Query
         return $oNode;
     }
 
+    /**
+     * Returns an attribute object.
+     */
     protected function _attribute($sAttribute, $bOnlyRelation = false)
     {
         $aPieces = explode('/', $sAttribute);
@@ -169,14 +176,13 @@ abstract class Where extends \SimpleAR\Query
         );
     }
 
-    protected function _conditionExists($oAttribute)
+    protected function _conditionExists($oAttribute, array $aConditions = null)
     {
         $oNode      = $this->_addToArborescence($oAttribute->pieces);
-        $oCondition = new \SimpleAR\Condition($oAttribute->attribute, null, null);
+        $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
 
         $oCondition->depth    = $oNode->depth;
-        $oCondition->type     = 'exists';
-        $oCondition->exists   = ! (bool)$oAttribute->specialChar;
+        $oCondition->exists   = ! (bool) $oAttribute->specialChar;
         $oCondition->relation = $oNode->relation;
 
         $oNode->conditions[] = $oCondition;
@@ -203,14 +209,17 @@ abstract class Where extends \SimpleAR\Query
         $oNode = $this->_addToArborescence($oAttribute->pieces);
         $mAttr = $oAttribute->attribute;
 
-        $oCondition = new \SimpleAR\Condition($mAttr, $sOperator, $mValue);
-        $oCondition->depth = $oNode->depth;
-        $oCondition->table = $oNode->table;
         if ($oNode->relation)
         {
+            $oCondition = new RelationCondition($mAttr, $sOperator, $mValue);
             $oCondition->relation = $oNode->relation;
-            $oCondition->type     = 'relation';
         }
+        else
+        {
+            $oCondition = new SimpleCondition($mAttr, $sOperator, $mValue);
+        }
+        $oCondition->depth = $oNode->depth;
+        $oCondition->table = $oNode->table;
 
         // Is there a Model's method to handle this attribute? Useful for virtual attributes.
         if ($this->_bUseModel && is_string($mAttr))
@@ -242,7 +251,7 @@ abstract class Where extends \SimpleAR\Query
     {
         $aRes = array();
 
-        $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+        $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
         $oCondition       = null;
 
         foreach ($aConditions as $mKey => $mValue)
@@ -257,7 +266,7 @@ abstract class Where extends \SimpleAR\Query
                 }
 
                 // Reset operator.
-                $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+                $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
             }
 
             // It can be a condition, a condition group, or a logical operator.
@@ -270,15 +279,8 @@ abstract class Where extends \SimpleAR\Query
                 // Condition or condition group.
                 else
                 {
-                    // An exists condition.
-                    if (is_string($mValue))
-                    {
-                        $oCondition = $this->_conditionExists($this->_attribute($mValue, true));
-                        $aRes[]     = array($sLogicalOperator, $oCondition);
-                    }
-
                     // Condition.
-                    elseif (isset($mValue[0]) && is_string($mValue[0]))
+                    if (isset($mValue[0]) && is_string($mValue[0]))
                     {
                         $oCondition = $this->_condition($this->_attribute($mValue[0]), $mValue[1], $mValue[2]);
                         if ($oCondition)
@@ -294,7 +296,7 @@ abstract class Where extends \SimpleAR\Query
                     }
 
                     // Reset operator.
-                    $sLogicalOperator = \SimpleAR\Condition::DEFAULT_LOGICAL_OP;
+                    $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
                 }
             }
 
@@ -302,6 +304,44 @@ abstract class Where extends \SimpleAR\Query
         }
 
         return $aRes;
+    }
+
+    /**
+     * EXISTS conditions.
+     */
+    protected function _has($aHas)
+    {
+        $aRes             = array();
+        $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+
+        foreach ($aHas as $mKey => $mValue)
+        {
+            // It is a logical operator.
+            if     ($mValue === 'OR'  || $mValue === '||') { $sLogicalOperator = 'OR';  }
+            elseif ($mValue === 'AND' || $mValue === '&&') { $sLogicalOperator = 'AND'; }
+
+            if (is_string($mKey))
+            {
+                if (!is_array($mValue))
+                {
+                    throw new MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
+                }
+
+                $oCondition = $this->_conditionExists($this->_attribute($mKey, true), $mValue);
+            }
+            elseif (is_string($mValue))
+            {
+                $oCondition = $this->_conditionExists($this->_attribute($mValue, true));
+                $this->_aConditions[]     = array($sLogicalOperator, $oCondition);
+            }
+            else
+            {
+                throw new MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+            }
+
+            // Reset operator.
+            $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+        }
     }
 
     protected function _having($sAttribute, $sOperator, $mValue)
@@ -377,7 +417,7 @@ abstract class Where extends \SimpleAR\Query
         // We made all wanted treatments; get SQL out of Condition array.
         // We update values because Condition::arrayToSql() will flatten them in
         // order to bind them to SQL string with PDO.
-        list($sSql, $aValues) = \SimpleAR\Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
+        list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
 
         $this->values = array_merge($this->values, $aValues);
 

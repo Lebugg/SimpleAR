@@ -6,7 +6,7 @@
  */
 namespace SimpleAR;
 
-require 'Condition.php';
+require 'queries/Condition.php';
 require 'queries/Where.php';
 require 'queries/Insert.php';
 require 'queries/Select.php';
