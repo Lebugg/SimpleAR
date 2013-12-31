@@ -19,13 +19,6 @@ class Select extends Where
 	private $_aSelects		= array();
 
     /**
-     * Contains ORDER BY clause.
-     *
-     * @var string
-     */
-	private $_sOrderBy;
-
-    /**
      * Contains attributes to GROUP BY on.
      *
      * @var array
@@ -306,8 +299,6 @@ class Select extends Where
                 }
 			}
         }
-
-        //$this->_sOrderBy = $aRes ? ' ORDER BY ' . implode(',', $aRes) : '';
 	}
 
     /**
@@ -375,7 +366,7 @@ class Select extends Where
 		$this->sql .= ' FROM `' . $this->_oRootTable->name . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
 		$this->sql .= $this->_sWhere;
 		$this->sql .= $this->_groupBy();
-		$this->sql .= $this->_sOrderBy;
+        $this->sql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
         $this->sql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
         $this->sql .= $this->_iLimit ? ' LIMIT ' . $this->_iLimit : '';
         $this->sql .= $this->_iOffset ? ' OFFSET ' . $this->_iOffset : '';
