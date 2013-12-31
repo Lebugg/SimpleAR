@@ -1088,21 +1088,20 @@ abstract class Model
 	 * This function makes pagination easier.
 	 *
 	 * @param $iPage int Page number. Min: 1.
-	 * @param $iNbItems int Number of items. Min: 1.
+	 * @param $iItems int Number of items. Min: 1.
 	 */
-	public static function search($aOptions, $iPage, $iNbItems)
+	public static function search($aOptions, $iPage, $iItems)
 	{
-		$iPage    = $iPage    >= 1 ? $iPage    : 1;
-		$iNbItems = $iNbItems >= 1 ? $iNbItems : 1;
+		$iPage  = $iPage    >= 1 ? $iPage  : 1;
+		$iItems = $iNbItems >= 1 ? $iItems : 1;
 
-		$aOptions['limit']  = $iNbItems;
-		$aOptions['offset'] = ($iPage - 1) * $iNbItems;
+		$aOptions['limit']  = $iItems;
+		$aOptions['offset'] = ($iPage - 1) * $iItems;
 
-		$aRes          = array();
-		$aRes['count'] = static::count($aOptions);
-		$aRes['rows']  = static::all($aOptions);
-
-		return $aRes;
+        return array(
+            'count' => static::count($aOptions),
+            'rows'  => static::all($aOptions),
+        );
 	}
 
     public static function table()

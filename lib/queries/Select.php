@@ -33,6 +33,8 @@ class Select extends Where
 	private $_aGroupBy		= array();
 	private $_aOrderBy		= array();
     private $_aHaving = array();
+    private $_iLimit;
+    private $_iOffset;
 
     private $_aPendingRow = false;
 
@@ -78,15 +80,22 @@ class Select extends Where
                ($aRow = $this->_oSth->fetch(\PDO::FETCH_ASSOC)) !== false
         ) {
 
-            // Prevent infinite loop.
-            if ($this->_aPendingRow) { $this->_aPendingRow = false; }
-
-            $aParsedRow = $this->_parseRow($aRow);
+            if ($this->_aPendingRow)
+            {
+                // Prevent infinite loop.
+                $this->_aPendingRow = false;
+                // Pending row is already parsed.
+                $aParsedRow = $aRow;
+            }
+            else
+            {
+                $aParsedRow = $this->_parseRow($aRow);
+            }
 
             // New main object, we are finished.
             if ($aRes && $aResId !== array_intersect_key($aParsedRow, $aReversedPK)) // Compare IDs
             {
-                $this->_aPendingRow = $aRow;
+                $this->_aPendingRow = $aParsedRow;
                 break;
             }
 
@@ -342,6 +351,16 @@ class Select extends Where
         {
 			$this->_with($aOptions['with']);
         }
+
+		if (isset($aOptions['limit']))
+		{
+            $this->_limit($aOptions['limit']);
+		}
+
+		if (isset($aOptions['offset']))
+		{
+            $this->_offset($aOptions['offset']);
+		}
 	}
 
     protected function _compile()
@@ -358,16 +377,8 @@ class Select extends Where
 		$this->sql .= $this->_groupBy();
 		$this->sql .= $this->_sOrderBy;
         $this->sql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
-
-		if (isset($aOptions['limit']))
-		{
-			$this->sql .= ' LIMIT ' . $aOptions['limit'];
-		}
-
-		if (isset($aOptions['offset']))
-		{
-			$this->sql .= ' OFFSET ' . $aOptions['offset'];
-		}
+        $this->sql .= $this->_iLimit ? ' LIMIT ' . $this->_iLimit : '';
+        $this->sql .= $this->_iOffset ? ' OFFSET ' . $this->_iOffset : '';
     }
 
 
@@ -414,12 +425,61 @@ class Select extends Where
         }
     }
 
+    private function _limit($i)
+    {
+        $i = (int) $i;
+
+        if ($i < 0)
+        {
+            throw new Exception('"limit" option must be a natural integer. Negative integer given: ' . $i . '.');
+        }
+
+        $this->_iLimit = $i;
+    }
+
+    private function _offset($i)
+    {
+        $i = (int) $i;
+
+        if ($i < 0)
+        {
+            throw new Exception('"offset" option must be a natural integer. Negative integer given: ' . $i . '.');
+        }
+
+        $this->_iOffset = $i;
+    }
+
+    /**
+     * Parse a row fetch from query result into a more object-oriented array.
+     *
+     * Resulting array:
+     * array(
+     *      'attr1' => <val>,
+     *      'attr2' => <val>,
+     *      'attr3' => <val>,
+     *      '_WITH_' => array(
+     *          'relation1' => array(
+     *              <attributes>
+     *          ),
+     *          ...
+     *      ),
+     * )
+     *
+     * Note: does not parse relations recursively (only on one level).
+     *
+     * @return array
+     */
     private function _parseRow($aRow)
     {
         $aRes = array();
 
         foreach ($aRow as $sKey => $mValue)
         {
+            // We do not want null values. It would result with linked model instances with null 
+            // attributes and null IDs. Moreover, it reduces process time (does not process useless 
+            // null-valued attributes).
+            if ($mValue === null) { continue; }
+
             $a = explode('.', $sKey);
 
             if ($a[0] === self::ROOT_RESULT_ALIAS)
@@ -431,7 +491,7 @@ class Select extends Where
             else
             {
                 // $a[0]: relation name.
-                // $a[1]: related table column name.
+                // $a[1]: linked table column name.
 
                 $aRes['_WITH_'][$a[0]][$a[1]] = $mValue;
             }
