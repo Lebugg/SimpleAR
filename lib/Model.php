@@ -422,10 +422,10 @@ abstract class Model
      * This function will check attribute existence in several places. Here are
      * the differents check, by order:
      *
-     * 1. Is in attribute array (`Model::$_aAttributes`). If there, return it;
-     * 2. Is try-to-be-get attribute called "id"? If yes, return instance's ID;
-     * 3. Is there a method called `get_<attribute name>()`? If yes, fire it and
+     * 1. Is try-to-be-get attribute called "id"? If yes, return instance's ID;
+     * 2. Is there a method called `get_<attribute name>()`? If yes, fire it and
      * return its result;
+     * 3. Is in attribute array (`Model::$_aAttributes`). If there, return it;
      * 4. Is it a relation (in `Model::$_aRelations`)? If yes, load linked
      * 5. Is it a *count get*? If yes, compute it, store the result in attribute
      * array and return it.
@@ -459,12 +459,6 @@ abstract class Model
      */
     public function __get($s)
     {
-        // Classic attribute.
-        if (isset($this->_aAttributes[$s]) || array_key_exists($s, $this->_aAttributes))
-        { 
-            return $this->_aAttributes[$s];
-        }
-
         // Specific case for id.
         if ($s === 'id')
         {
@@ -475,6 +469,13 @@ abstract class Model
         {
             return call_user_func(array($this, 'get_' . $s));
         } 
+
+        // Classic attribute.
+        if (isset($this->_aAttributes[$s]) || array_key_exists($s, $this->_aAttributes))
+        { 
+            return $this->_aAttributes[$s];
+        }
+
         // Relation.
         // Will arrive here maximum once per relation because when a relation is
         // loaded, an attribute named as the relation is appended to $this->_aAttributes.
@@ -1088,20 +1089,21 @@ abstract class Model
 	 * This function makes pagination easier.
 	 *
 	 * @param $iPage int Page number. Min: 1.
-	 * @param $iItems int Number of items. Min: 1.
+	 * @param $iNbItems int Number of items. Min: 1.
 	 */
-	public static function search($aOptions, $iPage, $iItems)
+	public static function search($aOptions, $iPage, $iNbItems)
 	{
-		$iPage  = $iPage    >= 1 ? $iPage  : 1;
-		$iItems = $iNbItems >= 1 ? $iItems : 1;
+		$iPage    = $iPage    >= 1 ? $iPage    : 1;
+		$iNbItems = $iNbItems >= 1 ? $iNbItems : 1;
 
-		$aOptions['limit']  = $iItems;
-		$aOptions['offset'] = ($iPage - 1) * $iItems;
+		$aOptions['limit']  = $iNbItems;
+		$aOptions['offset'] = ($iPage - 1) * $iNbItems;
 
-        return array(
-            'count' => static::count($aOptions),
-            'rows'  => static::all($aOptions),
-        );
+		$aRes          = array();
+		$aRes['count'] = static::count($aOptions);
+		$aRes['rows']  = static::all($aOptions);
+
+		return $aRes;
 	}
 
     public static function table()
@@ -1529,21 +1531,51 @@ abstract class Model
 
                 if ($oRelation instanceof BelongsTo || $oRelation instanceof HasOne)
                 {
+                    // $aValue is an array of attributes. The attributes of the linked model 
+                    // instance.
+                    // But it *might* be an array of arrays of attributes. For instance, when 
+                    // relation is defined as a Has One relation but actually is a Has Many in 
+                    // database. In that case, SQL query would return several rows for this relation 
+                    // and we would result with $aValue to be an array of arrays.
+
+                    // Array of arrays ==> array of attribute.
+                    if (isset($aValue[0])) { $aValue = $aValue[0]; }
+
                     $o = new $sLMClass();
                     $o->_load($aValue);
 
-                    $this->_attr($sRelation, $o);
+                    if ($o->id !== null)
+                    {
+                        $this->_attr($sRelation, $o);
+                    }
                 }
                 else
                 {
-                    $a = array();
-                    foreach ($aValue as $aVal)
-                    {
-                        $o = new $sLMClass();
-                        $o->_load($aValue);
+                    // $aValue is an array of arrays. These subarrays contain attributes of linked 
+                    // models.
+                    // But $aValue can directly be an associative array (if SQL query returned only 
+                    // one row). We have to check this, then.
 
-                        $a[] = $o;
+                    $a = array();
+
+                    if ($aValue)
+                    {
+                        // $aValue is an attribute array.
+                        // Array of attributes ==> array of arrays.
+                        if (! isset($aValue[0])) { $aValue = array($aValue); }
+
+                        foreach ($aValue as $aAttributes)
+                        {
+                            $o = new $sLMClass();
+                            $o->_load($aAttributes);
+
+                            if ($o->id !== null)
+                            {
+                                $a[] = $o;
+                            }
+                        }
                     }
+
                     $this->_attr($sRelation, $a);
                 }
             }

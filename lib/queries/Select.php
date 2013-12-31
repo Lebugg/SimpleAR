@@ -478,7 +478,16 @@ class Select extends Where
             // We do not want null values. It would result with linked model instances with null 
             // attributes and null IDs. Moreover, it reduces process time (does not process useless 
             // null-valued attributes).
-            if ($mValue === null) { continue; }
+            //
+            // EDIT
+            // ----
+            // Note: Now, the check is made in Model::_load(). We don't keep linked models with null 
+            // ID at that moment.
+            // Why: by discarding attributes with null value here, object's attribute array was not 
+            // filled with them and we were forced to check attribute presence in columns definition 
+            // in Model::__get(). Not nice.
+            //
+            // if ($mValue === null) { continue; }
 
             $a = explode('.', $sKey);
 
