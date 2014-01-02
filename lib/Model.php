@@ -410,7 +410,6 @@ abstract class Model
 		}
 
         $this->_setDefaultValues();
-        $this->_bIsDirty = true;
     }
 
     /**
@@ -482,7 +481,7 @@ abstract class Model
         // So, it would return it right above.
         if (isset(static::$_aRelations[$s]))
         {
-            $this->_aAttributes[$s] = $this->_loadLinkedModel($s);
+            $this->_loadLinkedModel($s);
 
             if (method_exists($this, 'get_' . $s))
             {
@@ -532,11 +531,7 @@ abstract class Model
      * fired every time user tries to set a *virtual property*.
      *
      * This function will check existence of the property. You can set a
-     * property if one of these conditions is fulfilled:
-     *
-     *  * It is a declared column;
-     *  * It is a relation name;
-     *  * It is already present in the attribute array.
+     * property any property you want.
      *
      * In all cases, the property you set will be store in the attribute array.
      * Nothing else is modified.
@@ -551,26 +546,16 @@ abstract class Model
      */
     public function __set($sName, $mValue)
     {
-        $aColumns = static::table()->columns;
-
         if (method_exists($this, 'set_' . $sName))
         {
             call_user_func(array($this, 'set_' . $sName), $mValue);
-
-            $this->_bIsDirty = true;
-			return;
+        }
+        else
+        {
+            $this->_attr($sName, $mValue);
         }
 
-        if (isset($aColumns[$sName])
-            || isset(static::$_aRelations[$sName])
-			|| isset($this->_aAttributes[$sName]) 
-			|| array_key_exists($sName, $this->_aAttributes)
-		) {
-            $this->_aAttributes[$sName] = $mValue;
-
-            $this->_bIsDirty = true;
-			return;
-        }
+        return;
 
         $aTrace = debug_backtrace();
         trigger_error(
@@ -653,7 +638,7 @@ abstract class Model
             }
             elseif (is_array($m))
             {
-                $m = self::_arrayToArray($m);
+                $m = self::arrayToArray($m);
             }
         }
 
@@ -969,10 +954,21 @@ abstract class Model
         return self::find('last', $aOptions);
     }
 
+    /**
+     * Manually load linked model(s). Useful to reload the linked model(s).
+     *
+     * @param string $sRelation The relation to load.
+     *
+     * @return void
+     */
+    public function load($sRelation)
+    {
+        $this->_loadLinkedModel($sRelation);
+    }
+
     public function modify($aAttributes)
     {
         $this->_fill($aAttributes);
-        $this->_bIsDirty = true;
 
         return $this;
     }
@@ -1118,7 +1114,7 @@ abstract class Model
     {
         $aRes = $this->attributes();
 
-        return self::_arrayToArray($aRes);
+        return self::arrayToArray($aRes);
     }
 
     public static function wakeup()
@@ -1171,8 +1167,15 @@ abstract class Model
         }
         else
         {
-            $this->_aAttributes[$sAttributeName] = func_get_arg(1);
-            $this->_bIsDirty = true;
+            $mNewValue = func_get_arg(1);
+            $mOldValue = isset($this->_aAttributes[$sAttributeName]) ?  $this->_aAttributes[$sAttributeName] : null;
+
+            if ($mNewValue !== $mOldValue)
+            {
+                $this->_aAttributes[$sAttributeName] = $mNewValue;
+                $this->_bIsDirty = true;
+            }
+
         }
     }
 
@@ -1662,7 +1665,7 @@ abstract class Model
 			));
         }
 
-        return $mRes;
+        $this->_attr($sRelationName, $mRes);
     }
 
 
