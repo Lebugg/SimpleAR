@@ -103,14 +103,14 @@ abstract class Condition
             $sMessage  = 'Unknown SQL operator: "' . $this->operator .  '".' .  PHP_EOL;
             $sMessage .= 'List of available operators: ' . implode(', ', array_keys(self::$_aOperators)); 
 
-            throw new Exception($sMessage);
+            throw new \SimpleAR\Exception($sMessage);
         }
 
         // Set logic and check its validity.
         $this->logic     = $sLogic;
         if (! ($this->logic === 'or' || $o->logic === 'and'))
         {
-            throw new Exception('Logical operator "' . $o->logic . '" is not valid.');
+            throw new \SimpleAR\Exception('Logical operator "' . $o->logic . '" is not valid.');
         }
 
         // Set value.
