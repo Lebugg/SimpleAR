@@ -423,9 +423,9 @@ abstract class Model
      * the differents check, by order:
      *
      * 1. Is try-to-be-get attribute called "id"? If yes, return instance's ID;
-     * 2. Is there a method called `get_<attribute name>()`? If yes, fire it and
+     * 2. Is in attribute array (`Model::$_aAttributes`). If there, return it;
+     * 3. Is there a method called `get_<attribute name>()`? If yes, fire it and
      * return its result;
-     * 3. Is in attribute array (`Model::$_aAttributes`). If there, return it;
      * 4. Is it a relation (in `Model::$_aRelations`)? If yes, load linked
      * 5. Is it a *count get*? If yes, compute it, store the result in attribute
      * array and return it.
@@ -465,16 +465,16 @@ abstract class Model
             return $this->_mId;
         }
 
-        if (method_exists($this, 'get_' . $s))
-        {
-            return call_user_func(array($this, 'get_' . $s));
-        } 
-
         // Classic attribute.
         if (isset($this->_aAttributes[$s]) || array_key_exists($s, $this->_aAttributes))
         { 
             return $this->_aAttributes[$s];
         }
+
+        if (method_exists($this, 'get_' . $s))
+        {
+            return call_user_func(array($this, 'get_' . $s));
+        } 
 
         // Relation.
         // Will arrive here maximum once per relation because when a relation is
@@ -553,19 +553,20 @@ abstract class Model
     {
         $aColumns = static::table()->columns;
 
+        if (method_exists($this, 'set_' . $sName))
+        {
+            call_user_func(array($this, 'set_' . $sName), $mValue);
+
+            $this->_bIsDirty = true;
+			return;
+        }
+
         if (isset($aColumns[$sName])
             || isset(static::$_aRelations[$sName])
 			|| isset($this->_aAttributes[$sName]) 
 			|| array_key_exists($sName, $this->_aAttributes)
 		) {
-            if (method_exists($this, 'set_' . $sName))
-            {
-                call_user_func(array($this, 'set_' . $sName), $mValue);
-            }
-            else
-            {
-                $this->_aAttributes[$sName] = $mValue;
-            }
+            $this->_aAttributes[$sName] = $mValue;
 
             $this->_bIsDirty = true;
 			return;
@@ -1335,19 +1336,15 @@ abstract class Model
 
     private function _fill($aAttributes)
     {
-		$this->_aAttributes = $aAttributes + $this->_aAttributes;
+        // The following does not call setters if any.
+		//$this->_aAttributes = $aAttributes + $this->_aAttributes;
 
-		/* Restrictive way of doing it:
-        $aColumns = static::table()->columns();
-
-        foreach ($aAttributes as $sKey => $sValue)
+        // This is not as efficient as above, but it is more consistent with what we want because it
+        // will call setters.
+        foreach ($aAttributes as $sKey => $mValue)
         {
-            if (isset($aColumns[$sKey]) || isset(static::$_aRelations[$sKey]))
-            {
-                $this->_aAttributes[$sKey] = $sValue;
-            }
+            $this->$sKey = $mValue;
         }
-		*/
     }
 
     /**
