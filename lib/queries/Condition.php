@@ -134,7 +134,7 @@ abstract class Condition
             if (!isset($this->value[0]))
             {
                 $this->value    = NULL;
-                $this->operator = '<=>';
+                $this->operator = $this->operator === '=' ? 'IS' : 'IS NOT';
                 //throw new Exception('Invalid condition value: ' . $mValue . '.');
             }
 
@@ -198,8 +198,15 @@ abstract class Condition
                 }
                 else
                 {
-                    $sSql   .= ' ' . $oCondition->toSql($bUseAliases, $bToColumn);
-                    $aValues = array_merge($aValues, $oCondition->flattenValues());
+                    $sSql .= ' ' . $oCondition->toSql($bUseAliases, $bToColumn);
+                    $m     = $oCondition->flattenValues();
+
+                    // $m may be null and we don't want it because it is handled by a IS [NOT] NULL
+                    // condition.
+                    if ($m)
+                    {
+                        $aValues = array_merge($aValues, $m);
+                    }
                 }
             }
             // $mItem is an array of Conditions.
@@ -223,6 +230,8 @@ abstract class Condition
      */
     public function flattenValues()
     {
+        if ($this->value === null) { return; }
+
         if (is_array($this->value))
         {
             if (is_array($this->value[0]))
