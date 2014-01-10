@@ -37,7 +37,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             // We check that condition makes sense.
             if ($this->logic === 'and' && isset($this->value[1]))
             {
-                throw new Exception('Condition does not make sense: ' . strtoupper($o->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
+                throw new Exception('Condition does not make sense: ' . strtoupper($this->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
             }
 
             // Get attribute column name.
@@ -55,7 +55,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             $sLHS = self::leftHandSide($mColumn, $oTable->alias . ($this->depth ?: ''));
             $sRHS = self::rightHandSide($this->value);
 
-            return $sLHS . ' ' . $o->operator . ' ' . $sRHS;
+            return $sLHS . ' ' . $this->operator . ' ' . $sRHS;
         }
 
         elseif ($r instanceof HasOne)
