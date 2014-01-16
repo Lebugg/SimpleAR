@@ -113,6 +113,22 @@ class Config
     private $_convertDateToObject = true;
 
     /**
+     * The DateTime format used by DBMS.
+     *
+     * It will be used to transform PHP DateTime objects into the correct format
+     * for the database. This transformation is done in Model class in functions
+     * that handle Model instance saves.
+     *
+     * @var string
+     *
+     * Default value: 'Y-m-d H:i:s'
+     *
+     * @see Model::_insert()
+     * @see Model::_update()
+     */
+    private $_databaseDateTimeFormat = 'Y-m-d H:i:s';
+
+    /**
      * Date format to be used by SimpleAR.
      * 
      * It will be used in conjunction with

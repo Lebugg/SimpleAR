@@ -1358,23 +1358,32 @@ abstract class Model
      */
     private function _insert()
     {
-        $this->_onBeforeInsert();
         $this->_checkUniqueConstraints();
+        $this->_onBeforeInsert();
 
-        $oTable = static::table();
-        $sTableName  = $oTable->name;
-        $aColumns    = $oTable->columns;
+        $oTable   = static::table();
+        $aColumns = $oTable->columns;
 
         // Keys will be attribute names; Values will be attributes values.
         $aFields = array();
 
+        // Will contains LM to save in cascade.
         $aLinkedModels = array();
+
+        // Avoid retrieving config option several times.
+        $sDateTimeFormat = self::$_oConfig->databaseDateTimeFormat;
 
         foreach ($this->_aAttributes as $sKey => $mValue)
         {
             // Handle actual columns.
             if (isset($aColumns[$sKey]))
             {
+                // Transform DateTime object into a database-formatted string.
+                if ($mValue instanceof \DateTime)
+                {
+                    $mValue = $mValue->format($sDateTimeFormat);
+                }
+
                 $aFields[$sKey] = $mValue;
                 continue;
             }
@@ -1739,13 +1748,23 @@ abstract class Model
         // Keys will be attribute names; Values will be attributes values.
         $aFields = array();
 
+        // Will contains LM to save in cascade.
         $aLinkedModels = array();
+
+        // Avoid retrieving config option several times.
+        $sDateTimeFormat = self::$_oConfig->databaseDateTimeFormat;
 
         foreach ($this->_aAttributes as $sKey => $mValue)
         {
             // Handles actual columns.
             if (isset($aColumns[$sKey]))
             {
+                // Transform DateTime object into a database-formatted string.
+                if ($mValue instanceof \DateTime)
+                {
+                    $mValue = $mValue->format($sDateTimeFormat);
+                }
+
                 $aFields[$sKey] = $mValue;
                 continue;
             }
