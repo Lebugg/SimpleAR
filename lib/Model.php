@@ -1491,6 +1491,10 @@ abstract class Model
                 }
             }
         }
+        catch (DatabaseException $oEx)
+        {
+            throw $oEx;
+        }
         catch(Exception $oEx)
         {
             throw new Exception('Error inserting ' . get_class($this) . ' in database.', 0, $oEx);
@@ -1892,6 +1896,10 @@ abstract class Model
                     $oQuery->run();
                 }
             }
+        }
+        catch (DatabaseException $oEx)
+        {
+            throw $oEx;
         }
         catch (Exception $oEx)
         {
