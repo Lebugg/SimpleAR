@@ -24,6 +24,11 @@ class Count extends Select
 		{
             $this->_conditions($aOptions['conditions']);
 		}
+
+		if (isset($aOptions['has']))
+		{
+            $this->_has($aOptions['has']);
+		}
 	}
 
     public function _compile()
