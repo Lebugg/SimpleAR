@@ -427,7 +427,7 @@ class Select extends Where
 
         if ($i < 0)
         {
-            throw new Exception('"limit" option must be a natural integer. Negative integer given: ' . $i . '.');
+            throw new \SimpleAR\Exception('"limit" option must be a natural integer. Negative integer given: ' . $i . '.');
         }
 
         $this->_iLimit = $i;
@@ -439,7 +439,7 @@ class Select extends Where
 
         if ($i < 0)
         {
-            throw new Exception('"offset" option must be a natural integer. Negative integer given: ' . $i . '.');
+            throw new \SimpleAR\Exception('"offset" option must be a natural integer. Negative integer given: ' . $i . '.');
         }
 
         $this->_iOffset = $i;

@@ -164,7 +164,7 @@ abstract class Where extends \SimpleAR\Query
         {
             if (is_array($mAttribute))
             {
-                throw new Exception('Cannot have multiple attributes in “' . $sAttribute . '”.');
+                throw new \SimpleAR\Exception('Cannot have multiple attributes in “' . $sAttribute . '”.');
             }
 
             $aPieces[] = $mAttribute;
@@ -209,7 +209,7 @@ abstract class Where extends \SimpleAR\Query
                     $this->_having($oAttribute, $sOperator, $mValue);
                     return;
                 default:
-                    throw new Exception('Unknown symbole “' . $c . '” in attribute “' . $sAttribute . '”.');
+                    throw new \SimpleAR\Exception('Unknown symbole “' . $c . '” in attribute “' . $sAttribute . '”.');
                     break;
             }
         }
@@ -332,7 +332,7 @@ abstract class Where extends \SimpleAR\Query
             {
                 if (!is_array($mValue))
                 {
-                    throw new MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
+                    throw new \SimpleAR\MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
                 }
 
                 $oCondition = $this->_conditionExists($this->_attribute($mKey, true), $mValue);
@@ -344,7 +344,7 @@ abstract class Where extends \SimpleAR\Query
             }
             else
             {
-                throw new MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+                throw new \SimpleAR\MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
             }
 
             // Reset operator.
@@ -354,7 +354,7 @@ abstract class Where extends \SimpleAR\Query
 
     protected function _having($oAttribute, $sOperator, $mValue)
     {
-        throw new Exception('Cannot add this condition "' . $oAttribute->original . '" in a ' .  get_class($this) . ' query.');
+        throw new \SimpleAR\Exception('Cannot add this condition "' . $oAttribute->original . '" in a ' .  get_class($this) . ' query.');
     }
 
     protected function _processArborescence()
