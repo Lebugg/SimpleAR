@@ -1598,14 +1598,27 @@ abstract class Model
 
         $this->_fill($aRow);
 
-        $bConvertDateToObject = self::$_oConfig->convertDateToObject;
-
-        foreach ($this->_aAttributes as $sKey => &$mValue)
+        if (self::$_oConfig->convertDateToObject)
         {
-            // $sKey.startsWith('date')
-            if ($bConvertDateToObject && strpos($sKey, 'date') === 0)
+            foreach ($this->_aAttributes as $sKey => &$mValue)
             {
-                $mValue = new DateTime($mValue);
+                // We test that is a string because setters might have been
+                // called from within _fill() so we cannot be sure of what
+                // $mValue is.
+                //
+                // strpos call <=> $sKey.startsWith('date')
+                if (is_string($mValue) && strpos($sKey, 'date') === 0)
+                {
+                    // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would 
+                    // cause strange values.
+                    // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
+                    $mValue =  $mValue === '0000-00-00'
+                            || $mValue === '0000-00-00 00:00:00'
+                            || $mValue === null
+                            ? null
+                            : new DateTime($mValue)
+                            ;
+                }
             }
         }
 
