@@ -1365,8 +1365,8 @@ abstract class Model
         $sTableName  = $oTable->name;
         $aColumns    = $oTable->columns;
 
+        // Keys will be attribute names; Values will be attributes values.
         $aFields = array();
-        $aValues = array();
 
         $aLinkedModels = array();
 
@@ -1375,8 +1375,7 @@ abstract class Model
             // Handle actual columns.
             if (isset($aColumns[$sKey]))
             {
-                $aFields[] = $sKey;
-                $aValues[] = $mValue;
+                $aFields[$sKey] = $mValue;
                 continue;
             }
 
@@ -1398,11 +1397,10 @@ abstract class Model
                     // Save in cascade.
                     $mValue->save();
 
-                    // @TODO: accept compound keys.
-                    $aFields[] = $oRelation->cm->attribute;
-                    $aValues[] = $mValue->id;
+                    // We use array_merge() and array_combine() in order to handle composed keys.
+                    $aFields = array_merge($aFields, array_combine((array) $oRelation->cm->attribute, (array) $mValue->id));
                 }
-                // Otherwise, handle it later (After CM insert, actually).
+                // Otherwise, handle it later (After CM insert, actually, because we need CM ID).
                 else
                 {
                     $aLinkedModels[] = array('relation' => static::relation($sKey), 'object' => $mValue);
@@ -1412,7 +1410,10 @@ abstract class Model
 
         try
         {
-            $oQuery = Query::insert(array('fields' => $aFields, 'values' => $aValues), get_called_class());
+            $oQuery = Query::insert(array(
+                'fields' => array_keys($aFields),
+                'values' => array_values($aFields)
+            ), get_called_class());
             $oQuery->run();
 
             // We fetch the ID.
@@ -1732,8 +1733,8 @@ abstract class Model
         $oTable   = static::table();
         $aColumns = $oTable->columns;
 
+        // Keys will be attribute names; Values will be attributes values.
         $aFields = array();
-        $aValues = array();
 
         $aLinkedModels = array();
 
@@ -1742,8 +1743,7 @@ abstract class Model
             // Handles actual columns.
             if (isset($aColumns[$sKey]))
             {
-                $aFields[] = $sKey;
-                $aValues[] = $mValue;
+                $aFields[$sKey] = $mValue;
                 continue;
             }
 
@@ -1765,9 +1765,8 @@ abstract class Model
                     // Save in cascade.
                     $mValue->save();
 
-                    // @TODO: accept compound keys.
-                    $aFields[] = $oRelation->cm->attribute;
-                    $aValues[] = $mValue->id;
+                    // We use array_merge() and array_combine() in order to handle composed keys.
+                    $aFields = array_merge($aFields, array_combine((array) $oRelation->cm->attribute, (array) $mValue->id));
                 }
                 // Otherwise, handle it later (After CM insert, actually).
                 else
@@ -1780,8 +1779,8 @@ abstract class Model
         try
         {
             $oQuery = Query::update(array(
-                'fields' => $aFields,
-                'values' => $aValues,
+                'fields' => array_keys($aFields),
+                'values' => array_values($aFields),
                 'conditions' => array('id' => $this->_mId)
             ), get_called_class());
             $oQuery->run();
