@@ -159,6 +159,11 @@ class Select extends Where
                 $sOrder     = 'ASC';
             }
 
+            if ($sAttribute == null)
+            {
+                throw new \SimpleAR\MalformedOptionException('"order_by" option malformed: attribute is empty.');
+            }
+
             $oAttribute = $this->_attribute($sAttribute);
 
             /*
