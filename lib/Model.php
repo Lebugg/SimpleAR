@@ -1168,7 +1168,7 @@ abstract class Model
         else
         {
             $mNewValue = func_get_arg(1);
-            $mOldValue = isset($this->_aAttributes[$sAttributeName]) ?  $this->_aAttributes[$sAttributeName] : null;
+            $mOldValue = isset($this->_aAttributes[$sAttributeName]) ? $this->_aAttributes[$sAttributeName] : null;
 
             if ($mNewValue !== $mOldValue)
             {
@@ -1423,24 +1423,28 @@ abstract class Model
             // We want to save linked models on cascade.
             foreach ($aLinkedModels as $a)
             {
+                // Avoid multiple array accesses.
+                $oRelation = $a['relation'];
+                $mObject   = $a['object'];
+
                 // Ignore if not Model instance.
-                if ($a['relation'] instanceof HasOne)
+                if ($oRelation instanceof HasOne)
                 {
-                    if($a['object'] instanceof Model)
+                    if($mObject instanceof Model)
                     {
-                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
-                        $a['object']->save();
+                        $mObject->{$oRelation->lm->attribute} = $this->_mId;
+                        $mObject->save();
                     }
                 }
-                elseif ($a['relation'] instanceof HasMany)
+                elseif ($oRelation instanceof HasMany)
                 {
                     // Ignore if not Model instance.
                     // Array cast allows user not to bother to necessarily set an array.
-                    foreach ((array) $a['object'] as $o)
+                    foreach ((array) $mObject as $o)
                     {
                         if ($o instanceof Model)
                         {
-                            $o->{$a['relation']->lm->attribute} = $this->_mId;
+                            $o->{$oRelation->lm->attribute} = $this->_mId;
                             $o->save();
                         }
                     }
@@ -1455,7 +1459,7 @@ abstract class Model
                     //  - save instances on cascade.
                     $aValues = array();
                     // Array cast allows user not to bother to necessarily set an array.
-                    foreach ((array) $a['object'] as $m)
+                    foreach ((array) $mObject as $m)
                     {
                         if ($m instanceof Model)
                         {
@@ -1470,9 +1474,9 @@ abstract class Model
                     }
 
 					$oQuery = Query::insert(array(
-                        'fields' => array($a['relation']->jm->from, $a['relation']->jm->to),
+                        'fields' => array($oRelation->jm->from, $oRelation->jm->to),
                         'values' => $aValues
-                    ), $a['relation']->jm->table);
+                    ), $oRelation->jm->table);
 
                     $oQuery->run();
                 }
@@ -1790,24 +1794,28 @@ abstract class Model
             // example: we delete before inserting.
             foreach ($aLinkedModels as $a)
             {
+                // Avoid multiple array accesses.
+                $oRelation = $a['relation'];
+                $mObject   = $a['object'];
+
                 // Ignore if not Model instance.
-                if ($a['relation'] instanceof HasOne)
+                if ($oRelation instanceof HasOne)
                 {
-                    if($a['object'] instanceof Model)
+                    if($mObject instanceof Model)
                     {
-                        $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
-                        $a['object']->save();
+                        $mObject->{$oRelation->lm->attribute} = $this->_mId;
+                        $mObject->save();
                     }
                 }
-                elseif ($a['relation'] instanceof HasMany)
+                elseif ($oRelation instanceof HasMany)
                 {
                     // Ignore if not Model instance.
                     // Array cast allows user not to bother to necessarily set an array.
-                    foreach ((array) $a['object'] as $o)
+                    foreach ((array) $mObject as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$a['relation']->lm->attribute} = $this->_mId;
+                            $o->{$oRelation->lm->attribute} = $this->_mId;
                             $o->save();
                         }
                     }
@@ -1825,12 +1833,12 @@ abstract class Model
                     //      2) Insert new rows.
 
                     // Remove all rows from join table. (Easier this way.)
-					$oQuery = Query::delete(array($a['relation']->jm->from => $this->_mId), $a['relation']->jm->table);
+					$oQuery = Query::delete(array($oRelation->jm->from => $this->_mId), $oRelation->jm->table);
                     $oQuery->run();
 
                     $aValues = array();
                     // Array cast allows user not to bother to necessarily set an array.
-                    foreach ((array) $a['object'] as $m)
+                    foreach ((array) $mObject as $m)
                     {
                         if ($m instanceof Model)
                         {
@@ -1845,9 +1853,9 @@ abstract class Model
                     }
 
 					$oQuery = Query::insert(array(
-                        'fields' => array($a['relation']->jm->from, $a['relation']->jm->to),
+                        'fields' => array($oRelation->jm->from, $oRelation->jm->to),
                         'values' => $aValues
-                    ), $a['relation']->jm->table);
+                    ), $oRelation->jm->table);
 
                     $oQuery->run();
                 }
