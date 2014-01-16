@@ -115,6 +115,26 @@ class Database
     }
 
     /**
+     * Adapter to PDO::beginTransaction()
+     *
+     * @see http://www.php.net/manual/en/pdo.begintransaction.php
+     */
+    public function beginTransaction()
+    {
+        $this->_oPdo->beginTransaction();
+    }
+
+    /**
+     * Database name getter.
+     *
+     * @return string The current database name.
+     */
+    public function database()
+    {
+        return $this->_sDatabase;
+    }
+
+    /**
      * Gets the last inserted ID.
      *
      * Warning: Works for MySQL, but it won't for PostgreSQL.
@@ -178,14 +198,15 @@ class Database
     }
 
     /**
-     * Database name getter.
+     * Adapter to PDO::rollBack()
      *
-     * @return string The current database name.
+     * @see http://www.php.net/manual/en/pdo.rollback.php
      */
-    public function database()
+    public function rollBack()
     {
-        return $this->_sDatabase;
+        $this->_oPdo->rollBack();
     }
+
 
     /**
      * Executed queries getter.
