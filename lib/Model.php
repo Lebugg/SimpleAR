@@ -1420,14 +1420,13 @@ abstract class Model
             $this->_mId = $oQuery->insertId();
 
             // Process linked models.
+            // We want to save linked models on cascade.
             foreach ($aLinkedModels as $a)
             {
-                // Linked model instance is not yet saved. We want to save it on
-                // cascade.
-                // Ignore if not Model instance or already saved.
+                // Ignore if not Model instance.
                 if ($a['relation'] instanceof HasOne)
                 {
-                    if($a['object'] instanceof Model && $a['object']->_mId === null)
+                    if($a['object'] instanceof Model)
                     {
                         $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
                         $a['object']->save();
@@ -1435,12 +1434,11 @@ abstract class Model
                 }
                 elseif ($a['relation'] instanceof HasMany)
                 {
-                    // Linked model instance is not yet saved. We want to save it on
-                    // cascade.
-                    // Ignore if not Model instance or already saved.
-                    foreach ($a['object'] as $o)
+                    // Ignore if not Model instance.
+                    // Array cast allows user not to bother to necessarily set an array.
+                    foreach ((array) $a['object'] as $o)
                     {
-                        if ($o instanceof Model && $o->id === null)
+                        if ($o instanceof Model)
                         {
                             $o->{$a['relation']->lm->attribute} = $this->_mId;
                             $o->save();
@@ -1456,7 +1454,8 @@ abstract class Model
                     //  relation join table;
                     //  - save instances on cascade.
                     $aValues = array();
-                    foreach ($a['object'] as $m)
+                    // Array cast allows user not to bother to necessarily set an array.
+                    foreach ((array) $a['object'] as $m)
                     {
                         if ($m instanceof Model)
                         {
@@ -1791,12 +1790,10 @@ abstract class Model
             // example: we delete before inserting.
             foreach ($aLinkedModels as $a)
             {
-                // Linked model instance is not yet saved. We want to save it on
-                // cascade.
-                // Ignore if not Model instance or already saved.
+                // Ignore if not Model instance.
                 if ($a['relation'] instanceof HasOne)
                 {
-                    if($a['object'] instanceof Model && $a['object']->_mId === null)
+                    if($a['object'] instanceof Model)
                     {
                         $a['object']->{$a['relation']->lm->attribute} = $this->_mId;
                         $a['object']->save();
@@ -1804,10 +1801,9 @@ abstract class Model
                 }
                 elseif ($a['relation'] instanceof HasMany)
                 {
-                    // Linked model instance is not yet saved. We want to save it on
-                    // cascade.
-                    // Ignore if not Model instance or already saved.
-                    foreach ($a['object'] as $o)
+                    // Ignore if not Model instance.
+                    // Array cast allows user not to bother to necessarily set an array.
+                    foreach ((array) $a['object'] as $o)
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
@@ -1833,7 +1829,8 @@ abstract class Model
                     $oQuery->run();
 
                     $aValues = array();
-                    foreach ($a['object'] as $m)
+                    // Array cast allows user not to bother to necessarily set an array.
+                    foreach ((array) $a['object'] as $m)
                     {
                         if ($m instanceof Model)
                         {
