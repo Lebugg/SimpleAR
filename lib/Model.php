@@ -943,6 +943,47 @@ abstract class Model
         return self::find('first', $aOptions);
     }
 
+    /**
+     * This function checks that current object is linked to another.
+     *
+     * It is the matching of addTo() and removeFrom() methods.
+     *
+     * @param string $sRelation The name of the relation to check on.
+     * @param mixed  $m         Linked object or object's ID.
+     *
+     * @return bool True if current object is linked to the other, false
+     * otherwise.
+     *
+     * @see Model::addTo()
+     * @see Model::removeFrom()
+     */
+    public function has($sRelation, $m)
+    {
+        $a = $this->$sRelation;
+
+        if (!is_array($a)) { $a = array($a); }
+
+        // We want to test by IDs, not by objects.
+        if ($m instanceof Model)
+        {
+            $m = $m->id;
+        }
+
+        // $a is an array of Model instances
+        // $o is a Model instance.
+        foreach ($a as $o)
+        {
+            // I would like to use === operator but we are not sure that int IDs
+            // really are integers.
+            if ($o->id == $m)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function init($oConfig, $oDatabase)
     {
         self::$_oConfig = $oConfig;
