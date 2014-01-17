@@ -670,12 +670,11 @@ abstract class Model
      *
      * @return array
      */
-    public static function columnsToSelect($sFilter = null, $sTableAlias = '', $sResAlias = '')
+    public static function columnsToSelect($sFilter = null)
     {
         $oTable = static::table();
-        $aRes   = array();
 
-        $aColumns = ($sFilter !== null && isset(static::$_aFilters[$sFilter]))
+        $aRes = ($sFilter !== null && isset(static::$_aFilters[$sFilter]))
             ? array_intersect_key($oTable->columns, array_flip(static::$_aFilters[$sFilter]))
             : $oTable->columns
             ;
@@ -684,17 +683,7 @@ abstract class Model
         // primary keys.
         if ($oTable->isSimplePrimaryKey)
         {
-            $aColumns['id'] = $oTable->primaryKey;
-        }
-
-        // If a table alias is given, add a dot to respect SQL syntax and to not
-        // worry about it in following foreach loop.
-        if ($sTableAlias) { $sTableAlias .= '.'; }
-        if ($sResAlias)   { $sResAlias   .= '.'; }
-
-        foreach ($aColumns as $sAttribute => $sColumn)
-        {
-            $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResAlias . $sAttribute . '`';
+            $aRes['id'] = $oTable->primaryKey;
         }
 
         return $aRes;

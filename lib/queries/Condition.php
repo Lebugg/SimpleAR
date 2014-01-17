@@ -457,7 +457,4 @@ abstract class Condition
      * @retutn string A valid SQL condition string.
      */
     public abstract function toSql($bUseAliases = true, $bToColumn = true);
-
-
-
 }

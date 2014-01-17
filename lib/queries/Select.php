@@ -34,7 +34,7 @@ class Select extends Where
     protected static $_aOptions = array('conditions', 'filter', 'group_by',
             'has', 'limit', 'offset', 'order_by', 'with');
 
-    const ROOT_RESULT_ALIAS = '_';
+    const DEFAULT_ROOT_RESULT_ALIAS = '_';
 
     /**
      * Return all fetch Model instances.
@@ -66,7 +66,7 @@ class Select extends Where
     {
         $aRes = array();
 
-        $aReversedPK = $this->_oRootTable->isSimplePrimaryKey ? array('id' => 0) : array_flip((array) $this->_oRootTable->primaryKey);
+        $aReversedPK = $this->_oContext->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_oContext->rootTable->primaryKey);
         $aResId      = null;
 
         // We want one resulting object. But we may have to process several lines in case that eager
@@ -123,7 +123,7 @@ class Select extends Where
 
     protected function _build(array $aOptions)
     {
-        // If we don't set a filter entry, Select::_filter() will never be
+        // If we don't set a filter entry, Select::filter() will never be
         // called.
         if (!isset($aOptions['filter']))
         {
@@ -136,7 +136,7 @@ class Select extends Where
 	public function group_by($aGroupBy)
 	{
         $aRes		= array();
-		$sRootAlias = $this->_oRootTable->alias;
+		$sRootAlias = $this->_oContext->rootTable->alias;
 
         foreach ((array) $aGroupBy as $sAttribute)
         {
@@ -161,11 +161,11 @@ class Select extends Where
 	public function order_by($aOrderBy)
 	{
         $aRes		= array();
-		$sRootAlias = $this->_oRootTable->alias;
+		$sRootAlias = $this->_oContext->rootTable->alias;
 
         // If there are common keys between static::$_aOrder and $aOrder, 
         // entries of static::$_aOrder will be overwritten.
-        foreach (array_merge($this->_oRootTable->orderBy, (array) $aOrderBy) as $sAttribute => $sOrder)
+        foreach (array_merge($this->_oContext->rootTable->orderBy, (array) $aOrderBy) as $sAttribute => $sOrder)
         {
             // Allows for a without-ASC/DESC syntax.
             if (is_int($sAttribute))
@@ -204,8 +204,8 @@ class Select extends Where
                         $oNode     = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
                         $oRelation = $oNode->relation;
 
-                        $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
-                        $sResultAlias    = $oAttribute->lastRelation ?: self::ROOT_RESULT_ALIAS;
+                        $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_oContext->rootTable;
+                        $sResultAlias    = $oAttribute->lastRelation ?: $this->_oContext->rootResultAlias;
 
                         // We assure that keys are string because they might be arrays.
                         if ($oRelation instanceof \SimpleAR\HasMany || $oRelation instanceof \SimpleAR\HasOne)
@@ -257,7 +257,7 @@ class Select extends Where
                 $oNode     = $this->_addToArborescence($oAttribute->pieces);
                 $oRelation = $oNode->relation;
 
-                $oCMTable = $oRelation ? $oRelation->cm->t : $this->_oRootTable;
+                $oCMTable = $oRelation ? $oRelation->cm->t : $this->_oContext->rootTable;
                 $oLMTable = $oRelation ? $oRelation->lm->t : null;
 
                 $iDepth = $oNode->depth ?: '';
@@ -321,30 +321,52 @@ class Select extends Where
         }
 	}
 
+    /**
+     * Handle "filter" option.
+     *
+     * First, it retrieve an attribute array from the Model.
+     * Then, it apply aliasing according to contextual values.
+     *
+     * Final columns to select (in a string form) are stored in
+     * Select::$_aSelects.
+     *
+     * @param string $sFilter The filter to apply or null to not filter.
+     *
+     * @return void
+     *
+     * @see Model::columnsToSelect()
+     * @see Query::attributeAliasing()
+     * @see Query\Select::$_aSelects
+     */
     public function filter($sFilter)
     {
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
+        // Mandatory for syntax respect.
+		$sRootModel   = $this->_oContext->rootModel;
+        // Shortcuts.
+		$sRootAlias   = $this->_oContext->rootTable->alias;
+        $sResultAlias = $this->_oContext->rootResultAlias;
 
-		$this->_aSelects = array_merge($this->_aSelects, $sRootModel::columnsToSelect($sFilter, $sRootAlias, self::ROOT_RESULT_ALIAS));
+        $aColumns = $sRootModel::columnsToSelect($sFilter);
+        $aColumns = self::columnAliasing($aColumns, $sRootAlias, $sResultAlias);
+
+		$this->_aSelects = array_merge($this->_aSelects, $aColumns);
     }
 
     protected function _compile()
     {
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
+		$sRootModel   = $this->_oContext->rootModel;
+		$sRootAlias   = $this->_oContext->rootTable->alias;
 
         $this->_processArborescence();
-        $this->_where();
 
 		$this->_sSql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->_sSql .= ' FROM `' . $this->_oRootTable->name . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
-		$this->_sSql .= $this->_sWhere;
+		$this->_sSql .= ' FROM `' . $this->_oContext->rootTableName . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
+		$this->_sSql .= $this->_where();
 		$this->_sSql .= $this->_groupBy();
         $this->_sSql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
-        $this->_sSql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
-        $this->_sSql .= $this->_iLimit ? ' LIMIT ' . $this->_iLimit : '';
-        $this->_sSql .= $this->_iOffset ? ' OFFSET ' . $this->_iOffset : '';
+        $this->_sSql .= $this->_aHaving  ? (' HAVING ' . implode(',', $this->_aHaving))    : '';
+        $this->_sSql .= $this->_iLimit   ? ' LIMIT ' . $this->_iLimit                      : '';
+        $this->_sSql .= $this->_iOffset  ? ' OFFSET ' . $this->_iOffset                    : '';
     }
 
 
@@ -359,10 +381,10 @@ class Select extends Where
         $oNode = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
 
         $sOperator = $sOperator ?: Condition::DEFAULT_OP;
-        $sResultAlias     = $oAttribute->lastRelation ?: self::ROOT_RESULT_ALIAS;
+        $sResultAlias     = $oAttribute->lastRelation ?: $this->_oContext->rootResultAlias;
         $sAttribute       = $oAttribute->attribute;
-        $oRelation = $oNode->relation;
-        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_oRootTable;
+        $oRelation        = $oNode->relation;
+        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_oContext->rootTable;
         $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
         $iDepth           = $oNode->depth ?: '';
 
@@ -457,7 +479,7 @@ class Select extends Where
 
             $a = explode('.', $sKey);
 
-            if ($a[0] === self::ROOT_RESULT_ALIAS)
+            if ($a[0] === $this->_oContext->rootResultAlias)
             {
                 // $a[1]: table column name.
 
@@ -485,10 +507,26 @@ class Select extends Where
             $oRelation = $oNode->relation;
 
             $sLM = $oRelation->lm->class;
-            $this->_aSelects = array_merge(
-                $this->_aSelects,
-                $sLM::columnsToSelect($oRelation->filter, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation)
-            );
+
+            $aColumns = $sLM::columnsToSelect($oRelation->filter);
+            $aColumns = self::columnAliasing($aColumns, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation);
+
+            $this->_aSelects = array_merge($this->_aSelects, $aColumns);
+        }
+    }
+
+    protected function _initContext($sRoot)
+    {
+        parent::_initContext($sRoot);
+
+        if ($this->_oContext->useModel)
+        {
+            // False by default. It will be set true if we have to fetch
+            // attributes from other tables.
+            $this->_oContext->useResultAlias = false;
+            
+            // Contain the result alias we will use if we use result aliases.
+            $this->_oContext->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
         }
     }
 

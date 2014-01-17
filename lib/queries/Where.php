@@ -34,20 +34,6 @@ abstract class Where extends \SimpleAR\Query
         10 => 'OUTER',
     );
 
-    public function __construct($sRoot)
-    {
-        parent::__construct($sRoot);
-
-        $this->_oArborescence = new \StdClass();
-        $this->_oArborescence->next  = array();
-        $this->_oArborescence->conditions = array();
-        $this->_oArborescence->relation = null;
-        $this->_oArborescence->previousRelation = null;
-        $this->_oArborescence->depth = 0;
-        $this->_oArborescence->table = $this->_oRootTable;
-
-    }
-
     /**
      * Add a relation array into the join arborescence of the query.
      *
@@ -66,10 +52,13 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
     {
-        if (!$aRelationNames) { return $this->_oArborescence; }
+        if (!$aRelationNames)
+        {
+            return $this->_oContext->arborescence;
+        }
 
-        $oNode         = $this->_oArborescence;
-        $sCurrentModel = $this->_sRootModel;
+        $oNode         = $this->_oContext->arborescence;
+        $sCurrentModel = $this->_oContext->rootModel;
 
         $oRelation         = null;
         $oPreviousRelation = null;
@@ -121,7 +110,8 @@ abstract class Where extends \SimpleAR\Query
             $oNode->__force = $bForceJoin || $oNode->__force;
         }
 
-        // Return arborescence leaf and current Relation object.
+        // Return arborescence leaf.
+        var_dump($oNode->table);
         return $oNode;
     }
 
@@ -229,9 +219,9 @@ abstract class Where extends \SimpleAR\Query
         $oCondition->table = $oNode->table;
 
         // Is there a Model's method to handle this attribute? Useful for virtual attributes.
-        if ($this->_bUseModel && is_string($mAttr))
+        if ($this->_oContext->useModel && is_string($mAttr))
         {
-            $sModel  = $oNode->relation ? $oNode->relation->lm->class : $this->_sRootModel;
+            $sModel  = $oNode->relation ? $oNode->relation->lm->class : $this->_oContext->rootModel;
             $sMethod = 'to_conditions_' . $mAttr;
 
             if (method_exists($sModel, $sMethod))
@@ -356,14 +346,36 @@ abstract class Where extends \SimpleAR\Query
         throw new \SimpleAR\Exception('Cannot add this condition "' . $oAttribute->original . '" in a ' .  get_class($this) . ' query.');
     }
 
+    protected function _initContext($sRoot)
+    {
+        parent::_initContext($sRoot);
+
+        $o = new \StdClass();
+        $o->next             = array();
+        $o->conditions       = array();
+        $o->relation         = null;
+        $o->previousRelation = null;
+        $o->depth            = 0;
+        $o->table            = $this->_oContext->rootTable;
+
+        $this->_oContext->arborescence = $o;
+    }
+
     protected function _processArborescence()
     {
+        // We cannot use arborescence feature when we are not using models.
+        // So, abort it.
+        if (! $this->_oContext->useModel)
+        {
+            return false;
+        }
+
         // Process root node here.
-        $oRoot = $this->_oArborescence;
+        $oRoot = $this->_oContext->arborescence;
         // Nothing to do?
 
         // Cross down the tree.
-        $this->_processArborescenceRecursive($oRoot, $this->_sRootModel);
+        $this->_processArborescenceRecursive($oRoot, $this->_oContext->rootModel);
     }
 
 	private function _processArborescenceRecursive($oArborescence, $sCurrentModel, $iDepth = 1)
@@ -422,10 +434,9 @@ abstract class Where extends \SimpleAR\Query
     protected function _where()
     {
         // We made all wanted treatments; get SQL out of Condition array.
-        list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
+        list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_oContext->useAlias, $this->_oContext->useModel);
 
         // Add condition values. $aValues is a flatten array.
-        // @see Condition::arrayToSql()
         // @see Condition::flattenValues()
         $this->_aValues = array_merge($this->_aValues, $aValues);
 

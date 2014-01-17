@@ -70,14 +70,14 @@ abstract class Query
      *
      * @var bool Default true
      */
-    protected $_bUseModel  = true;
+    /* protected $_bUseModel  = true; */
 
     /**
      * Use aliases in queries?
      *
      * @var bool Default true
      */
-    protected $_bUseAlias  = true;
+    //protected $_bUseAlias  = true;
 
     /**
      * Root model name.
@@ -86,7 +86,7 @@ abstract class Query
      *
      * @var string
      */
-	protected $_sRootModel;
+	//protected $_sRootModel;
 
     /**
      * Table object of root model.
@@ -95,16 +95,40 @@ abstract class Query
      *
      * @var Table
      */
-	protected $_oRootTable;
+	//protected $_oRootTable;
 
     /**
      * Root model table name.
      *
      * @var string
      */
-	protected $_sRootTable = '';
+	/* protected $_sRootTable = ''; */
 
     protected static $_aOptions = array();
+
+    /**
+     * Holds information used to properly construct queries. It allows
+     * flexibility while keeping code clear.
+     *
+     * Description of its members:
+     * ---------------------------
+     *
+     * - useAlias (bool): Tells if we use table aliases. If true, every table field use
+     * in query will be prefix by the corresponding table alias.
+     *
+     * - useModel (bool): Indicate if we are using models to build query. If false, we
+     * only use the raw table name given in constructor. In this case, we would
+     * be enable to use many features like process query on linked models.
+     *
+     * - useResultAlias (bool)
+     * - rootModel (string)
+     * - rootTable (Table)
+     * - rootTableName (string)
+     * - isCriticalQuery (bool)
+     *
+     * @var object
+     */
+    protected $_oContext;
 
     /**
      * Constructor.
@@ -115,19 +139,9 @@ abstract class Query
      */
 	public function __construct($sRoot)
 	{
-		if (class_exists($sRoot))
-		{
-            $this->_sRootModel = $sRoot;
-            $this->_oRootTable = $sRoot::table();
-			$this->_sRootTable = $this->_oRootTable->name;
-		}
-		else
-		{
-			$this->_bUseModel  = false;
-            $this->_bUseAlias  = false;
-			$this->_sRootTable = $sRoot;
-		}
-	}
+        $this->_initContext($sRoot);
+    }
+
 
     /**
      * Construct a Count query.
@@ -200,7 +214,7 @@ abstract class Query
     {
         $this->_compile();
 
-        if (static::$_bIsCriticalQuery)
+        if ($this->_oContext->isCriticalQuery)
         {
             if (strpos($this->_sSql, ' WHERE ') === false)
             {
@@ -260,6 +274,39 @@ abstract class Query
 
     protected abstract function _compile();
 
+    protected function _initContext($sRoot)
+    {
+        $this->_oContext = new \StdClass();
+
+        // A Model class name is given.
+		if (class_exists($sRoot))
+		{
+            if (! is_subclass_of($sRoot, '\SimpleAR\Model'))
+            {
+                throw new Exception('Given class "' . $sRoot . '" is not a subclass of Model.');
+            }
+
+            $this->_oContext->useModel = true;
+            $this->_oContext->useAlias = true;
+
+            $this->_oContext->rootModel       = $sRoot;
+            $this->_oContext->rootTable       = $t = $sRoot::table();
+            $this->_oContext->rootTableName   = $t->name;
+		}
+
+        // A table name is given.
+		else
+		{
+            // We cannot use models if we only have a table name.
+            $this->_oContext->useModel = false;
+            $this->_oContext->useAlias = true;
+
+            $this->_oContext->rootTableName   = $sRoot;
+		}
+
+        $this->_oContext->isCriticalQuery = self::$_bIsCriticalQuery;
+	}
+
     private static function _query($sQueryClass, $aOptions, $sRoot)
     {
         $sQueryClass = "\SimpleAR\Query\\$sQueryClass";
@@ -268,6 +315,61 @@ abstract class Query
         $oQuery->_build($aOptions);
 
         return $oQuery;
+    }
+
+    /**
+     * Apply aliases to columns.
+     *
+     * It may be necessary to add alias to columns:
+     * - we want to prefix columns with table aliases;
+     * - we want to rename columns in query result (only for Select queries).
+     *
+     * Note: The function name may be confusing.
+     *
+     * @param array $aColumns The column array. It can take two forms:
+     * - an indexed array where values are column names;
+     * - an associative array where keys are attribute names and values are
+     * column names (for column renaming in result. Select queries only).
+     *
+     * @param string $sTableAlias  The table alias to prefix the column with.
+     * @param string $sResultAlias The result alias to rename the column into.
+     *
+     * @return array
+     */
+    protected static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
+    {
+        $aRes = array();
+
+        // If a table alias is given, add a dot to respect SQL syntax and to not
+        // worry about it in following foreach loop.
+        if ($sTableAlias)  { $sTableAlias  .= '.'; }
+
+
+        // Result alias should only be used by Select queries.
+        //
+        // Should we do:
+        //      if -> loop, else -> loop
+        // or
+        //      loop iteration -> if/else
+        // ?
+        if ($sResultAlias)
+        {
+            $sResultAlias .= '.';
+
+            foreach ($aColumns as $sAttribute => $sColumn)
+            {
+                $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResultAlias . $sAttribute . '`';
+            }
+        }
+        else
+        {
+            foreach ($aColumns as $sColumn)
+            {
+                $aRes[] = $sTableAlias . $sColumn;
+            }
+        }
+
+        return $aRes;
     }
 
 }

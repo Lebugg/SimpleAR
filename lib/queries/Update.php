@@ -18,32 +18,49 @@ class Update extends \SimpleAR\Query\Where
      */
     protected static $_bIsCriticalQuery = true;
 
-    /**
-     * Never use aliases.
-     *
-     * @var bool
-     */
-    protected $_bUseAlias = false;
-
     protected static $_aOptions = array('conditions', 'fields', 'values');
 
     protected function _compile()
     {
-        $this->_where();
+		$this->_sSql = $this->_oContext->useAlias
+            ? 'UPDATE ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias . ' SET '
+            : 'UPDATE ' . $this->_oContext->rootTableName . ' SET '
+            ;
 
-		$this->_sSql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
+        $this->_processArborescence();
+
         $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
-		$this->_sSql .= $this->_sWhere;
+		$this->_sSql .= $this->_where();
     }
 
-    public function fields(array $aFields)
+    public function fields($aFields)
     {
-        $this->_aColumns = $this->_oRootTable->columnRealName($aFields);
+        $a = (array) $aFields;
+
+        // We have to translate attribute to columns.
+        if ($this->_oContext->useModel)
+        {
+            // We cast into array because columnRealName can return a string
+            // even if we gave it an array.
+            $a = (array) $this->_oContext->rootTable->columnRealName($a);
+        }
+
+        // We have to use table alias.
+        if ($this->_oContext->useAlias)
+        {
+            $a = self::columnAliasing($a);
+        }
+
+        $this->_aColumns = $a;
     }
 
-    public function values(array $aValues)
+    public function values($aValues)
     {
-        $this->_aValues = array_merge($aValues, $this->_aValues);
+        $this->_aValues = array_merge($this->_aValues, (array) $aValues);
     }
 
+    protected function _initContext($sRoot)
+    {
+        parent::_initContext($sRoot);
+    }
 }

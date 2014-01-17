@@ -28,23 +28,16 @@ class Insert extends \SimpleAR\Query
 	protected function _compile()
 	{
         // If user did not specified any column.
+        // We could throw an exception, but the user may want to insert a kind
+        // of "default row", that is a row with only database default values.
         if (! $this->_aColumns)
         {
-            $this->_sSql = 'INSERT INTO `' . $sTable . '` VALUES()';
+            $this->_sSql = 'INSERT INTO `' . $this->_oContext->rootTableName . '` VALUES()';
             return;
         }
 
-        if ($this->_bUseModel)
-        {
-            $sTable   = $this->_oRootTable->name;
-        }
-        else
-        {
-            $sTable   = $this->_sRootTable;
-        }
-
-        $this->_sSql = 'INSERT INTO `' . $sTable . '`(`' . implode('`,`', (array) $this->_aColumns) . '`) VALUES';
-        $iCount    = count($this->_aValues);
+        $this->_sSql = 'INSERT INTO `' . $this->_oContext->rootTableName . '`(`' . implode('`,`', (array) $this->_aColumns) . '`) VALUES';
+        $iCount      = count($this->_aValues);
 
         // $this->_aValues is a multidimensional array. Actually, it is an array of
         // tuples.
@@ -70,22 +63,15 @@ class Insert extends \SimpleAR\Query
     {
         $aFields = (array) $aFields;
 
-        if ($this->_bUseModel)
-        {
-            $this->_aColumns = $this->_oRootTable->columnRealName($aFields);
-            $sTable   = $this->_oRootTable->name;
-        }
-        else
-        {
-            $this->_aColumns = $aFields;
-            $sTable   = $this->_sRootTable;
-        }
-
+        $this->_aColumns = $this->_oContext->useModel
+            ? $this->_oContext->rootTable->columnRealName($aFields)
+            : $aFields
+            ;
     }
 
     public function values($aValues)
     {
-        $this->_aValues = array_merge((array) $aValues, $this->_aValues);
+        $this->_aValues = array_merge($this->_aValues, (array) $aValues);
     }
 
 }
