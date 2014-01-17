@@ -11,37 +11,16 @@ namespace SimpleAR\Query;
  */
 class Count extends Select
 {
-    /**
-     * This function builds the query.
-     *
-     * @param array $aOptions The option array.
-     *
-     * @return void
-     */
-	public function _build(array $aOptions)
-	{
-		if (isset($aOptions['conditions']))
-		{
-            $this->_conditions($aOptions['conditions']);
-		}
-
-		if (isset($aOptions['has']))
-		{
-            $this->_has($aOptions['has']);
-		}
-	}
+    protected static $_aOptions = array('conditions', 'has');
 
     public function _compile()
     {
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
-
         $this->_processArborescence();
         $this->_where();
 
-		$this->sql  = 'SELECT COUNT(*)';
-		$this->sql .= ' FROM ' . $this->_oRootTable->name . ' ' . $sRootAlias .  ' ' . $this->_sJoin;
-		$this->sql .= $this->_sWhere;
+		$this->_sSql  = 'SELECT COUNT(*)';
+		$this->_sSql .= ' FROM ' . $this->_oRootTable->name . ' ' .  $this->_oRootTable->alias .  ' ' . $this->_sJoin;
+		$this->_sSql .= $this->_sWhere;
     }
 
     /**

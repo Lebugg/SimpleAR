@@ -31,6 +31,9 @@ class Select extends Where
 
     private $_aPendingRow = false;
 
+    protected static $_aOptions = array('conditions', 'filter', 'group_by',
+            'has', 'limit', 'offset', 'order_by', 'with');
+
     const ROOT_RESULT_ALIAS = '_';
 
     /**
@@ -118,12 +121,24 @@ class Select extends Where
         return $aRes;
     }
 
-	private function _group_by(array $aGroupBy)
+    protected function _build(array $aOptions)
+    {
+        // If we don't set a filter entry, Select::_filter() will never be
+        // called.
+        if (!isset($aOptions['filter']))
+        {
+            $aOptions['filter'] = null;
+        }
+
+        parent::_build($aOptions);
+    }
+
+	public function group_by($aGroupBy)
 	{
         $aRes		= array();
 		$sRootAlias = $this->_oRootTable->alias;
 
-        foreach ($aGroupBy as $sAttribute)
+        foreach ((array) $aGroupBy as $sAttribute)
         {
             $oAttribute = $this->_attribute($sAttribute);
 
@@ -143,14 +158,14 @@ class Select extends Where
     /**
      * Only works when $_bUseModel and $_bUseAliases are true.
      */
-	private function _order_by(array $aOrderBy)
+	public function order_by($aOrderBy)
 	{
         $aRes		= array();
 		$sRootAlias = $this->_oRootTable->alias;
 
         // If there are common keys between static::$_aOrder and $aOrder, 
         // entries of static::$_aOrder will be overwritten.
-        foreach (array_merge($this->_oRootTable->orderBy, $aOrderBy) as $sAttribute => $sOrder)
+        foreach (array_merge($this->_oRootTable->orderBy, (array) $aOrderBy) as $sAttribute => $sOrder)
         {
             // Allows for a without-ASC/DESC syntax.
             if (is_int($sAttribute))
@@ -306,58 +321,13 @@ class Select extends Where
         }
 	}
 
-    /**
-     * This function builds the query.
-     *
-     * @param array $aOptions The option array.
-     *
-     * @return void
-     */
-	protected function _build(array $aOptions)
-	{
+    public function filter($sFilter)
+    {
 		$sRootModel = $this->_sRootModel;
 		$sRootAlias = $this->_oRootTable->alias;
 
-		$this->_aSelects = (isset($aOptions['filter']))
-			? $sRootModel::columnsToSelect($aOptions['filter'], $sRootAlias, self::ROOT_RESULT_ALIAS)
-			: $sRootModel::columnsToSelect(null,                $sRootAlias, self::ROOT_RESULT_ALIAS)
-			;
-
-		if (isset($aOptions['conditions']))
-		{
-            $this->_conditions($aOptions['conditions']);
-		}
-
-        if (isset($aOptions['has']))
-        {
-            $this->_has((array) $aOptions['has']);
-        }
-
-		if (isset($aOptions['order_by']))
-		{
-			$this->_order_by((array) $aOptions['order_by']);
-		}
-
-		if (isset($aOptions['group_by']))
-		{
-			$this->_group_by((array) $aOptions['group_by']);
-		}
-
-        if (isset($aOptions['with']))
-        {
-			$this->_with($aOptions['with']);
-        }
-
-		if (isset($aOptions['limit']))
-		{
-            $this->_limit($aOptions['limit']);
-		}
-
-		if (isset($aOptions['offset']))
-		{
-            $this->_offset($aOptions['offset']);
-		}
-	}
+		$this->_aSelects = array_merge($this->_aSelects, $sRootModel::columnsToSelect($sFilter, $sRootAlias, self::ROOT_RESULT_ALIAS));
+    }
 
     protected function _compile()
     {
@@ -367,14 +337,14 @@ class Select extends Where
         $this->_processArborescence();
         $this->_where();
 
-		$this->sql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->sql .= ' FROM `' . $this->_oRootTable->name . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
-		$this->sql .= $this->_sWhere;
-		$this->sql .= $this->_groupBy();
-        $this->sql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
-        $this->sql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
-        $this->sql .= $this->_iLimit ? ' LIMIT ' . $this->_iLimit : '';
-        $this->sql .= $this->_iOffset ? ' OFFSET ' . $this->_iOffset : '';
+		$this->_sSql  = 'SELECT ' . implode(', ', $this->_aSelects);
+		$this->_sSql .= ' FROM `' . $this->_oRootTable->name . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
+		$this->_sSql .= $this->_sWhere;
+		$this->_sSql .= $this->_groupBy();
+        $this->_sSql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
+        $this->_sSql .= $this->_aHaving ? (' HAVING ' . implode(',', $this->_aHaving)) : '';
+        $this->_sSql .= $this->_iLimit ? ' LIMIT ' . $this->_iLimit : '';
+        $this->_sSql .= $this->_iOffset ? ' OFFSET ' . $this->_iOffset : '';
     }
 
 
@@ -415,13 +385,13 @@ class Select extends Where
                         }
                     }
                     $this->_aHaving[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
-                    $this->values[]    = $mValue;
+                    $this->_aValues[]    = $mValue;
                     break;
             }
         }
     }
 
-    private function _limit($i)
+    public function limit($i)
     {
         $i = (int) $i;
 
@@ -433,7 +403,7 @@ class Select extends Where
         $this->_iLimit = $i;
     }
 
-    private function _offset($i)
+    public function offset($i)
     {
         $i = (int) $i;
 
@@ -505,7 +475,7 @@ class Select extends Where
         return $aRes;
     }
 
-    private function _with($m)
+    public function with($m)
     {
         $a = (array) $m;
 

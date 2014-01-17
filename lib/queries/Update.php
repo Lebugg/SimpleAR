@@ -25,32 +25,25 @@ class Update extends \SimpleAR\Query\Where
      */
     protected $_bUseAlias = false;
 
-    /**
-     * This function builds the query.
-     *
-     * @param array $aOptions The option array.
-     *
-     * @return void
-     */
-	protected function _build(array $aOptions)
-	{
-		if (isset($aOptions['conditions']))
-		{
-            $this->_conditions($aOptions['conditions']);
-            $this->_where();
-		}
-
-        $this->_aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
-        $this->values    = array_merge($aOptions['values'], $this->values);
-	}
+    protected static $_aOptions = array('conditions', 'fields', 'values');
 
     protected function _compile()
     {
-		$sRootModel = $this->_sRootModel;
-		$sRootAlias = $this->_oRootTable->alias;
+        $this->_where();
 
-		$this->sql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
-        $this->sql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
-		$this->sql .= $this->_sWhere;
+		$this->_sSql  = 'UPDATE ' . $this->_oRootTable->name . ' SET ';
+        $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
+		$this->_sSql .= $this->_sWhere;
     }
+
+    public function fields(array $aFields)
+    {
+        $this->_aColumns = $this->_oRootTable->columnRealName($aFields);
+    }
+
+    public function values(array $aValues)
+    {
+        $this->_aValues = array_merge($aValues, $this->_aValues);
+    }
+
 }

@@ -18,17 +18,7 @@ class Delete extends \SimpleAR\Query\Where
      */
     protected static $_bIsCriticalQuery = true;
 
-    /**
-     * This function builds the query.
-     *
-     * @param array $aOptions The option array.
-     *
-     * @return void
-     */
-	protected function _build(array $aConditions)
-	{
-        $this->_conditions($aConditions);
-    }
+    protected static $_aOptions = array('conditions');
 
     protected function _compile()
     {
@@ -37,14 +27,14 @@ class Delete extends \SimpleAR\Query\Where
             $this->_processArborescence();
             $sUsingClause = $this->_sJoin ? ' USING ' . $this->_sJoin : '';
 
-            $this->sql .= 'DELETE ' . $this->_oRootTable->alias . ' FROM ' . $this->_oRootTable->name . ' AS ' .  $this->_oRootTable->alias;
-            $this->sql .= $sUsingClause;
-            $this->sql .= $this->_where();
+            $this->_sSql .= 'DELETE ' . $this->_oRootTable->alias . ' FROM ' . $this->_oRootTable->name . ' AS ' .  $this->_oRootTable->alias;
+            $this->_sSql .= $sUsingClause;
+            $this->_sSql .= $this->_where();
         }
         else
         {
-            $this->sql .= 'DELETE FROM ' . $this->_sRootTable;
-            $this->sql .= $this->_where();
+            $this->_sSql .= 'DELETE FROM ' . $this->_sRootTable;
+            $this->_sSql .= $this->_where();
         }
 	}
 }

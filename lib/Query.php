@@ -10,10 +10,9 @@ require 'queries/Condition.php';
 require 'queries/Where.php';
 require 'queries/Insert.php';
 require 'queries/Select.php';
-//require 'queries/Exists.php';
 require 'queries/Count.php';
-require 'queries/Delete.php';
 require 'queries/Update.php';
+require 'queries/Delete.php';
 
 /**
  * This class is the superclass of all SQL queries.
@@ -52,14 +51,16 @@ abstract class Query
      *
      * @var string
      */
-	public $sql;
+	protected $_sSql;
 
     /**
      * The query values to bind.
      *
      * @var array.
      */
-	public $values = array();
+	protected $_aValues = array();
+
+    protected $_aColumns = array();
 
     /**
      * Use Model properties to construct query?
@@ -103,7 +104,7 @@ abstract class Query
      */
 	protected $_sRootTable = '';
 
-    protected $_sGlobalAliasPrefix = '';
+    protected static $_aOptions = array();
 
     /**
      * Constructor.
@@ -138,11 +139,7 @@ abstract class Query
      */
 	public static function count($aOptions, $sRoot)
 	{
-		$oQuery = new Query\Count($sRoot);
-        $oQuery->_build($aOptions);
-        $oQuery->_compile();
-
-		return $oQuery;
+        return self::_query('Count', $aOptions, $sRoot);
 	}
 
     /**
@@ -155,11 +152,11 @@ abstract class Query
      */
 	public static function delete($aConditions, $sRoot)
 	{
-		$oQuery = new Query\Delete($sRoot);
-        $oQuery->_build($aConditions);
-        $oQuery->_compile();
+        // Delete query only needs a condition array, but we do not want to
+        // redefine _build() for this.
+        $aOptions = array('conditions' => $aConditions);
 
-		return $oQuery;
+        return self::_query('Delete', $aOptions, $sRoot);
 	}
 
     public static function init($oDatabase)
@@ -177,11 +174,7 @@ abstract class Query
      */
 	public static function insert($aOptions, $sRoot)
 	{
-		$oQuery = new Query\Insert($sRoot);
-        $oQuery->_build($aOptions);
-        $oQuery->_compile();
-
-		return $oQuery;
+        return self::_query('Insert', $aOptions, $sRoot);
 	}
 
     /**
@@ -205,15 +198,17 @@ abstract class Query
      */
     public function run()
     {
+        $this->_compile();
+
         if (static::$_bIsCriticalQuery)
         {
-            if (! $this->_sWhere)
+            if (strpos($this->_sSql, ' WHERE ') === false)
             {
                 throw new Exception('Cannot execute this query without a WHERE clause.');
             }
         }
 
-        $this->_oSth = self::$_oDb->query($this->sql, $this->values);
+        $this->_oSth = self::$_oDb->query($this->_sSql, $this->_aValues);
 
         return $this;
     }
@@ -228,11 +223,7 @@ abstract class Query
      */
 	public static function select($aOptions, $sRoot)
 	{
-		$oQuery = new Query\Select($sRoot);
-        $oQuery->_build($aOptions);
-        $oQuery->_compile();
-
-		return $oQuery;
+        return self::_query('Select', $aOptions, $sRoot);
 	}
 
     /**
@@ -245,11 +236,7 @@ abstract class Query
      */
 	public static function update($aOptions, $sRoot)
 	{
-		$oQuery = new Query\Update($sRoot);
-        $oQuery->_build($aOptions);
-        $oQuery->_compile();
-
-		return $oQuery;
+        return self::_query('Update', $aOptions, $sRoot);
 	}
 
     /**
@@ -259,8 +246,28 @@ abstract class Query
      *
      * @return void
      */
-	protected abstract function _build(array $aOptions);
+	protected function _build(array $aOptions)
+    {
+        foreach ($aOptions as $s => $a)
+        {
+            if (in_array($s, static::$_aOptions))
+            {
+                // There must be a method that corresponds to the option.
+                $this->$s($a);
+            }
+        }
+    }
 
     protected abstract function _compile();
+
+    private static function _query($sQueryClass, $aOptions, $sRoot)
+    {
+        $sQueryClass = "\SimpleAR\Query\\$sQueryClass";
+        $oQuery      = new $sQueryClass($sRoot);
+
+        $oQuery->_build($aOptions);
+
+        return $oQuery;
+    }
 
 }

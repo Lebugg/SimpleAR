@@ -19,7 +19,6 @@ abstract class Where extends \SimpleAR\Query
 	protected $_aConditions = array();
 
     protected $_sJoin         = '';
-    protected $_sWhere        = '';
 
     protected $_aJoinedTables = array();
 
@@ -250,7 +249,7 @@ abstract class Where extends \SimpleAR\Query
         return $oCondition;
     }
 
-    protected function _conditions($aConditions)
+    public function conditions($aConditions)
     {
         $this->_aConditions = $this->_conditionsParse($aConditions);
     }
@@ -317,7 +316,7 @@ abstract class Where extends \SimpleAR\Query
     /**
      * EXISTS conditions.
      */
-    protected function _has($aHas)
+    public function has($aHas)
     {
         $aRes             = array();
         $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
@@ -423,13 +422,14 @@ abstract class Where extends \SimpleAR\Query
     protected function _where()
     {
         // We made all wanted treatments; get SQL out of Condition array.
-        // We update values because Condition::arrayToSql() will flatten them in
-        // order to bind them to SQL string with PDO.
         list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_bUseAlias, $this->_bUseModel);
 
-        $this->values = array_merge($this->values, $aValues);
+        // Add condition values. $aValues is a flatten array.
+        // @see Condition::arrayToSql()
+        // @see Condition::flattenValues()
+        $this->_aValues = array_merge($this->_aValues, $aValues);
 
-		return $this->_sWhere = ($sSql ? ' WHERE ' . $sSql : '');
+		return $sSql ? ' WHERE ' . $sSql : '';
     }
 
 }

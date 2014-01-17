@@ -11,6 +11,8 @@ namespace SimpleAR\Query;
  */
 class Insert extends \SimpleAR\Query
 {
+    protected static $_aOptions = array('fields', 'values');
+
     /**
      * Last inserted ID getter.
      *
@@ -23,59 +25,67 @@ class Insert extends \SimpleAR\Query
         return self::$_oDb->lastInsertId();
     }
 
-    /**
-     * This function builds the query.
-     *
-     * @param array $aOptions The option array.
-     *
-     * @return void
-     */
-	protected function _build(array $aOptions)
+	protected function _compile()
 	{
-        $this->values = $aOptions['values'];
+        // If user did not specified any column.
+        if (! $this->_aColumns)
+        {
+            $this->_sSql = 'INSERT INTO `' . $sTable . '` VALUES()';
+            return;
+        }
 
         if ($this->_bUseModel)
         {
-            $aColumns = $this->_oRootTable->columnRealName($aOptions['fields']);
             $sTable   = $this->_oRootTable->name;
         }
         else
         {
-            $aColumns = $aOptions['fields'];
             $sTable   = $this->_sRootTable;
         }
 
-        // If user did not specified any column.
-        if (! $aColumns)
-        {
-            $this->sql = 'INSERT INTO `' . $sTable . '` VALUES()';
-            return;
-        }
+        $this->_sSql = 'INSERT INTO `' . $sTable . '`(`' . implode('`,`', (array) $this->_aColumns) . '`) VALUES';
+        $iCount    = count($this->_aValues);
 
-        $this->sql = 'INSERT INTO `' . $sTable . '`(`' . implode('`,`', (array) $aColumns) . '`) VALUES';
-        $iCount    = count($this->values);
-
-        // $this->values is a multidimensional array. Actually, it is an array of
+        // $this->_aValues is a multidimensional array. Actually, it is an array of
         // tuples.
-        if (is_array($this->values[0]))
+        if (is_array($this->_aValues[0]))
         {
             // Tuple cardinal.
-            $iTupleSize = count($this->values[0]);
+            $iTupleSize = count($this->_aValues[0]);
             
             $sTuple     = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
-            $this->sql .= str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
+            $this->_sSql .= str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
 
             // We also need to flatten value array.
-            $this->values = call_user_func_array('array_merge', $this->values);
+            $this->_aValues = call_user_func_array('array_merge', $this->_aValues);
         }
         // Simple array.
         else
         {
-            $this->sql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
+            $this->_sSql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
         }
 	}
 
-    protected function _compile()
+    public function fields($aFields)
     {
+        $aFields = (array) $aFields;
+
+        if ($this->_bUseModel)
+        {
+            $this->_aColumns = $this->_oRootTable->columnRealName($aFields);
+            $sTable   = $this->_oRootTable->name;
+        }
+        else
+        {
+            $this->_aColumns = $aFields;
+            $sTable   = $this->_sRootTable;
+        }
+
     }
+
+    public function values($aValues)
+    {
+        $this->_aValues = array_merge((array) $aValues, $this->_aValues);
+    }
+
 }
