@@ -142,6 +142,61 @@ abstract class Query
         $this->_initContext($sRoot);
     }
 
+    /**
+     * Apply aliases to columns.
+     *
+     * It may be necessary to add alias to columns:
+     * - we want to prefix columns with table aliases;
+     * - we want to rename columns in query result (only for Select queries).
+     *
+     * Note: The function name may be confusing.
+     *
+     * @param array $aColumns The column array. It can take two forms:
+     * - an indexed array where values are column names;
+     * - an associative array where keys are attribute names and values are
+     * column names (for column renaming in result. Select queries only).
+     *
+     * @param string $sTableAlias  The table alias to prefix the column with.
+     * @param string $sResultAlias The result alias to rename the column into.
+     *
+     * @return array
+     */
+    protected static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
+    {
+        $aRes = array();
+
+        // If a table alias is given, add a dot to respect SQL syntax and to not
+        // worry about it in following foreach loop.
+        if ($sTableAlias)  { $sTableAlias  .= '.'; }
+
+
+        // Result alias should only be used by Select queries.
+        //
+        // Should we do:
+        //      if -> loop, else -> loop
+        // or
+        //      loop iteration -> if/else
+        // ?
+        if ($sResultAlias)
+        {
+            $sResultAlias .= '.';
+
+            foreach ($aColumns as $sAttribute => $sColumn)
+            {
+                $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResultAlias . $sAttribute . '`';
+            }
+        }
+        else
+        {
+            foreach ($aColumns as $sColumn)
+            {
+                $aRes[] = $sTableAlias . $sColumn;
+            }
+        }
+
+        return $aRes;
+    }
+
 
     /**
      * Construct a Count query.
@@ -315,61 +370,6 @@ abstract class Query
         $oQuery->_build($aOptions);
 
         return $oQuery;
-    }
-
-    /**
-     * Apply aliases to columns.
-     *
-     * It may be necessary to add alias to columns:
-     * - we want to prefix columns with table aliases;
-     * - we want to rename columns in query result (only for Select queries).
-     *
-     * Note: The function name may be confusing.
-     *
-     * @param array $aColumns The column array. It can take two forms:
-     * - an indexed array where values are column names;
-     * - an associative array where keys are attribute names and values are
-     * column names (for column renaming in result. Select queries only).
-     *
-     * @param string $sTableAlias  The table alias to prefix the column with.
-     * @param string $sResultAlias The result alias to rename the column into.
-     *
-     * @return array
-     */
-    protected static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
-    {
-        $aRes = array();
-
-        // If a table alias is given, add a dot to respect SQL syntax and to not
-        // worry about it in following foreach loop.
-        if ($sTableAlias)  { $sTableAlias  .= '.'; }
-
-
-        // Result alias should only be used by Select queries.
-        //
-        // Should we do:
-        //      if -> loop, else -> loop
-        // or
-        //      loop iteration -> if/else
-        // ?
-        if ($sResultAlias)
-        {
-            $sResultAlias .= '.';
-
-            foreach ($aColumns as $sAttribute => $sColumn)
-            {
-                $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResultAlias . $sAttribute . '`';
-            }
-        }
-        else
-        {
-            foreach ($aColumns as $sColumn)
-            {
-                $aRes[] = $sTableAlias . $sColumn;
-            }
-        }
-
-        return $aRes;
     }
 
 }

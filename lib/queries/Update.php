@@ -20,19 +20,6 @@ class Update extends \SimpleAR\Query\Where
 
     protected static $_aOptions = array('conditions', 'fields', 'values');
 
-    protected function _compile()
-    {
-		$this->_sSql = $this->_oContext->useAlias
-            ? 'UPDATE ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias . ' SET '
-            : 'UPDATE ' . $this->_oContext->rootTableName . ' SET '
-            ;
-
-        $this->_processArborescence();
-
-        $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
-		$this->_sSql .= $this->_where();
-    }
-
     public function fields($aFields)
     {
         $a = (array) $aFields;
@@ -57,6 +44,19 @@ class Update extends \SimpleAR\Query\Where
     public function values($aValues)
     {
         $this->_aValues = array_merge($this->_aValues, (array) $aValues);
+    }
+
+    protected function _compile()
+    {
+		$this->_sSql = $this->_oContext->useAlias
+            ? 'UPDATE ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias . ' SET '
+            : 'UPDATE ' . $this->_oContext->rootTableName . ' SET '
+            ;
+
+        $this->_processArborescence();
+
+        $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
+		$this->_sSql .= $this->_where();
     }
 
     protected function _initContext($sRoot)

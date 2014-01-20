@@ -29,7 +29,7 @@ class Delete extends \SimpleAR\Query\Where
 
         $this->_processArborescence();
 
-        // Replace FROM clause for DELETE queries.
+        // Equivalent FROM clause for DELETE queries.
         $this->_sSql .= $this->_sJoin ? ' USING ' . $this->_sJoin : '';
         $this->_sSql .= $this->_where();
 	}

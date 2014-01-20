@@ -34,6 +34,49 @@ abstract class Where extends \SimpleAR\Query
         10 => 'OUTER',
     );
 
+    public function conditions($aConditions)
+    {
+        $this->_aConditions = $this->_conditionsParse($aConditions);
+    }
+    
+    /**
+     * EXISTS conditions.
+     */
+    public function has($aHas)
+    {
+        $aRes             = array();
+        $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+
+        foreach ($aHas as $mKey => $mValue)
+        {
+            // It is a logical operator.
+            if     ($mValue === 'OR'  || $mValue === '||') { $sLogicalOperator = 'OR';  }
+            elseif ($mValue === 'AND' || $mValue === '&&') { $sLogicalOperator = 'AND'; }
+
+            if (is_string($mKey))
+            {
+                if (!is_array($mValue))
+                {
+                    throw new \SimpleAR\MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
+                }
+
+                $oCondition = $this->_conditionExists($this->_attribute($mKey, true), $mValue);
+            }
+            elseif (is_string($mValue))
+            {
+                $oCondition = $this->_conditionExists($this->_attribute($mValue, true));
+                $this->_aConditions[]     = array($sLogicalOperator, $oCondition);
+            }
+            else
+            {
+                throw new \SimpleAR\MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+            }
+
+            // Reset operator.
+            $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+        }
+    }
+
     /**
      * Add a relation array into the join arborescence of the query.
      *
@@ -168,25 +211,6 @@ abstract class Where extends \SimpleAR\Query
         );
     }
 
-    protected function _conditionExists($oAttribute, array $aConditions = null)
-    {
-        $oNode      = $this->_addToArborescence($oAttribute->pieces);
-        $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
-
-        $oCondition->depth    = $oNode->depth;
-        $oCondition->exists   = ! (bool) $oAttribute->specialChar;
-        $oCondition->relation = $oNode->relation;
-
-        $oNode->conditions[] = $oCondition;
-
-        if ($aConditions)
-        {
-            $oCondition->subconditions = $this->_conditionsParse($aConditions);
-        }
-
-        return $oCondition;
-    }
-
     protected function _condition($oAttribute, $sOperator, $mValue)
     {
         // Special attributes check.
@@ -239,11 +263,25 @@ abstract class Where extends \SimpleAR\Query
         return $oCondition;
     }
 
-    public function conditions($aConditions)
+    protected function _conditionExists($oAttribute, array $aConditions = null)
     {
-        $this->_aConditions = $this->_conditionsParse($aConditions);
+        $oNode      = $this->_addToArborescence($oAttribute->pieces);
+        $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
+
+        $oCondition->depth    = $oNode->depth;
+        $oCondition->exists   = ! (bool) $oAttribute->specialChar;
+        $oCondition->relation = $oNode->relation;
+
+        $oNode->conditions[] = $oCondition;
+
+        if ($aConditions)
+        {
+            $oCondition->subconditions = $this->_conditionsParse($aConditions);
+        }
+
+        return $oCondition;
     }
-    
+
     protected function _conditionsParse($aConditions)
     {
         $aRes = array();
@@ -301,44 +339,6 @@ abstract class Where extends \SimpleAR\Query
         }
 
         return $aRes;
-    }
-
-    /**
-     * EXISTS conditions.
-     */
-    public function has($aHas)
-    {
-        $aRes             = array();
-        $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
-
-        foreach ($aHas as $mKey => $mValue)
-        {
-            // It is a logical operator.
-            if     ($mValue === 'OR'  || $mValue === '||') { $sLogicalOperator = 'OR';  }
-            elseif ($mValue === 'AND' || $mValue === '&&') { $sLogicalOperator = 'AND'; }
-
-            if (is_string($mKey))
-            {
-                if (!is_array($mValue))
-                {
-                    throw new \SimpleAR\MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
-                }
-
-                $oCondition = $this->_conditionExists($this->_attribute($mKey, true), $mValue);
-            }
-            elseif (is_string($mValue))
-            {
-                $oCondition = $this->_conditionExists($this->_attribute($mValue, true));
-                $this->_aConditions[]     = array($sLogicalOperator, $oCondition);
-            }
-            else
-            {
-                throw new \SimpleAR\MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
-            }
-
-            // Reset operator.
-            $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
-        }
     }
 
     protected function _having($oAttribute, $sOperator, $mValue)

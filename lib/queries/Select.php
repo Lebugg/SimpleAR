@@ -121,18 +121,6 @@ class Select extends Where
         return $aRes;
     }
 
-    protected function _build(array $aOptions)
-    {
-        // If we don't set a filter entry, Select::filter() will never be
-        // called.
-        if (!isset($aOptions['filter']))
-        {
-            $aOptions['filter'] = null;
-        }
-
-        parent::_build($aOptions);
-    }
-
 	public function group_by($aGroupBy)
 	{
         $aRes		= array();
@@ -154,6 +142,62 @@ class Select extends Where
             }
         }
 	}
+
+    /**
+     * Handle "filter" option.
+     *
+     * First, it retrieve an attribute array from the Model.
+     * Then, it apply aliasing according to contextual values.
+     *
+     * Final columns to select (in a string form) are stored in
+     * Select::$_aSelects.
+     *
+     * @param string $sFilter The filter to apply or null to not filter.
+     *
+     * @return void
+     *
+     * @see Model::columnsToSelect()
+     * @see Query::attributeAliasing()
+     * @see Query\Select::$_aSelects
+     */
+    public function filter($sFilter)
+    {
+        // Mandatory for syntax respect.
+		$sRootModel   = $this->_oContext->rootModel;
+        // Shortcuts.
+		$sRootAlias   = $this->_oContext->rootTable->alias;
+        $sResultAlias = $this->_oContext->rootResultAlias;
+
+        $aColumns = $sRootModel::columnsToSelect($sFilter);
+        $aColumns = self::columnAliasing($aColumns, $sRootAlias, $sResultAlias);
+
+		$this->_aSelects = array_merge($this->_aSelects, $aColumns);
+    }
+
+
+    public function limit($i)
+    {
+        $i = (int) $i;
+
+        if ($i < 0)
+        {
+            throw new \SimpleAR\Exception('"limit" option must be a natural integer. Negative integer given: ' . $i . '.');
+        }
+
+        $this->_iLimit = $i;
+    }
+
+    public function offset($i)
+    {
+        $i = (int) $i;
+
+        if ($i < 0)
+        {
+            throw new \SimpleAR\Exception('"offset" option must be a natural integer. Negative integer given: ' . $i . '.');
+        }
+
+        $this->_iOffset = $i;
+    }
 
     /**
      * Only works when $_bUseModel and $_bUseAliases are true.
@@ -321,35 +365,34 @@ class Select extends Where
         }
 	}
 
-    /**
-     * Handle "filter" option.
-     *
-     * First, it retrieve an attribute array from the Model.
-     * Then, it apply aliasing according to contextual values.
-     *
-     * Final columns to select (in a string form) are stored in
-     * Select::$_aSelects.
-     *
-     * @param string $sFilter The filter to apply or null to not filter.
-     *
-     * @return void
-     *
-     * @see Model::columnsToSelect()
-     * @see Query::attributeAliasing()
-     * @see Query\Select::$_aSelects
-     */
-    public function filter($sFilter)
+    public function with($m)
     {
-        // Mandatory for syntax respect.
-		$sRootModel   = $this->_oContext->rootModel;
-        // Shortcuts.
-		$sRootAlias   = $this->_oContext->rootTable->alias;
-        $sResultAlias = $this->_oContext->rootResultAlias;
+        $a = (array) $m;
 
-        $aColumns = $sRootModel::columnsToSelect($sFilter);
-        $aColumns = self::columnAliasing($aColumns, $sRootAlias, $sResultAlias);
+        foreach($a as $sRelation)
+        {
+            $oNode = $this->_addToArborescence(explode('/', $sRelation), self::JOIN_LEFT, true);
+            $oRelation = $oNode->relation;
 
-		$this->_aSelects = array_merge($this->_aSelects, $aColumns);
+            $sLM = $oRelation->lm->class;
+
+            $aColumns = $sLM::columnsToSelect($oRelation->filter);
+            $aColumns = self::columnAliasing($aColumns, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation);
+
+            $this->_aSelects = array_merge($this->_aSelects, $aColumns);
+        }
+    }
+
+    protected function _build(array $aOptions)
+    {
+        // If we don't set a filter entry, Select::filter() will never be
+        // called.
+        if (!isset($aOptions['filter']))
+        {
+            $aOptions['filter'] = null;
+        }
+
+        parent::_build($aOptions);
     }
 
     protected function _compile()
@@ -368,7 +411,6 @@ class Select extends Where
         $this->_sSql .= $this->_iLimit   ? ' LIMIT ' . $this->_iLimit                      : '';
         $this->_sSql .= $this->_iOffset  ? ' OFFSET ' . $this->_iOffset                    : '';
     }
-
 
 	private function _groupBy()
 	{
@@ -413,28 +455,19 @@ class Select extends Where
         }
     }
 
-    public function limit($i)
+    protected function _initContext($sRoot)
     {
-        $i = (int) $i;
+        parent::_initContext($sRoot);
 
-        if ($i < 0)
+        if ($this->_oContext->useModel)
         {
-            throw new \SimpleAR\Exception('"limit" option must be a natural integer. Negative integer given: ' . $i . '.');
+            // False by default. It will be set true if we have to fetch
+            // attributes from other tables.
+            $this->_oContext->useResultAlias = false;
+            
+            // Contain the result alias we will use if we use result aliases.
+            $this->_oContext->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
         }
-
-        $this->_iLimit = $i;
-    }
-
-    public function offset($i)
-    {
-        $i = (int) $i;
-
-        if ($i < 0)
-        {
-            throw new \SimpleAR\Exception('"offset" option must be a natural integer. Negative integer given: ' . $i . '.');
-        }
-
-        $this->_iOffset = $i;
     }
 
     /**
@@ -495,39 +528,6 @@ class Select extends Where
         }
 
         return $aRes;
-    }
-
-    public function with($m)
-    {
-        $a = (array) $m;
-
-        foreach($a as $sRelation)
-        {
-            $oNode = $this->_addToArborescence(explode('/', $sRelation), self::JOIN_LEFT, true);
-            $oRelation = $oNode->relation;
-
-            $sLM = $oRelation->lm->class;
-
-            $aColumns = $sLM::columnsToSelect($oRelation->filter);
-            $aColumns = self::columnAliasing($aColumns, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation);
-
-            $this->_aSelects = array_merge($this->_aSelects, $aColumns);
-        }
-    }
-
-    protected function _initContext($sRoot)
-    {
-        parent::_initContext($sRoot);
-
-        if ($this->_oContext->useModel)
-        {
-            // False by default. It will be set true if we have to fetch
-            // attributes from other tables.
-            $this->_oContext->useResultAlias = false;
-            
-            // Contain the result alias we will use if we use result aliases.
-            $this->_oContext->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
-        }
     }
 
 }
