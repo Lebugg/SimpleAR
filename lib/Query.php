@@ -8,6 +8,7 @@ namespace SimpleAR;
 
 require 'queries/Condition.php';
 require 'queries/Arborescence.php';
+require 'queries/Option.php';
 require 'queries/Where.php';
 require 'queries/Insert.php';
 require 'queries/Select.php';
@@ -162,7 +163,7 @@ abstract class Query
      *
      * @return array
      */
-    protected static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
+    public static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
     {
         $aRes = array();
 
@@ -318,12 +319,14 @@ abstract class Query
      */
 	protected function _build(array $aOptions)
     {
-        foreach ($aOptions as $s => $a)
+        foreach ($aOptions as $s => $value)
         {
             if (in_array($s, static::$_aOptions))
             {
                 // There must be a method that corresponds to the option.
-                $this->$s($a);
+                //$this->$s($a);
+                $option = Query\Option::forge($s, $value, $this, $this->_oContext);
+                $option->build();
             }
         }
     }

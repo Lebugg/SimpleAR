@@ -20,30 +20,14 @@ class Update extends \SimpleAR\Query\Where
 
     protected static $_aOptions = array('conditions', 'fields', 'values');
 
-    public function fields($aFields)
+    public function fields(array $fields)
     {
-        $a = (array) $aFields;
-
-        // We have to translate attribute to columns.
-        if ($this->_oContext->useModel)
-        {
-            // We cast into array because columnRealName can return a string
-            // even if we gave it an array.
-            $a = (array) $this->_oContext->rootTable->columnRealName($a);
-        }
-
-        // We have to use table alias.
-        if ($this->_oContext->useAlias)
-        {
-            $a = self::columnAliasing($a);
-        }
-
-        $this->_aColumns = $a;
+        $this->_aColumns = array_merge($this->_aColumns, $fields);
     }
 
-    public function values($aValues)
+    public function values(array $values)
     {
-        $this->_aValues = array_merge($this->_aValues, (array) $aValues);
+        $this->_aValues = array_merge($this->_aValues, $values);
     }
 
     protected function _compile()

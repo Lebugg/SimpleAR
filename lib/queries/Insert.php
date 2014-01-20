@@ -59,19 +59,14 @@ class Insert extends \SimpleAR\Query
         }
 	}
 
-    public function fields($aFields)
+    public function fields(array $fields)
     {
-        $aFields = (array) $aFields;
-
-        $this->_aColumns = $this->_oContext->useModel
-            ? $this->_oContext->rootTable->columnRealName($aFields)
-            : $aFields
-            ;
+        $this->_aColumns = array_merge($this->_aColumns, $fields);
     }
 
-    public function values($aValues)
+    public function values(array $values)
     {
-        $this->_aValues = array_merge($this->_aValues, (array) $aValues);
+        $this->_aValues = array_merge($this->_aValues, $values);
     }
 
 }

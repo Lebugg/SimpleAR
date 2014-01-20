@@ -1,6 +1,8 @@
 <?php
 namespace SimpleAR\Query\Condition;
 
+use \SimpleAR\Query\Option;
+
 class SimpleCondition extends \SimpleAR\Query\Condition
 {
     public function toSql($bUseAliases = true, $bToColumn = true)
