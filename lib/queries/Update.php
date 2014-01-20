@@ -53,7 +53,8 @@ class Update extends \SimpleAR\Query\Where
             : 'UPDATE ' . $this->_oContext->rootTableName . ' SET '
             ;
 
-        $this->_processArborescence();
+        // Not used?
+        //$sJoin = $this->_processArborescence();
 
         $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
 		$this->_sSql .= $this->_where();

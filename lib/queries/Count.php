@@ -15,10 +15,10 @@ class Count extends Select
 
     public function _compile()
     {
-        $this->_processArborescence();
+        $sJoin = $this->_processArborescence();
 
 		$this->_sSql  = 'SELECT COUNT(*)';
-		$this->_sSql .= ' FROM ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias .  ' ' . $this->_sJoin;
+		$this->_sSql .= ' FROM ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias .  ' ' . $sJoin;
 		$this->_sSql .= $this->_where();
     }
 

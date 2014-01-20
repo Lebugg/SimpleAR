@@ -1,5 +1,4 @@
-<?php
-/**
+<?php /**
  * This file contains the Where class.
  *
  * @author Lebugg
@@ -17,22 +16,6 @@ abstract class Where extends \SimpleAR\Query
 {
 	protected $_oArborescence;
 	protected $_aConditions = array();
-
-    protected $_sJoin         = '';
-
-    protected $_aJoinedTables = array();
-
-    const JOIN_INNER = 30;
-    const JOIN_LEFT  = 20;
-    const JOIN_RIGHT = 21;
-    const JOIN_OUTER = 10;
-
-    protected $_aJoinTypes = array(
-        30 => 'INNER',
-        20 => 'LEFT',
-        21 => 'RIGHT',
-        10 => 'OUTER',
-    );
 
     public function conditions($aConditions)
     {
@@ -75,87 +58,6 @@ abstract class Where extends \SimpleAR\Query
             // Reset operator.
             $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
         }
-    }
-
-    /**
-     * Add a relation array into the join arborescence of the query.
-     *
-     * @param array $aRelationNames Array containing relations ordered by depth to add to join
-     * arborescence.
-     * @param int $iJoinType The type of join to use to join this relation. Default: inner join.
-     * @param bool $bForceJoin Does relation *must* be joined?
-     *
-     * To be used as:
-     *  ```php
-     *  $a = $this->_addToArborescence(...);
-     *  $aArborescence = &$a[0];
-     *  $oRelation     = $a[1];
-     *  ```
-     * @return array
-     */
-    protected function _addToArborescence($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
-    {
-        if (!$aRelationNames)
-        {
-            return $this->_oContext->arborescence;
-        }
-
-        $oNode         = $this->_oContext->arborescence;
-        $sCurrentModel = $this->_oContext->rootModel;
-
-        $oRelation         = null;
-        $oPreviousRelation = null;
-
-        // Foreach relation to add, set some "config" elements.
-        foreach ($aRelationNames as $i => $sRelation)
-        {
-            $oPreviousRelation = $oRelation;
-            $oRelation         = $sCurrentModel::relation($sRelation);
-            $sCurrentModel     = $oRelation->lm->class;
-
-            // Add a new node if needed.
-            if (! isset($oNode->next[$sRelation]))
-            {
-                $oNode = $oNode->next[$sRelation] = new \StdClass();
-
-                $oNode->__type       = $iJoinType;
-                $oNode->conditions = array();
-                $oNode->__force      = false;
-                $oNode->next  = array();
-
-                $oNode->previousRelation = $oPreviousRelation;
-                $oNode->relation = $oRelation;
-                $oNode->depth    = $i + 1;
-                $oNode->table    = $oRelation->lm->t;
-            }
-            // Already present? We may have to change some values.
-            else
-            {
-                $oNode = $oNode->next[$sRelation];
-
-                // Choose right join type.
-                $iCurrentType = $oNode->__type;
-
-                // If new join type is *stronger* (more restrictive) than old join type, use new
-                // type.
-                if ($iCurrentType / 10 < $iJoinType / 10)
-                {
-                    $oNode->__type = $iJoinType;
-                }
-                // Special case for LEFT and RIGHT conflict. Use INNER.
-                elseif ($iCurrentType !== $iJoinType && $iCurrentType / 10 === $iJoinType / 10)
-                {
-                    $oNode->__type = self::JOIN_INNER;
-                }
-            }
-
-            // Force join on last node if required.
-            $oNode->__force = $bForceJoin || $oNode->__force;
-        }
-
-        // Return arborescence leaf.
-        var_dump($oNode->table);
-        return $oNode;
     }
 
     /**
@@ -227,7 +129,7 @@ abstract class Where extends \SimpleAR\Query
             }
         }
 
-        $oNode = $this->_addToArborescence($oAttribute->pieces);
+        $oNode = $this->_oContext->arborescence->add($oAttribute->pieces);
         $mAttr = $oAttribute->attribute;
 
         if ($oNode->relation)
@@ -265,7 +167,7 @@ abstract class Where extends \SimpleAR\Query
 
     protected function _conditionExists($oAttribute, array $aConditions = null)
     {
-        $oNode      = $this->_addToArborescence($oAttribute->pieces);
+        $oNode      = $this->_oContext->arborescence->add($oAttribute->pieces);
         $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
 
         $oCondition->depth    = $oNode->depth;
@@ -350,15 +252,10 @@ abstract class Where extends \SimpleAR\Query
     {
         parent::_initContext($sRoot);
 
-        $o = new \StdClass();
-        $o->next             = array();
-        $o->conditions       = array();
-        $o->relation         = null;
-        $o->previousRelation = null;
-        $o->depth            = 0;
-        $o->table            = $this->_oContext->rootTable;
-
-        $this->_oContext->arborescence = $o;
+        $this->_oContext->arborescence = new Arborescence(
+            $this->_oContext->rootTable,
+            $this->_oContext->rootModel
+        );
     }
 
     protected function _processArborescence()
@@ -367,69 +264,11 @@ abstract class Where extends \SimpleAR\Query
         // So, abort it.
         if (! $this->_oContext->useModel)
         {
-            return false;
+            return '';
         }
 
-        // Process root node here.
-        $oRoot = $this->_oContext->arborescence;
-        // Nothing to do?
-
-        // Cross down the tree.
-        $this->_processArborescenceRecursive($oRoot, $this->_oContext->rootModel);
+        return $this->_oContext->arborescence->process();
     }
-
-	private function _processArborescenceRecursive($oArborescence, $sCurrentModel, $iDepth = 1)
-	{
-        // Construct joined table array according to depth.
-        if (! isset($this->_aJoinedTables[$iDepth]))
-        {
-            $this->_aJoinedTables[$iDepth] = array();
-        }
-
-		foreach ($oArborescence->next as $sRelation => $oNextNode)
-		{
-			$oRelation = $oNextNode->relation;
-            $sTable    = $oRelation->lm->table;
-
-            // We *have to* to join table if not already joined *and* there it is not the last
-            // relation.
-            // __force bypasses the last relation condition. True typically when we have to join
-            // this table for a "with" option.
-            if (! in_array($sTable, $this->_aJoinedTables[$iDepth]) && ($oNextNode->next || $oNextNode->__force) )
-            {
-                $this->_sJoin .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$oNextNode->__type]);
-
-                // Add it to joined tables array.
-                $this->_aJoinedTables[$iDepth][] = $sTable;
-            }
-
-            // We have stuff to do with conditions:
-            // 1. Join the relation as last if not already joined (to be able to apply potential
-            // conditions).
-            if ($oNextNode->conditions)
-            {
-                // If not already joined, do it as last relation.
-                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
-                {
-                    // $s is false if joining table was not necessary.
-                    if ($s = $oRelation->joinAsLast($oNextNode->conditions, $iDepth, $this->_aJoinTypes[$oNextNode->__type]));
-                    {
-                        $this->_sJoin .= $s;
-
-                        // Add it to joined tables array.
-                        $this->_aJoinedTables[$iDepth][] = $sTable;
-                    }
-                }
-            }
-
-            // Go through arborescence.
-            if ($oNextNode->next)
-            {
-				$this->_sJoin .= $this->_processArborescenceRecursive($oNextNode, $oRelation->lm->class, $iDepth + 1);
-            }
-
-		}
-	}
 
     protected function _where()
     {

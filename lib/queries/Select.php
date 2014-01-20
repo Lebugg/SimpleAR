@@ -131,7 +131,9 @@ class Select extends Where
             $oAttribute = $this->_attribute($sAttribute);
 
 			// Add related model(s) in join arborescence.
-            $oNode           = $this->_addToArborescence($oAttribute->pieces, self::JOIN_INNER, true);
+            $oNode           =
+            $this->_oContext->arborescence->add($oAttribute->pieces,
+            Arborescence::JOIN_INNER, true);
 
             $oTableToGroupOn = $oNode->table;
             $sTableAlias     = $oTableToGroupOn->alias . ($oNode->depth ?: '');
@@ -245,7 +247,9 @@ class Select extends Where
                     case '#':
                         // Add related model(s) in join arborescence.
                         $oAttribute->pieces[] = $oAttribute->attribute;
-                        $oNode     = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
+                        $oNode     =
+                        $this->_oContext->arborescence->add($oAttribute->pieces,
+                        Arborescence::JOIN_LEFT, true);
                         $oRelation = $oNode->relation;
 
                         $oTableToGroupOn = $oRelation ? $oRelation->cm->t : $this->_oContext->rootTable;
@@ -298,7 +302,7 @@ class Select extends Where
             else
             {
                 // Add related model(s) in join arborescence.
-                $oNode     = $this->_addToArborescence($oAttribute->pieces);
+                $oNode     = $this->_oContext->arborescence->add($oAttribute->pieces);
                 $oRelation = $oNode->relation;
 
                 $oCMTable = $oRelation ? $oRelation->cm->t : $this->_oContext->rootTable;
@@ -371,7 +375,8 @@ class Select extends Where
 
         foreach($a as $sRelation)
         {
-            $oNode = $this->_addToArborescence(explode('/', $sRelation), self::JOIN_LEFT, true);
+            $oNode = $this->_oContext->arborescence->add(explode('/',
+            $sRelation), Arborescence::JOIN_LEFT, true);
             $oRelation = $oNode->relation;
 
             $sLM = $oRelation->lm->class;
@@ -400,10 +405,10 @@ class Select extends Where
 		$sRootModel   = $this->_oContext->rootModel;
 		$sRootAlias   = $this->_oContext->rootTable->alias;
 
-        $this->_processArborescence();
+        $sJoin = $this->_processArborescence();
 
 		$this->_sSql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->_sSql .= ' FROM `' . $this->_oContext->rootTableName . '` ' . $sRootAlias .  ' ' . $this->_sJoin;
+		$this->_sSql .= ' FROM `' . $this->_oContext->rootTableName . '` ' .  $sRootAlias .  ' ' . $sJoin;
 		$this->_sSql .= $this->_where();
 		$this->_sSql .= $this->_groupBy();
         $this->_sSql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
@@ -420,7 +425,8 @@ class Select extends Where
     protected function _having($oAttribute, $sOperator, $mValue)
     {
         $oAttribute->pieces[] = $oAttribute->attribute;
-        $oNode = $this->_addToArborescence($oAttribute->pieces, self::JOIN_LEFT, true);
+        $oNode = $this->_oContext->arborescence->add($oAttribute->pieces,
+        Arborescence::JOIN_LEFT, true);
 
         $sOperator = $sOperator ?: Condition::DEFAULT_OP;
         $sResultAlias     = $oAttribute->lastRelation ?: $this->_oContext->rootResultAlias;
