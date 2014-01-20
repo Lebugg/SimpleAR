@@ -885,16 +885,16 @@ abstract class Model
             case 'last':
 				$aOptions['limit'] = 1;
 
-				if (isset($aOptions['order']))
+				if (isset($aOptions['order_by']))
 				{
-					foreach ($aOptions['order'] as $sKey => $sOrder)
+					foreach ($aOptions['order_by'] as $sKey => $sOrder)
 					{
-						$aOptions['order'][$sKey] = ($sOrder == 'ASC' ? 'DESC' : 'ASC');
+						$aOptions['order_by'][$sKey] = ($sOrder == 'ASC' ? 'DESC' : 'ASC');
 					}
 				}
 				else
 				{
-					$aOptions['order'] = array('id' => 'DESC');
+					$aOptions['order_by'] = array('id' => 'DESC');
 				}
                 $oQuery = Query::select($aOptions, get_called_class());
                 $sMultiplicity = 'one';
@@ -1695,7 +1695,7 @@ abstract class Model
         {
             $mRes = $sLMClass::first(array(
                 'conditions' => array_merge($oRelation->conditions, array($oRelation->lm->attribute => $this->{$oRelation->cm->attribute})),
-				'order'		 => $oRelation->order,
+				'order_by'	 => $oRelation->order,
                 'filter'     => $oRelation->filter,
             ));
         }
@@ -1703,7 +1703,7 @@ abstract class Model
         {
             $mRes = $sLMClass::all(array(
                 'conditions' => array_merge($oRelation->conditions, array($oRelation->lm->attribute => $this->{$oRelation->cm->attribute})),
-				'order'		 => $oRelation->order,
+				'order_by'	 => $oRelation->order,
                 'filter'     => $oRelation->filter,
             ));
         }
@@ -1720,7 +1720,7 @@ abstract class Model
 
 			$mRes = $sLMClass::all(array(
                 'conditions' => $aConditions,
-				'order'		 => $oRelation->order,
+				'order_by'	 => $oRelation->order,
                 'filter'     => $oRelation->filter,
 			));
         }
