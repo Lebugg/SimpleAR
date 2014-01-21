@@ -5,26 +5,36 @@ use \SimpleAR\Query;
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
 
+use \SimpleAR\MalformedOptionException;
+
 class With extends Option
 {
     public function build()
     {
-        $aRes = array();
-        $a = (array) $this->_value;
-
-        foreach($a as $sRelation)
+        if (! $this->_context->useModel)
         {
-            $oNode = $this->_arborescence->add(explode('/', $sRelation), Arborescence::JOIN_LEFT, true);
-            $oRelation = $oNode->relation;
+            throw new MalformedOptionException('Cannot use "with" option when not using models.');
+        }
+        
+        $res = array();
+        foreach((array) $this->_value as $relation)
+        {
+            $node     = $this->_arborescence->add(explode('/', $relation), Arborescence::JOIN_LEFT, true);
+            $relation = $node->relation;
 
-            $sLM = $oRelation->lm->class;
+            $lmClass = $relation->lm->class;
+            $columns = $lmClass::columnsToSelect($relation->filter);
 
-            $aColumns = $sLM::columnsToSelect($oRelation->filter);
-            $aColumns = Query::columnAliasing($aColumns, $oRelation->lm->alias . ($oNode->depth ?: ''), $sRelation);
+            $tableAlias = $this->_context->useAlias
+                ? $relation->lm->alias . ($node->depth ?: '')
+                : ''
+                ;
 
-            $aRes = array_merge($aRes, $aColumns);
+            $columns = Query::columnAliasing($columns, $tableAlias, $relation->name);
+
+            $res = array_merge($res, $columns);
         }
 
-        call_user_func($this->_callback, $aRes);
+        call_user_func($this->_callback, $res);
     }
 }

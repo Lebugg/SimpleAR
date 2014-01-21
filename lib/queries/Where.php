@@ -33,7 +33,7 @@ abstract class Where extends \SimpleAR\Query
     /*
     protected function _conditionExists($oAttribute, array $aConditions = null)
     {
-        $oNode      = $this->_oContext->arborescence->add($oAttribute->pieces);
+        $oNode      = $this->_context->arborescence->add($oAttribute->pieces);
         $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
 
         $oCondition->depth    = $oNode->depth;
@@ -116,22 +116,22 @@ abstract class Where extends \SimpleAR\Query
     {
         parent::_initContext($sRoot);
 
-        $this->_oContext->arborescence = new Arborescence(
-            $this->_oContext->rootTable,
-            $this->_oContext->rootModel
+        $this->_context->arborescence = new Arborescence(
+            $this->_context->rootTable,
+            $this->_context->rootModel
         );
     }
 
     protected function _processArborescence()
     {
-        return $this->_oContext->arborescence->process();
+        return $this->_context->arborescence->process();
     }
 
 
     protected function _where()
     {
         // We made all wanted treatments; get SQL out of Condition array.
-        list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_oContext->useAlias, $this->_oContext->useModel);
+        list($sSql, $aValues) = Condition::arrayToSql($this->_aConditions, $this->_context->useAlias, $this->_context->useModel);
 
         // Add condition values. $aValues is a flatten array.
         // @see Condition::flattenValues()

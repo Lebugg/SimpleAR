@@ -8,15 +8,21 @@ class Filter extends Option
 {
     public function build()
     {
+        if (!$this->_context->useModel)
+        {
+            throw new MalformedOptionException('"filter" option cannot be used without using model.');
+        }
+
         // Mandatory for syntax respect.
-		$sRootModel   = $this->_context->rootModel;
+		$rootModel   = $this->_context->rootModel;
+
         // Shortcuts.
-		$sRootAlias   = $this->_context->rootTable->alias;
-        $sResultAlias = $this->_context->rootResultAlias;
+		$rootAlias   = $this->_context->useAlias       ? $this->_context->rootTableAlias  : '';
+        $resultAlias = $this->_context->useResultAlias ? $this->_context->rootResultAlias : '';
 
-        $aColumns = $sRootModel::columnsToSelect($this->_value);
-        $aColumns = Query::columnAliasing($aColumns, $sRootAlias, $sResultAlias);
+        $columns = $rootModel::columnsToSelect($this->_value);
+        $columns = Query::columnAliasing($columns, $rootAlias, $resultAlias);
 
-        call_user_func($this->_callback, $aColumns);
+        call_user_func($this->_callback, $columns);
     }
 }

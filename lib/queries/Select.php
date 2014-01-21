@@ -31,7 +31,7 @@ class Select extends Where
 
     private $_aPendingRow = false;
 
-    protected static $_aOptions = array('conditions', 'filter', 'group_by',
+    protected static $_options = array('conditions', 'filter', 'group_by',
             'has', 'limit', 'offset', 'order_by', 'with');
 
     const DEFAULT_ROOT_RESULT_ALIAS = '_';
@@ -66,7 +66,7 @@ class Select extends Where
     {
         $aRes = array();
 
-        $aReversedPK = $this->_oContext->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_oContext->rootTable->primaryKey);
+        $aReversedPK = $this->_context->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_context->rootTable->primaryKey);
         $aResId      = null;
 
         // We want one resulting object. But we may have to process several lines in case that eager
@@ -159,9 +159,11 @@ class Select extends Where
         $this->_iOffset = $i;
     }
 
-	public function order_by($a)
+	public function order_by(array $orderBy, array $groupBy = array(), array $selects = array())
 	{
-        $this->_aOrderBy = array_merge($this->_aOrderBy, $a);
+        $this->_aOrderBy = array_merge($this->_aOrderBy, $orderBy);
+        $this->_aGroupBy = array_merge($this->_aGroupBy, $groupBy);
+        $this->_aSelects = array_merge($this->_aSelects, $selects);
 	}
 
     public function with($a)
@@ -173,9 +175,18 @@ class Select extends Where
     {
         // If we don't set a filter entry, Select::filter() will never be
         // called.
-        if (!isset($aOptions['filter']))
+        if (! isset($aOptions['filter']))
         {
             $aOptions['filter'] = null;
+        }
+
+        // We have to use result alias in order to distinguish root model from
+        // its linked models. It will cost more operations to parse result.
+        //
+        // @see Select::_parseRow().
+        if (! empty($aOptions['with']))
+        {
+            $this->_context->useResultAlias = true;
         }
 
         parent::_build($aOptions);
@@ -183,13 +194,13 @@ class Select extends Where
 
     protected function _compile()
     {
-		$sRootModel   = $this->_oContext->rootModel;
-		$sRootAlias   = $this->_oContext->rootTable->alias;
+		$sRootModel   = $this->_context->rootModel;
+		$sRootAlias   = $this->_context->rootTable->alias;
 
         $sJoin = $this->_processArborescence();
 
 		$this->_sSql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->_sSql .= ' FROM `' . $this->_oContext->rootTableName . '` ' .  $sRootAlias .  ' ' . $sJoin;
+		$this->_sSql .= ' FROM `' . $this->_context->rootTableName . '` ' .  $sRootAlias .  ' ' . $sJoin;
 		$this->_sSql .= $this->_where();
 		$this->_sSql .= $this->_groupBy();
         $this->_sSql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
@@ -206,14 +217,14 @@ class Select extends Where
     protected function _having($oAttribute, $sOperator, $mValue)
     {
         $oAttribute->pieces[] = $oAttribute->attribute;
-        $oNode = $this->_oContext->arborescence->add($oAttribute->pieces,
+        $oNode = $this->_context->arborescence->add($oAttribute->pieces,
         Arborescence::JOIN_LEFT, true);
 
         $sOperator = $sOperator ?: Condition::DEFAULT_OP;
-        $sResultAlias     = $oAttribute->lastRelation ?: $this->_oContext->rootResultAlias;
+        $sResultAlias     = $oAttribute->lastRelation ?: $this->_context->rootResultAlias;
         $sAttribute       = $oAttribute->attribute;
         $oRelation        = $oNode->relation;
-        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_oContext->rootTable;
+        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_context->rootTable;
         $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
         $iDepth           = $oNode->depth ?: '';
 
@@ -246,14 +257,15 @@ class Select extends Where
     {
         parent::_initContext($sRoot);
 
-        if ($this->_oContext->useModel)
+        if ($this->_context->useModel)
         {
             // False by default. It will be set true if we have to fetch
-            // attributes from other tables.
-            $this->_oContext->useResultAlias = false;
+            // attributes from other tables. This is checked in
+            // Select::_build().
+            $this->_context->useResultAlias = false;
             
             // Contain the result alias we will use if we use result aliases.
-            $this->_oContext->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
+            $this->_context->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
         }
     }
 
@@ -277,11 +289,11 @@ class Select extends Where
      *
      * @return array
      */
-    private function _parseRow($aRow)
+    private function _parseRow($row)
     {
-        $aRes = array();
+        $res = array();
 
-        foreach ($aRow as $sKey => $mValue)
+        foreach ($row as $key => $value)
         {
             // We do not want null values. It would result with linked model instances with null 
             // attributes and null IDs. Moreover, it reduces process time (does not process useless 
@@ -295,26 +307,38 @@ class Select extends Where
             // filled with them and we were forced to check attribute presence in columns definition 
             // in Model::__get(). Not nice.
             //
-            // if ($mValue === null) { continue; }
+            // if ($value === null) { continue; }
 
-            $a = explode('.', $sKey);
-
-            if ($a[0] === $this->_oContext->rootResultAlias)
+            // Keys are prefixed with an alias corresponding:
+            // - either to the root model;
+            // - either to a linked model (thanks to the relation name).
+            if ($this->_context->useResultAlias)
             {
-                // $a[1]: table column name.
+                $a = explode('.', $key);
 
-                $aRes[$a[1]] = $mValue;
+                if ($a[0] === $this->_context->rootResultAlias)
+                {
+                    // $a[1]: table column name.
+
+                    $res[$a[1]] = $value;
+                }
+                else
+                {
+                    // $a[0]: relation name.
+                    // $a[1]: linked table column name.
+
+                    $res['_WITH_'][$a[0]][$a[1]] = $value;
+                }
             }
+
+            // Much more simple in that case.
             else
             {
-                // $a[0]: relation name.
-                // $a[1]: linked table column name.
-
-                $aRes['_WITH_'][$a[0]][$a[1]] = $mValue;
+                $res[$key] = $value;
             }
         }
 
-        return $aRes;
+        return $res;
     }
 
 }

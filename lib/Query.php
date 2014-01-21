@@ -62,7 +62,7 @@ abstract class Query
      */
 	protected $_aValues = array();
 
-    protected $_aColumns = array();
+    protected $_columns = array();
 
     /**
      * Use Model properties to construct query?
@@ -106,7 +106,7 @@ abstract class Query
      */
 	/* protected $_sRootTable = ''; */
 
-    protected static $_aOptions = array();
+    protected static $_options = array();
 
     /**
      * Holds information used to properly construct queries. It allows
@@ -130,7 +130,7 @@ abstract class Query
      *
      * @var object
      */
-    protected $_oContext;
+    protected $_context;
 
     /**
      * Constructor.
@@ -153,46 +153,45 @@ abstract class Query
      *
      * Note: The function name may be confusing.
      *
-     * @param array $aColumns The column array. It can take two forms:
+     * @param array $columns The column array. It can take three forms:
      * - an indexed array where values are column names;
      * - an associative array where keys are attribute names and values are
-     * column names (for column renaming in result. Select queries only).
+     * column names (for column renaming in result. Select queries only);
+     * - a mix of both. Values of numeric entries will be taken as column names.
      *
-     * @param string $sTableAlias  The table alias to prefix the column with.
-     * @param string $sResultAlias The result alias to rename the column into.
+     * @param string $tableAlias  The table alias to prefix the column with.
+     * @param string $resultAlias The result alias to rename the column into.
      *
      * @return array
      */
-    public static function columnAliasing($aColumns, $sTableAlias = '', $sResultAlias = '')
+    public static function columnAliasing($columns, $tableAlias = '', $resultAlias = '')
     {
         $aRes = array();
 
         // If a table alias is given, add a dot to respect SQL syntax and to not
         // worry about it in following foreach loop.
-        if ($sTableAlias)  { $sTableAlias  .= '.'; }
-
+        if ($tableAlias)
+        {
+            $tableAlias = '`' . $tableAlias . '`.';
+        }
 
         // Result alias should only be used by Select queries.
-        //
-        // Should we do:
-        //      if -> loop, else -> loop
-        // or
-        //      loop iteration -> if/else
-        // ?
-        if ($sResultAlias)
+        if ($resultAlias)
         {
-            $sResultAlias .= '.';
-
-            foreach ($aColumns as $sAttribute => $sColumn)
-            {
-                $aRes[] = $sTableAlias . $sColumn . ' AS `' . $sResultAlias . $sAttribute . '`';
-            }
+            $resultAlias .= '.';
         }
-        else
+
+        foreach ($columns as $attribute => $column)
         {
-            foreach ($aColumns as $sColumn)
+            // $columns is an associative array.
+            if (is_string($attribute))
             {
-                $aRes[] = $sTableAlias . $sColumn;
+                $aRes[] = $tableAlias . '`' . $column . '` AS `' . $resultAlias . $attribute . '`';
+            }
+            // $columns is an indexed array. We do not know the attribute name.
+            else
+            {
+                $aRes[] = $tableAlias . '`' . $column . '`';
             }
         }
 
@@ -203,20 +202,20 @@ abstract class Query
     /**
      * Construct a Count query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      * @param string $sRoot The root model class name or the table name.
      *
      * @return Query\Count
      */
-	public static function count($aOptions, $sRoot)
+	public static function count($options, $sRoot)
 	{
-        return self::_query('Count', $aOptions, $sRoot);
+        return self::_query('Count', $options, $sRoot);
 	}
 
     /**
      * Construct a Delete query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      * @param string $sRoot The root model class name or the table name.
      *
      * @return Query\Delete
@@ -225,9 +224,9 @@ abstract class Query
 	{
         // Delete query only needs a condition array, but we do not want to
         // redefine _build() for this.
-        $aOptions = array('conditions' => $aConditions);
+        $options = array('conditions' => $aConditions);
 
-        return self::_query('Delete', $aOptions, $sRoot);
+        return self::_query('Delete', $options, $sRoot);
 	}
 
     public static function init($oDatabase)
@@ -238,14 +237,14 @@ abstract class Query
     /**
      * Construct a Insert query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      * @param string $sRoot The root model class name or the table name.
      *
      * @return Query\Insert
      */
-	public static function insert($aOptions, $sRoot)
+	public static function insert($options, $sRoot)
 	{
-        return self::_query('Insert', $aOptions, $sRoot);
+        return self::_query('Insert', $options, $sRoot);
 	}
 
     /**
@@ -271,7 +270,7 @@ abstract class Query
     {
         $this->_compile();
 
-        if ($this->_oContext->isCriticalQuery)
+        if ($this->_context->isCriticalQuery)
         {
             if (strpos($this->_sSql, ' WHERE ') === false)
             {
@@ -287,45 +286,45 @@ abstract class Query
     /**
      * Construct a Select query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      * @param string $sRoot The root model class name or the table name.
      *
      * @return Query\Select
      */
-	public static function select($aOptions, $sRoot)
+	public static function select($options, $sRoot)
 	{
-        return self::_query('Select', $aOptions, $sRoot);
+        return self::_query('Select', $options, $sRoot);
 	}
 
     /**
      * Construct a Update query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      * @param string $sRoot The root model class name or the table name.
      *
      * @return Query\Update
      */
-	public static function update($aOptions, $sRoot)
+	public static function update($options, $sRoot)
 	{
-        return self::_query('Update', $aOptions, $sRoot);
+        return self::_query('Update', $options, $sRoot);
 	}
 
     /**
      * This function builds the query.
      *
-     * @param array $aOptions The option array.
+     * @param array $options The option array.
      *
      * @return void
      */
-	protected function _build(array $aOptions)
+	protected function _build(array $options)
     {
-        foreach ($aOptions as $s => $value)
+        foreach ($options as $s => $value)
         {
-            if (in_array($s, static::$_aOptions))
+            if (in_array($s, static::$_options))
             {
-                // There must be a method that corresponds to the option.
-                //$this->$s($a);
-                $option = Query\Option::forge($s, $value, $this, $this->_oContext);
+                // There must be a method that corresponds to the option. It
+                // will be used as a callback.
+                $option = Query\Option::forge($s, $value, $this->_context, array($this, $s));
                 $option->build();
             }
         }
@@ -335,7 +334,7 @@ abstract class Query
 
     protected function _initContext($sRoot)
     {
-        $this->_oContext = new \StdClass();
+        $this->_context = new \StdClass();
 
         // A Model class name is given.
 		if (class_exists($sRoot))
@@ -345,33 +344,35 @@ abstract class Query
                 throw new Exception('Given class "' . $sRoot . '" is not a subclass of Model.');
             }
 
-            $this->_oContext->useModel = true;
-            $this->_oContext->useAlias = true;
+            $this->_context->useModel = true;
+            $this->_context->useAlias = true;
 
-            $this->_oContext->rootModel       = $sRoot;
-            $this->_oContext->rootTable       = $t = $sRoot::table();
-            $this->_oContext->rootTableName   = $t->name;
+            $this->_context->rootModel       = $sRoot;
+            $this->_context->rootTable       = $t = $sRoot::table();
+            $this->_context->rootTableName   = $t->name;
+            $this->_context->rootTableAlias  = $t->alias;
 		}
 
         // A table name is given.
 		else
 		{
             // We cannot use models if we only have a table name.
-            $this->_oContext->useModel = false;
-            $this->_oContext->useAlias = true;
+            $this->_context->useModel = false;
+            $this->_context->useAlias = true;
 
-            $this->_oContext->rootTableName   = $sRoot;
+            $this->_context->rootTableName   = $sRoot;
+            $this->_context->rootTableAlias  = '_' . strtolower($sRoot);
 		}
 
-        $this->_oContext->isCriticalQuery = self::$_bIsCriticalQuery;
+        $this->_context->isCriticalQuery = self::$_bIsCriticalQuery;
 	}
 
-    private static function _query($sQueryClass, $aOptions, $sRoot)
+    private static function _query($sQueryClass, $options, $sRoot)
     {
         $sQueryClass = "\SimpleAR\Query\\$sQueryClass";
         $oQuery      = new $sQueryClass($sRoot);
 
-        $oQuery->_build($aOptions);
+        $oQuery->_build($options);
 
         return $oQuery;
     }

@@ -18,7 +18,8 @@ class Conditions extends Option
     /**
      * Handle a condition.
      *
-     * @param StdClass $attribute An attribute object returned by _attribute().
+     * @param stdClass $attribute An attribute object returned by
+     * _parseAttribute().
      * @param string   $operator  A logical operator 'OR' or 'AND'.
      * @param mixed    $value     The condition value (scalar value or array).
      *
@@ -31,7 +32,7 @@ class Conditions extends Option
         {
             switch ($c)
             {
-                case '#':
+                case Option::SYMBOL_COUNT:
                     //$this->_having($attribute, $operator, $value);
                     return;
                 default:
@@ -92,7 +93,7 @@ class Conditions extends Option
             // It is bound to be a condition. 'myAttribute' => 'myValue'
             if (is_string($key))
             {
-                $condition = $this->_condition($this->_attribute($key), null, $value);
+                $condition = $this->_condition(self::_parseAttribute($key), null, $value);
                 if ($condition)
                 {
                     $res[] = array($logicalOperator, $condition);
@@ -115,7 +116,7 @@ class Conditions extends Option
                     // Condition.
                     if (isset($value[0]) && is_string($value[0]))
                     {
-                        $condition = $this->_condition($this->_attribute($value[0]), $value[1], $value[2]);
+                        $condition = $this->_condition(self::_parseAttribute($value[0]), $value[1], $value[2]);
                         if ($condition)
                         {
                             $res[] = array($logicalOperator, $condition);
@@ -138,73 +139,4 @@ class Conditions extends Option
 
         return $res;
     }
-
-    /**
-     * Return an attribute object.
-     *
-     * @param string $attribute    The raw attribute string of the condition.
-     * @param bool   $relationOnly If true, it tells that the attribute string
-     * must contain relation names only.
-     *
-     * @return StdClass
-     */
-    protected function _attribute($attribute, $relationOnly = false)
-    {
-        // Keep a trace of the original string. We won't touch it.
-        $originalString = $attribute;
-        $specialChar    = null;
-
-        $pieces = explode('/', $attribute);
-
-        $attribute    = array_pop($pieces);
-        $lastRelation = array_pop($pieces);
-
-        if ($lastRelation)
-        {
-            $pieces[] = $lastRelation;
-        }
-
-        $tuple = explode(',', $attribute);
-        // We are dealing with a tuple of attributes.
-        if (isset($tuple[1]))
-        {
-            $attribute = $tuple;
-        }
-        else
-        {
-            // $attribute = $attribute.
-
-            // (ctype_alpha tests if charachter is alphabetical ([a-z][A-Z]).)
-            $specialChar = ctype_alpha($attribute[0]) ? null : $attribute[0];
-
-            // There is a special char before attribute name; we want the
-            // attribute's real name.
-            if ($specialChar)
-            {
-                $attribute = substr($attribute, 1);
-            }
-        }
-
-        if ($relationOnly)
-        {
-            if (is_array($attribute))
-            {
-                throw new \SimpleAR\Exception('Cannot have multiple attributes in “' . $originalString . '”.');
-            }
-
-            // We do not have attribute name. We only have an array of relation
-            // names.
-            $pieces[]  = $attribute;
-            $attribute = null;
-        }
-
-        return (object) array(
-            'relations'    => $pieces,
-            'lastRelation' => $lastRelation,
-            'attribute'    => $attribute,
-            'specialChar'  => $specialChar,
-            'original'     => $originalString,
-        );
-    }
-
 }

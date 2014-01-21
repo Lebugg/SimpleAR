@@ -61,6 +61,9 @@ class Arborescence
         $oPreviousRelation = null;
 
         // Foreach relation to add, set some "config" elements.
+        //
+        // $i will be used to calculate node's depth.  $i starts at 0; detph
+        // equals $i + 1. That means that first relation will have a depth of 1.
         foreach ($aRelationNames as $i => $sRelation)
         {
             $oPreviousRelation = $oRelation;

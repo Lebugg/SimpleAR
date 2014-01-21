@@ -18,11 +18,12 @@ class Fields extends Option
             $fields = (array) $this->_context->rootTable->columnRealName($fields);
         }
 
-        // We have to use table alias.
-        if ($this->_context->useAlias)
-        {
-            $fields = Query::columnAliasing($fields);
-        }
+        // Use table alias?
+        $tableAlias = $this->_context->useAlias
+            ? $this->_context->rootTableAlias
+            : '';
+
+        $fields = Query::columnAliasing($fields, $tableAlias);
 
         call_user_func($this->_callback, $fields);
     }

@@ -18,13 +18,13 @@ class Delete extends \SimpleAR\Query\Where
      */
     protected static $_bIsCriticalQuery = true;
 
-    protected static $_aOptions = array('conditions');
+    protected static $_options = array('conditions');
 
     protected function _compile()
     {
-		$this->_sSql = $this->_oContext->useAlias
-            ? 'DELETE ' . $this->_oContext->rootTable->alias . ' FROM ' .  $this->_oContext->rootTableName . ' AS ' .  $this->_oContext->rootTable->alias
-            : 'DELETE FROM ' . $this->_oContext->rootTableName
+		$this->_sSql = $this->_context->useAlias
+            ? 'DELETE ' . $this->_context->rootTable->alias . ' FROM ' .  $this->_context->rootTableName . ' AS ' .  $this->_context->rootTable->alias
+            : 'DELETE FROM ' . $this->_context->rootTableName
             ;
 
         $sJoin = $this->_processArborescence();

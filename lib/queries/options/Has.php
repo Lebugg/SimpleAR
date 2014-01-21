@@ -5,6 +5,8 @@ use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Condition;
 use \SimpleAR\Query\Condition\ExistsCondition;
 
+use \SimpleAR\MalformedOptionException;
+
 class Has extends Option
 {
     public function build()
@@ -14,120 +16,70 @@ class Has extends Option
         call_user_func($this->_callback, $conditions);
     }
 
-    protected function _condition($oAttribute, array $aConditions = null)
+    /**
+     * Handle a "has condition".
+     *
+     * @param stdClass $attribute An attribute object returned by
+     * Option::_parseAttribute().
+     * @param array    $conditions Optional conditions to add to the "has
+     * condition".
+     *
+     * @return ExistsCondition
+     */
+    protected function _condition($attribute, array $conditions = null)
     {
-        $oNode      = $this->_arborescence->add($oAttribute->relations);
-        $oCondition = new ExistsCondition($oAttribute->attribute, null, null);
+        $node      = $this->_arborescence->add($attribute->relations);
+        $condition = new ExistsCondition($attribute->attribute, null, null);
 
-        $oCondition->depth    = $oNode->depth;
-        $oCondition->exists   = ! (bool) $oAttribute->specialChar;
-        $oCondition->relation = $oNode->relation;
+        $condition->depth    = $node->depth;
+        $condition->exists   = ! (bool) $attribute->specialChar;
+        $condition->relation = $node->relation;
 
-        $oNode->conditions[] = $oCondition;
+        $node->conditions[] = $condition;
 
-        if ($aConditions)
+        if ($conditions)
         {
-            $oCondition->subconditions = $this->_conditionsParse($aConditions);
+            $condition->subconditions = $this->_conditionsParse($conditions);
         }
 
-        return $oCondition;
+        return $condition;
     }
 
 
-    public function _parse($aHas)
+    public function _parse($has)
     {
-        $aRes             = array();
-        $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+        $res             = array();
+        $logicalOperator = Condition::DEFAULT_LOGICAL_OP;
 
-        foreach ($aHas as $mKey => $mValue)
+        foreach ($has as $key => $value)
         {
             // It is a logical operator.
-            if     ($mValue === 'OR'  || $mValue === '||') { $sLogicalOperator = 'OR';  }
-            elseif ($mValue === 'AND' || $mValue === '&&') { $sLogicalOperator = 'AND'; }
+            if     ($value === 'OR'  || $value === '||') { $logicalOperator = 'OR';  }
+            elseif ($value === 'AND' || $value === '&&') { $logicalOperator = 'AND'; }
 
-            if (is_string($mKey))
+            if (is_string($key))
             {
-                if (!is_array($mValue))
+                if (!is_array($value))
                 {
-                    throw new \SimpleAR\MalformedOptionException('"has" option "' . $mKey . '" is malformed.  Expected format: "\'' . $mKey . '\' => array(<conditions>)".');
+                    throw new MalformedOptionException('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
                 }
 
-                $oCondition = $this->_condition($this->_attribute($mKey, true), $mValue);
+                $condition = $this->_condition(self::_parseAttribute($key, true), $value);
             }
-            elseif (is_string($mValue))
+            elseif (is_string($value))
             {
-                $oCondition = $this->_condition($this->_attribute($mValue, true));
-                $aRes[]     = array($sLogicalOperator, $oCondition);
+                $condition = $this->_condition(self::_parseAttribute($value, true));
+                $res[]     = array($logicalOperator, $condition);
             }
             else
             {
-                throw new \SimpleAR\MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+                throw new MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
             }
 
             // Reset operator.
-            $sLogicalOperator = Condition::DEFAULT_LOGICAL_OP;
+            $logicalOperator = Condition::DEFAULT_LOGICAL_OP;
         }
 
-        return $aRes;
+        return $res;
     }
-
-    protected function _attribute($attribute, $relationOnly = false)
-    {
-        // Keep a trace of the original string. We won't touch it.
-        $originalString = $attribute;
-        $specialChar    = null;
-
-        $pieces = explode('/', $attribute);
-
-        $attribute    = array_pop($pieces);
-        $lastRelation = array_pop($pieces);
-
-        if ($lastRelation)
-        {
-            $pieces[] = $lastRelation;
-        }
-
-        $tuple = explode(',', $attribute);
-        // We are dealing with a tuple of attributes.
-        if (isset($tuple[1]))
-        {
-            $attribute = $tuple;
-        }
-        else
-        {
-            // $attribute = $attribute.
-
-            // (ctype_alpha tests if charachter is alphabetical ([a-z][A-Z]).)
-            $specialChar = ctype_alpha($attribute[0]) ? null : $attribute[0];
-
-            // There is a special char before attribute name; we want the
-            // attribute's real name.
-            if ($specialChar)
-            {
-                $attribute = substr($attribute, 1);
-            }
-        }
-
-        if ($relationOnly)
-        {
-            if (is_array($attribute))
-            {
-                throw new \SimpleAR\Exception('Cannot have multiple attributes in “' . $originalString . '”.');
-            }
-
-            // We do not have attribute name. We only have an array of relation
-            // names.
-            $pieces[]  = $attribute;
-            $attribute = null;
-        }
-
-        return (object) array(
-            'relations'    => $pieces,
-            'lastRelation' => $lastRelation,
-            'attribute'    => $attribute,
-            'specialChar'  => $specialChar,
-            'original'     => $originalString,
-        );
-    }
-
 }

@@ -11,14 +11,14 @@ namespace SimpleAR\Query;
  */
 class Count extends Select
 {
-    protected static $_aOptions = array('conditions', 'has');
+    protected static $_options = array('conditions', 'has');
 
     public function _compile()
     {
         $sJoin = $this->_processArborescence();
 
 		$this->_sSql  = 'SELECT COUNT(*)';
-		$this->_sSql .= ' FROM ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias .  ' ' . $sJoin;
+		$this->_sSql .= ' FROM ' . $this->_context->rootTableName . ' ' .  $this->_context->rootTable->alias .  ' ' . $sJoin;
 		$this->_sSql .= $this->_where();
     }
 

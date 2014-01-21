@@ -18,11 +18,11 @@ class Update extends \SimpleAR\Query\Where
      */
     protected static $_bIsCriticalQuery = true;
 
-    protected static $_aOptions = array('conditions', 'fields', 'values');
+    protected static $_options = array('conditions', 'fields', 'values');
 
     public function fields(array $fields)
     {
-        $this->_aColumns = array_merge($this->_aColumns, $fields);
+        $this->_columns = array_merge($this->_columns, $fields);
     }
 
     public function values(array $values)
@@ -32,15 +32,15 @@ class Update extends \SimpleAR\Query\Where
 
     protected function _compile()
     {
-		$this->_sSql = $this->_oContext->useAlias
-            ? 'UPDATE ' . $this->_oContext->rootTableName . ' ' .  $this->_oContext->rootTable->alias . ' SET '
-            : 'UPDATE ' . $this->_oContext->rootTableName . ' SET '
+		$this->_sSql = $this->_context->useAlias
+            ? 'UPDATE ' . $this->_context->rootTableName . ' ' .  $this->_context->rootTable->alias . ' SET '
+            : 'UPDATE ' . $this->_context->rootTableName . ' SET '
             ;
 
         // Not used?
         //$sJoin = $this->_processArborescence();
 
-        $this->_sSql .= implode(' = ?, ', (array) $this->_aColumns) . ' = ?';
+        $this->_sSql .= implode(' = ?, ', (array) $this->_columns) . ' = ?';
 		$this->_sSql .= $this->_where();
     }
 
