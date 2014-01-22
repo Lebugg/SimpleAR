@@ -2,20 +2,16 @@
 namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
+use \SimpleAR\Query\Option\Conditions;
 use \SimpleAR\Query\Condition;
 use \SimpleAR\Query\Condition\ExistsCondition;
+use \SimpleAR\Query\Condition\RelationCondition;
+use \SimpleAR\Query\Condition\SimpleCondition;
 
 use \SimpleAR\MalformedOptionException;
 
-class Has extends Option
+class Has extends Conditions
 {
-    public function build()
-    {
-        $conditions = $this->_parse($this->_value);
-
-        call_user_func($this->_callback, $conditions);
-    }
-
     /**
      * Handle a "has condition".
      *
@@ -26,7 +22,7 @@ class Has extends Option
      *
      * @return ExistsCondition
      */
-    protected function _condition($attribute, array $conditions = null)
+    protected function _has($attribute, array $conditions = null)
     {
         $node      = $this->_arborescence->add($attribute->relations);
         $condition = new ExistsCondition($attribute->attribute, null, null);
@@ -39,7 +35,7 @@ class Has extends Option
 
         if ($conditions)
         {
-            $condition->subconditions = $this->_conditionsParse($conditions);
+            $condition->subconditions = $this->_parseConditions($conditions);
         }
 
         return $condition;
@@ -64,11 +60,12 @@ class Has extends Option
                     throw new MalformedOptionException('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
                 }
 
-                $condition = $this->_condition(self::_parseAttribute($key, true), $value);
+                $condition = $this->_has(self::_parseAttribute($key, true), $value);
+                $res[]     = array($logicalOperator, $condition);
             }
             elseif (is_string($value))
             {
-                $condition = $this->_condition(self::_parseAttribute($value, true));
+                $condition = $this->_has(self::_parseAttribute($value, true));
                 $res[]     = array($logicalOperator, $condition);
             }
             else
@@ -81,5 +78,10 @@ class Has extends Option
         }
 
         return $res;
+    }
+
+    protected function _parseConditions($conditions)
+    {
+        return parent::_parse($conditions);
     }
 }

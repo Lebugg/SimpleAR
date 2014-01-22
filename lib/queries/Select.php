@@ -16,18 +16,18 @@ class Select extends Where
      *
      * @var array
      */
-	private $_aSelects		= array();
+	private $_selects		= array();
 
     /**
      * Contains attributes to GROUP BY on.
      *
      * @var array
      */
-	private $_aGroupBy		= array();
-	private $_aOrderBy		= array();
-    private $_aHaving = array();
-    private $_iLimit;
-    private $_iOffset;
+	private $_groupBy		= array();
+	private $_orderBy		= array();
+    private $_having = array();
+    private $_limit;
+    private $_offset;
 
     private $_aPendingRow = false;
 
@@ -121,56 +121,6 @@ class Select extends Where
         return $aRes;
     }
 
-	public function group_by($a)
-	{
-        $this->_aGroupBy = array_merge($this->_aGroupBy, $a);
-	}
-
-    /**
-     * Handle "filter" option.
-     *
-     * First, it retrieve an attribute array from the Model.
-     * Then, it apply aliasing according to contextual values.
-     *
-     * Final columns to select (in a string form) are stored in
-     * Select::$_aSelects.
-     *
-     * @param string $sFilter The filter to apply or null to not filter.
-     *
-     * @return void
-     *
-     * @see Model::columnsToSelect()
-     * @see Query::attributeAliasing()
-     * @see Query\Select::$_aSelects
-     */
-    public function filter($a)
-    {
-		$this->_aSelects = array_merge($this->_aSelects, $a);
-    }
-
-
-    public function limit($i)
-    {
-        $this->_iLimit = $i;
-    }
-
-    public function offset($i)
-    {
-        $this->_iOffset = $i;
-    }
-
-	public function order_by(array $orderBy, array $groupBy = array(), array $selects = array())
-	{
-        $this->_aOrderBy = array_merge($this->_aOrderBy, $orderBy);
-        $this->_aGroupBy = array_merge($this->_aGroupBy, $groupBy);
-        $this->_aSelects = array_merge($this->_aSelects, $selects);
-	}
-
-    public function with($a)
-    {
-        $this->_aSelects = array_merge($this->_aSelects, $a);
-    }
-
     protected function _build(array $aOptions)
     {
         // If we don't set a filter entry, Select::filter() will never be
@@ -194,79 +144,67 @@ class Select extends Where
 
     protected function _compile()
     {
-		$sRootModel   = $this->_context->rootModel;
-		$sRootAlias   = $this->_context->rootTable->alias;
+		$this->_sql  = 'SELECT ' . implode(', ', $this->_selects);
 
-        $sJoin = $this->_processArborescence();
+        $this->_sql .= $this->_context->useAlias
+            ?' FROM `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
+            :' FROM `' . $this->_context->rootTableName . '`'
+            ;
 
-		$this->_sSql  = 'SELECT ' . implode(', ', $this->_aSelects);
-		$this->_sSql .= ' FROM `' . $this->_context->rootTableName . '` ' .  $sRootAlias .  ' ' . $sJoin;
-		$this->_sSql .= $this->_where();
-		$this->_sSql .= $this->_groupBy();
-        $this->_sSql .= $this->_aOrderBy ? (' ORDER BY ' . implode(',', $this->_aOrderBy)) : '';
-        $this->_sSql .= $this->_aHaving  ? (' HAVING ' . implode(',', $this->_aHaving))    : '';
-        $this->_sSql .= $this->_iLimit   ? ' LIMIT ' . $this->_iLimit                      : '';
-        $this->_sSql .= $this->_iOffset  ? ' OFFSET ' . $this->_iOffset                    : '';
+        $this->_sql .= ' ' . $this->_join();
+		$this->_sql .= $this->_where();
+		$this->_sql .= $this->_groupBy ? ' GROUP BY ' . implode(',', $this->_groupBy) : '';
+        $this->_sql .= $this->_orderBy ? ' ORDER BY ' . implode(',', $this->_orderBy) : '';
+        $this->_sql .= $this->_having  ? ' HAVING '   . implode(',', $this->_having)  : '';
+        $this->_sql .= $this->_limit   ? ' LIMIT '    . $this->_limit                 : '';
+        $this->_sql .= $this->_offset  ? ' OFFSET '   . $this->_offset                : '';
     }
 
-	private function _groupBy()
+    protected function _group_by(Option $option)
+    {
+        $this->_groupBy = array_merge($this->_groupBy, $option->build());
+    }
+
+    protected function _filter(Option $option)
+    {
+		$this->_selects = array_merge($this->_selects, $option->build());
+    }
+
+    protected function _limit(Option $option)
+    {
+        $this->_limit = $option->build();
+    }
+
+    protected function _offset(Option $option)
+    {
+        $this->_offset = $option->build();
+    }
+
+	protected function _order_by(Option $option)
 	{
-		return $this->_aGroupBy ? ' GROUP BY ' . implode(',', $this->_aGroupBy) : '';
+        $res = $option->build();
+
+        $this->_orderBy = array_merge($this->_orderBy, $res['order_by']);
+        $this->_groupBy = array_merge($this->_groupBy, $res['group_by']);
+        $this->_selects = array_merge($this->_selects, $res['selects']);
 	}
 
-    protected function _having($oAttribute, $sOperator, $mValue)
+    protected function _with(Option $option)
     {
-        $oAttribute->pieces[] = $oAttribute->attribute;
-        $oNode = $this->_context->arborescence->add($oAttribute->pieces,
-        Arborescence::JOIN_LEFT, true);
-
-        $sOperator = $sOperator ?: Condition::DEFAULT_OP;
-        $sResultAlias     = $oAttribute->lastRelation ?: $this->_context->rootResultAlias;
-        $sAttribute       = $oAttribute->attribute;
-        $oRelation        = $oNode->relation;
-        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_context->rootTable;
-        $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
-        $iDepth           = $oNode->depth ?: '';
-
-        if ($oAttribute->specialChar)
-        {
-            switch ($oAttribute->specialChar)
-            {
-                case '#':
-                    $this->_aSelects[] = 'COUNT(`' . $oRelation->lm->t->alias . $iDepth . '`.' .  $sColumnToCountOn . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
-                    // We need a GROUP BY.
-                    if ($oTable->isSimplePrimaryKey)
-                    {
-                        $this->_aGroupBy[] = '`' . $sResultAlias . '.id`';
-                    }
-                    else
-                    {
-                        foreach ($oTable->primaryKey as $sPK)
-                        {
-                            $this->_aGroupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
-                        }
-                    }
-                    $this->_aHaving[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
-                    $this->_aValues[]    = $mValue;
-                    break;
-            }
-        }
+        $this->_selects = array_merge($this->_selects, $option->build());
     }
 
     protected function _initContext($sRoot)
     {
         parent::_initContext($sRoot);
 
-        if ($this->_context->useModel)
-        {
-            // False by default. It will be set true if we have to fetch
-            // attributes from other tables. This is checked in
-            // Select::_build().
-            $this->_context->useResultAlias = false;
-            
-            // Contain the result alias we will use if we use result aliases.
-            $this->_context->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
-        }
+        // False by default. It will be set true if we have to fetch
+        // attributes from other tables. This is checked in
+        // Select::_build().
+        $this->_context->useResultAlias = false;
+        
+        // Contain the result alias we will use if we use result aliases.
+        $this->_context->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
     }
 
     /**

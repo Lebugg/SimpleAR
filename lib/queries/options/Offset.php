@@ -14,7 +14,7 @@ class Offset extends Option
             throw new \SimpleAR\MalformedOptionException('"offset" option value must be a natural integer. Negative integer given: ' . $this->_value . '.');
         }
 
-        call_user_func($this->_callback, $this->_value);
+        return $this->_value;
     }
 }
 

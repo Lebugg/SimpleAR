@@ -6,6 +6,23 @@ use \SimpleAR\Query;
 
 class Filter extends Option
 {
+    /**
+     * Handle "filter" option.
+     *
+     * First, it retrieve an attribute array from the Model.
+     * Then, it apply aliasing according to contextual values.
+     *
+     * Final columns to select (in a string form) are stored in
+     * Select::$_aSelects.
+     *
+     * @param string $sFilter The filter to apply or null to not filter.
+     *
+     * @return void
+     *
+     * @see Model::columnsToSelect()
+     * @see Query::attributeAliasing()
+     * @see Query\Select::$_aSelects
+     */
     public function build()
     {
         if (!$this->_context->useModel)
@@ -23,6 +40,6 @@ class Filter extends Option
         $columns = $rootModel::columnsToSelect($this->_value);
         $columns = Query::columnAliasing($columns, $rootAlias, $resultAlias);
 
-        call_user_func($this->_callback, $columns);
+        return $columns;
     }
 }

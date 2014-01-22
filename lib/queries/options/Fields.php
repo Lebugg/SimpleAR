@@ -25,6 +25,6 @@ class Fields extends Option
 
         $fields = Query::columnAliasing($fields, $tableAlias);
 
-        call_user_func($this->_callback, $fields);
+        return $fields;
     }
 }

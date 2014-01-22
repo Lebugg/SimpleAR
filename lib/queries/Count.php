@@ -17,9 +17,13 @@ class Count extends Select
     {
         $sJoin = $this->_processArborescence();
 
-		$this->_sSql  = 'SELECT COUNT(*)';
-		$this->_sSql .= ' FROM ' . $this->_context->rootTableName . ' ' .  $this->_context->rootTable->alias .  ' ' . $sJoin;
-		$this->_sSql .= $this->_where();
+		$this->_sql  = 'SELECT COUNT(*)';
+        $this->_sql .= $this->_context->useAlias
+            ?' FROM `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
+            :' FROM `' . $this->_context->rootTableName . '`'
+            ;
+        $this->_sql .= $this->_join();
+		$this->_sql .= $this->_where();
     }
 
     /**

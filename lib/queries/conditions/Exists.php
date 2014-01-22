@@ -68,6 +68,8 @@ class ExistsCondition extends Condition
         // True for EXISTS, false for NOT EXISTS.
         $b = $this->exists ? '' : 'NOT';
 
+        var_dump(Condition::arrayToSql($this->subconditions));
+
         // Easy subquery.
         // $b contains '' or 'NOT'. It relies on $this->exists value.
         return " $b EXISTS (

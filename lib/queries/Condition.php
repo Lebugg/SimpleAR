@@ -36,7 +36,10 @@ abstract class Condition
 
     const DEFAULT_OP = '=';
 
-    const DEFAULT_LOGICAL_OP = 'AND';
+    const LOGICAL_OP_AND = 'AND';
+    const LOGICAL_OP_OR  = 'OR';
+
+    const DEFAULT_LOGICAL_OP = self::LOGICAL_OP_AND;
 
     /**
      * The condition logic.

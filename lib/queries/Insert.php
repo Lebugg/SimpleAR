@@ -32,46 +32,46 @@ class Insert extends \SimpleAR\Query
         // of "default row", that is a row with only database default values.
         if (! $this->_columns)
         {
-            $this->_sSql = 'INSERT INTO `' . $this->_context->rootTableName . '` VALUES()';
+            $this->_sql = 'INSERT INTO `' . $this->_context->rootTableName . '` VALUES()';
             return;
         }
 
-        $this->_sSql = $this->_context->useAlias
+        $this->_sql = $this->_context->useAlias
             ? 'INSERT INTO `' . $this->_context->rootTableName . '` `' . $this->_context->rootTableAlias . '`'
             : 'INSERT INTO `' . $this->_context->rootTableName . '`'
             ;
 
-        $this->_sSql .= '(' . implode(',', (array) $this->_columns) . ') VALUES';
-        $iCount       = count($this->_aValues);
+        $this->_sql .= '(' . implode(',', (array) $this->_columns) . ') VALUES';
+        $iCount       = count($this->_values);
 
-        // $this->_aValues is a multidimensional array. Actually, it is an array of
+        // $this->_values is a multidimensional array. Actually, it is an array of
         // tuples.
-        if (is_array($this->_aValues[0]))
+        if (is_array($this->_values[0]))
         {
             // Tuple cardinal.
-            $iTupleSize = count($this->_aValues[0]);
+            $iTupleSize = count($this->_values[0]);
             
             $sTuple     = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
-            $this->_sSql .= str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
+            $this->_sql .= str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
 
             // We also need to flatten value array.
-            $this->_aValues = call_user_func_array('array_merge', $this->_aValues);
+            $this->_values = call_user_func_array('array_merge', $this->_values);
         }
         // Simple array.
         else
         {
-            $this->_sSql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
+            $this->_sql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
         }
 	}
 
-    public function fields(array $fields)
+    protected function _values(Option $option)
     {
-        $this->_columns = array_merge($this->_columns, $fields);
+        $this->_values = array_merge($this->_values, $option->build());
     }
 
-    public function values(array $values)
+    protected function _fields(Option $option)
     {
-        $this->_aValues = array_merge($this->_aValues, $values);
+        $this->_columns = array_merge($this->_columns, $option->build());
     }
 
     protected function _initContext($sRoot)

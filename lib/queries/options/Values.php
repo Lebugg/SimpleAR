@@ -7,6 +7,6 @@ class Values extends Option
 {
     public function build()
     {
-        call_user_func($this->_callback, (array) $this->_value);
+        return (array) $this->_value;
     }
 }

@@ -46,6 +46,6 @@ class GroupBy extends Option
             }
         }
 
-        call_user_func($this->_callback, $res);
+        return $res;
     }
 }

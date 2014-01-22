@@ -20,10 +20,19 @@ class OrderBy extends Option
 
     const DEFAULT_DIRECTION = 'ASC';
 
+    /**
+     *
+     * @return array
+     *
+     *  array(
+     *      'order_by' => <array>,
+     *      'group_by' => <array>,
+     *      'selects'  => <array>,
+     *  );
+     *
+     */
 	public function build()
 	{
-        $res = array();
-
         // Merge order by arrays.
         //
         // _context->rootTable->orderBy corresponds to static::$_aOrderBy.
@@ -104,7 +113,11 @@ class OrderBy extends Option
             }
         }
 
-        call_user_func($this->_callback, $this->_orderBy, $this->_groupBy, $this->_selects);
+        return array(
+            'order_by' => $this->_orderBy,
+            'group_by' => $this->_groupBy,
+            'selects'  => $this->_selects,
+        );
 	}
 
     /**

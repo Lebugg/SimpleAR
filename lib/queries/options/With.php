@@ -35,6 +35,6 @@ class With extends Option
             $res = array_merge($res, $columns);
         }
 
-        call_user_func($this->_callback, $res);
+        return $res;
     }
 }

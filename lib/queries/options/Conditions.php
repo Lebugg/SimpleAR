@@ -10,9 +10,7 @@ class Conditions extends Option
 {
     public function build()
     {
-        $conditions = $this->_parse($this->_value);
-
-        call_user_func($this->_callback, $conditions);
+        return $this->_parse($this->_value);
     }
 
     /**
@@ -66,7 +64,7 @@ class Conditions extends Option
             {
                 if ($a = $sModel::$sMethod($condition))
                 {
-                    $condition->virtual = true;
+                    $condition->virtual       = true;
                     $condition->subconditions = $this->_parse($a);
                 }
             }
@@ -77,8 +75,43 @@ class Conditions extends Option
         return $condition;
     }
 
-    protected function _having()
+    protected function _having($oAttribute, $sOperator, $mValue)
     {
+        $oAttribute->pieces[] = $oAttribute->attribute;
+        $oNode = $this->_context->arborescence->add($oAttribute->pieces,
+        Arborescence::JOIN_LEFT, true);
+
+        $sOperator = $sOperator ?: Condition::DEFAULT_OP;
+        $sResultAlias     = $oAttribute->lastRelation ?: $this->_context->rootResultAlias;
+        $sAttribute       = $oAttribute->attribute;
+        $oRelation        = $oNode->relation;
+        $oTable           = $oNode->previousRelation ? $oNode->previousRelation : $this->_context->rootTable;
+        $sColumnToCountOn = $oRelation->lm->t->isSimplePrimaryKey ? $oRelation->lm->t->primaryKey : $oRelation->lm->t->primaryKeyColumns[0];
+        $iDepth           = $oNode->depth ?: '';
+
+        if ($oAttribute->specialChar)
+        {
+            switch ($oAttribute->specialChar)
+            {
+                case '#':
+                    $this->_aSelects[] = 'COUNT(`' . $oRelation->lm->t->alias . $iDepth . '`.' .  $sColumnToCountOn . ') AS `' .  $sResultAlias . '.#' . $sAttribute . '`';
+                    // We need a GROUP BY.
+                    if ($oTable->isSimplePrimaryKey)
+                    {
+                        $this->_groupBy[] = '`' . $sResultAlias . '.id`';
+                    }
+                    else
+                    {
+                        foreach ($oTable->primaryKey as $sPK)
+                        {
+                            $this->_groupBy[] = '`' . $sResultAlias . '.' . $sPK . '`';
+                        }
+                    }
+                    $this->_having[]  = '`'. $sResultAlias . '.#' . $sAttribute . '` ' . $sOperator . ' ?';
+                    $this->_values[]    = $mValue;
+                    break;
+            }
+        }
     }
 
     protected function _parse($conditions)
@@ -107,8 +140,11 @@ class Conditions extends Option
             else
             {
                 // It is a logical operator.
-                if     ($value === 'OR'  || $value === '||') { $logicalOperator = 'OR';  }
-                elseif ($value === 'AND' || $value === '&&') { $logicalOperator = 'AND'; }
+                if ($value === Condition::LOGICAL_OP_OR
+                    || $value === Condition::LOGICAL_OP_AND)
+                {
+                    $logicalOperator = $value;
+                }
 
                 // Condition or condition group.
                 else

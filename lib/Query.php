@@ -46,21 +46,21 @@ abstract class Query
      *
      * @var bool Default false
      */
-    protected static $_bIsCriticalQuery = false;
+    protected static $_isCriticalQuery = false;
 
     /**
      * The query string.
      *
      * @var string
      */
-	protected $_sSql;
+	protected $_sql;
 
     /**
      * The query values to bind.
      *
      * @var array.
      */
-	protected $_aValues = array();
+	protected $_values = array();
 
     protected $_columns = array();
 
@@ -142,6 +142,38 @@ abstract class Query
 	public function __construct($sRoot)
 	{
         $this->_initContext($sRoot);
+    }
+
+    /**
+     * Allows user to manually set query options.
+     *
+     * We use __call() magic method in order to avoid code duplication. Without
+     * this, we would have to write a method for each available option per query
+     * class...
+     *
+     * This is the matching of Query::_build() method. But _build() is used for
+     * automatical query build; __call() is here to open query manipulation to
+     * user.
+     *
+     * @param string $name      Name of the method being called. The method name
+     * must correspond to an option name.
+     * @param array  $arguments Enumerated array containing the parameters
+     * passed to the $name'ed method.
+     *
+     * @return mixed
+     */
+    public function __call($name, $arguments)
+    {
+        if (in_array($name, static::$_options))
+        {
+            $arguments = isset($arguments[0]) ? $arguments[0] : null;
+            $option    = Query\Option::forge($name, $arguments, $this->_context);
+
+            // There is an option handling function for each available option.
+            // They are declared protected in order to Query class to access it.
+            $fn = '_' . $s;
+            $this->$fn($option);
+        }
     }
 
     /**
@@ -272,13 +304,13 @@ abstract class Query
 
         if ($this->_context->isCriticalQuery)
         {
-            if (strpos($this->_sSql, ' WHERE ') === false)
+            if (strpos($this->_sql, ' WHERE ') === false)
             {
                 throw new Exception('Cannot execute this query without a WHERE clause.');
             }
         }
 
-        $this->_oSth = self::$_oDb->query($this->_sSql, $this->_aValues);
+        $this->_oSth = self::$_oDb->query($this->_sql, $this->_values);
 
         return $this;
     }
@@ -318,14 +350,14 @@ abstract class Query
      */
 	protected function _build(array $options)
     {
-        foreach ($options as $s => $value)
+        foreach ($options as $name => $value)
         {
-            if (in_array($s, static::$_options))
+            if (in_array($name, static::$_options))
             {
-                // There must be a method that corresponds to the option. It
-                // will be used as a callback.
-                $option = Query\Option::forge($s, $value, $this->_context, array($this, $s));
-                $option->build();
+                $option = Query\Option::forge($name, $value, $this->_context);
+
+                $fn = '_' . $name;
+                $this->$fn($option);
             }
         }
     }
@@ -364,7 +396,7 @@ abstract class Query
             $this->_context->rootTableAlias  = '_' . strtolower($sRoot);
 		}
 
-        $this->_context->isCriticalQuery = self::$_bIsCriticalQuery;
+        $this->_context->isCriticalQuery = self::$_isCriticalQuery;
 	}
 
     private static function _query($sQueryClass, $options, $sRoot)
