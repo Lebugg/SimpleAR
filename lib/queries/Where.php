@@ -27,8 +27,8 @@ abstract class Where extends \SimpleAR\Query
         parent::_initContext($sRoot);
 
         $this->_context->arborescence = new Arborescence(
-            $this->_context->rootTable,
-            $this->_context->rootModel
+            $this->_context->rootModel,
+            $this->_context->rootTable
         );
     }
 

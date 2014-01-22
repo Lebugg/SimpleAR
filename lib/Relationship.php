@@ -287,6 +287,7 @@ abstract class Relationship
     public function joinLinkedModel($iDepth, $sJoinType)
     {
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+        $iDepth         = $iDepth ?: '';
 
 		return " $sJoinType JOIN `{$this->lm->table}` {$this->lm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->lm->alias}$iDepth.{$this->lm->column}";
     }
@@ -415,7 +416,7 @@ class HasMany extends Relationship
         $oCM = $this->cm;
 
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
-        $iDepth = $iDepth ?: '';
+        $iDepth         = $iDepth ?: '';
 
 
         if ($o->logic === 'or')
@@ -539,7 +540,7 @@ class ManyMany extends Relationship
 		$mColumn = $this->lm->t->columnRealName($o->attribute);
 
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
-        $iDepth = $iDepth ?: '';
+        $iDepth         = $iDepth ?: '';
 
         if ($o->logic === 'or')
         {
@@ -662,6 +663,7 @@ class ManyMany extends Relationship
     private function _joinJM($iDepth, $sJoinType)
     {
         $iPreviousDepth = $iDepth <= 1 ? '' : $iDepth - 1;
+        $iDepth         = $iDepth ?: '';
 
 		return " $sJoinType JOIN `{$this->jm->table}` {$this->jm->alias}$iDepth ON {$this->cm->alias}$iPreviousDepth.{$this->cm->column} = {$this->jm->alias}$iDepth.{$this->jm->from}";
     }

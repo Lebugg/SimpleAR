@@ -3,32 +3,56 @@ namespace SimpleAR\Query;
 
 class Arborescence
 {
-    private $_oRoot;
-    private $_sRootModel;
+    public $model;
+    public $table;
+    public $relation;
+    public $parent;
+    public $conditions = array();
+    public $depth;
+    public $joinType;
+    public $forcejoin = false;
+
+    public $children = array();
 
     const JOIN_INNER = 30;
     const JOIN_LEFT  = 20;
     const JOIN_RIGHT = 21;
     const JOIN_OUTER = 10;
 
-    private $_aJoinTypes = array();
+    private static $_aJoinTypes = array(
+        self::JOIN_INNER => 'INNER',
+        self::JOIN_LEFT  => 'LEFT',
+        self::JOIN_RIGHT => 'RIGHT',
+        self::JOIN_OUTER => 'OUTER',
+    );
 
-    private $_aJoinedTables = array();
+    public function __construct(
+        $model,
+        $table,
+        $relation = null,
+        $joinType = self::JOIN_INNER,
+        $depth = 0,
+        $parent = null,
+        $forceJoin = false
+    ) {
+        $this->model     = $model;
+        $this->table     = $table;
+        $this->relation  = $relation;
+        $this->joinType  = $joinType;
+        $this->depth     = $depth;
 
-    public function __construct($oRootTable, $sRootModel)
-    {
-        // Initialize arborescence: create root node.
-        $this->_oRoot = $this->_node($oRootTable);
+        $this->forceJoin = $forceJoin;
+
+        $this->parent    = $parent;
+        $this->children  = array();
 
         // Initiliaze join type "int to string" translation array.
-        $this->_aJoinTypes = array(
-            self::JOIN_INNER => 'INNER',
-            self::JOIN_LEFT  => 'LEFT',
-            self::JOIN_RIGHT => 'RIGHT',
-            self::JOIN_OUTER => 'OUTER',
-        );
-
-        $this->_sRootModel = $sRootModel;
+        /* $this->_aJoinTypes = array( */
+        /*     self::JOIN_INNER => 'INNER', */
+        /*     self::JOIN_LEFT  => 'LEFT', */
+        /*     self::JOIN_RIGHT => 'RIGHT', */
+        /*     self::JOIN_OUTER => 'OUTER', */
+        /* ); */
     }
 
     /**
@@ -36,7 +60,7 @@ class Arborescence
      *
      * @param array $aRelationNames Array containing relations ordered by depth to add to join
      * arborescence.
-     * @param int $iJoinType The type of join to use to join this relation. Default: inner join.
+     * @param int $joinType The type of join to use to join this relation. Default: inner join.
      * @param bool $bForceJoin Does relation *must* be joined?
      *
      * To be used as:
@@ -47,157 +71,168 @@ class Arborescence
      *  ```
      * @return array
      */
-    public function add($aRelationNames, $iJoinType = self::JOIN_INNER, $bForceJoin = false)
+    public function add($relations, $joinType = self::JOIN_INNER, $forceJoin = false)
     {
-        if (!$aRelationNames)
+        if (! $relations)
         {
-            return $this->_oRoot;
+            return $this;
         }
 
-        $oNode         = $this->_oRoot;
-        $sCurrentModel = $this->_sRootModel;
+        // NOTE: "n" prefix in variable names means stands for "node", that is
+        // an Arborescence instance.
 
-        $oRelation         = null;
-        $oPreviousRelation = null;
+        $nCurrent         = $this;
+        $nPrevious = null;
+        // "cm" stands for Current Model.
+        $cm = $this->model;
+
+        $relation         = null;
 
         // Foreach relation to add, set some "config" elements.
         //
         // $i will be used to calculate node's depth.  $i starts at 0; detph
         // equals $i + 1. That means that first relation will have a depth of 1.
-        foreach ($aRelationNames as $i => $sRelation)
+        foreach ($relations as $i => $relation)
         {
-            $oPreviousRelation = $oRelation;
-            $oRelation         = $sCurrentModel::relation($sRelation);
-            $sCurrentModel     = $oRelation->lm->class;
+            $nPrevious = $nCurrent;
+            // $relation is now a Relationship object.
+            $relation = $cm::relation($relation);
+            $cm       = $relation->lm->class;
 
             // Add a new node if needed.
-            if (! isset($oNode->next[$sRelation]))
+            if (! $nCurrent->hasChild($relation))
             {
-                $oNewNode = $this->_node($oRelation->lm->t, $oRelation, $oPreviousRelation, $i + 1, $iJoinType);
+                // @see Arborescence::__construct().
+                $nNew = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $nCurrent, $forceJoin);
+                $nCurrent->addChild($nNew);
 
-                $oNode = $oNode->next[$sRelation] = $oNewNode;
+                // Go forward.
+                $nCurrent = $nNew;
             }
             // Already present? We may have to change some values.
             else
             {
-                $oNode = $oNode->next[$sRelation];
-                $this->_node_updateJoinType($oNode, $iJoinType);
+                $nCurrent = $nCurrent->getChild($relation);
+                $nCurrent->updateJoinType($joinType);
             }
 
             // Force join on last node if required.
-            $oNode->force = $bForceJoin || $oNode->force;
+            $nCurrent->forceJoin = $forceJoin || $nCurrent->forceJoin;
         }
 
         // Return arborescence leaf.
-        return $oNode;
+        return $nCurrent;
     }
 
-    public function process()
-    {
-        // Cross down the tree.
-        return $this->_processRecursive($this->_oRoot, $this->_sRootModel);
-    }
-
-	private function _processRecursive($oNode, $sCurrentModel, $iDepth = 1)
+	public function process($joinedTables = array())
 	{
-        $sRes = '';
+        $res = '';
 
         // Construct joined table array according to depth.
-        if (! isset($this->_aJoinedTables[$iDepth]))
+        if (! isset($joinedTables[$this->depth]))
         {
-            $this->_aJoinedTables[$iDepth] = array();
+            $joinedTables[$this->depth] = array();
         }
 
-		foreach ($oNode->next as $sRelation => $oNextNode)
+		foreach ($this->children as $relation => $nNext)
 		{
-			$oRelation = $oNextNode->relation;
-            $sTable    = $oRelation->lm->table;
+			$relation  = $nNext->relation;
+            $tableName = $relation->lm->table;
 
-            // We *have to* to join table if not already joined *and* it is not the last
-            // relation.
-            // __force bypasses the last relation condition. True typically when we have to join
-            // this table for a "with" option.
-            if (! in_array($sTable, $this->_aJoinedTables[$iDepth]) && ($oNextNode->next || $oNextNode->force) )
+            // We *have to* to join table if not already joined *and* it is not
+            // the last relation.
+            //
+            // "force" bypasses the last relation condition. True typically when
+            // we have to join this table for a "with" option.
+            if (! in_array($tableName, $joinedTables[$this->depth]) && ($nNext->children || $nNext->forceJoin) )
             {
-                $sRes .= $oRelation->joinLinkedModel($iDepth, $this->_aJoinTypes[$oNextNode->joinType]);
+                $res .= $relation->joinLinkedModel($nNext->depth, self::$_aJoinTypes[$nNext->joinType]);
 
                 // Add it to joined tables array.
-                $this->_aJoinedTables[$iDepth][] = $sTable;
+                $joinedTables[$this->depth][] = $tableName;
             }
 
             // We have stuff to do with conditions:
             // 1. Join the relation as last if not already joined (to be able to apply potential
             // conditions).
-            if ($oNextNode->conditions)
+            if ($nNext->conditions)
             {
                 // If not already joined, do it as last relation.
-                if (! in_array($sTable, $this->_aJoinedTables[$iDepth]))
+                if (! in_array($tableName, $joinedTables[$this->depth]))
                 {
                     // $s is false if joining table was not necessary.
-                    if ($s = $oRelation->joinAsLast($oNextNode->conditions, $iDepth, $this->_aJoinTypes[$oNextNode->joinType]));
+                    if ($s = $relation->joinAsLast($nNext->conditions, $nNext->depth, self::$_aJoinTypes[$nNext->joinType]));
                     {
-                        $sRes .= $s;
+                        $res .= $s;
 
                         // Add it to joined tables array.
-                        $this->_aJoinedTables[$iDepth][] = $sTable;
+                        $joinedTables[$this->depth][] = $tableName;
                     }
                 }
             }
 
             // Go through arborescence.
-            if ($oNextNode->next)
+            if ($nNext->children)
             {
-				$sRes .= $this->_processRecursive($oNextNode, $oRelation->lm->class, $iDepth + 1);
+				$res .= $nNext->process($joinedTables);
             }
 
 		}
 
-        return $sRes;
+        return $res;
 	}
 
-    private function _node(
-        $oTable            = null,
-        $oRelation         = null,
-        $oPreviousRelation = null,
-        $iDepth            = 0,
-        $iJoinType         = self::JOIN_INNER
-    ) {
-        return (object) array(
-            'table'            => $oTable,
-            'relation'         => $oRelation,
-            'previousRelation' => $oPreviousRelation,
-            'conditions'       => array(),
-            'depth'            => $iDepth,
-            'joinType'         => $iJoinType,
-            'force'            => false, // Should be removed.
-            'next'             => array(),
-        );
+    /**
+     * Add a child to children list.
+     *
+     * I made a function for this because I think the way to add children may
+     * change.
+     *
+     * @param Arborescence $child The child to add.
+     *
+     * @return void
+     */
+    public function addChild($child)
+    {
+        $this->children[$child->relation->name] = $child;
     }
+
+    public function getChild($relation)
+    {
+        return $this->children[$relation->name];
+    }
+
+    public function hasChild($relation)
+    {
+        return isset($this->children[$relation->name]);
+    }
+
 
     /**
      * Update the node join type.
      *
      * It always chooses the most restrictive JOIN when there is a conflict.
+     *
+     * @param int $newJoinType The new join type to apply.
      */
-    private function _node_updateJoinType($oNode, $iNewJoinType)
+    private function updateJoinType($newJoinType)
     {
-        if ($oNode->joinType === $iNewJoinType)
+        if ($this->joinType === $newJoinType)
         {
             return;
         }
 
         // If new join type is *stronger* (more restrictive) than old join type,
         // use new type.
-        if ($oNode->joinType / 10 < $iNewJoinType / 10)
+        if ($this->joinType / 10 < $newJoinType / 10)
         {
-            $oNode->joinType = $iNewJoinType;
+            $this->joinType = $newJoinType;
         }
 
         // Special case for LEFT and RIGHT conflict. Use INNER.
-        elseif ($oNode->joinType !== $iNewJoinType && $oNode->joinType / 10 === $iNewJoinType / 10)
+        elseif ($this->joinType !== $newJoinType && $this->joinType / 10 === $newJoinType / 10)
         {
-            $oNode->joinType = self::JOIN_INNER;
+            $this->joinType = self::JOIN_INNER;
         }
     }
-
 }
