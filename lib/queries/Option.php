@@ -18,7 +18,7 @@ use \SimpleAR\Query;
 abstract class Option
 {
     protected $_value;
-    protected $_query;
+    protected $_context;
     protected $_arborescence;
 
     protected static $_optionToClass = array(
@@ -36,17 +36,16 @@ abstract class Option
 
     const SYMBOL_COUNT = '#';
 
-    public function __construct($value, $context, $callback)
+    public function __construct($value, $context, $arborescence = null)
     {
         $this->_value        = $value;
         $this->_context      = $context;
-        $this->_arborescence = isset($context->arborescence) ? $context->arborescence : null;
-        $this->_callback     = $callback;
+        $this->_arborescence = $arborescence ?: (isset($context->arborescence) ?  $context->arborescence : null);
     }
 
     public abstract function build();
 
-    public static function forge($optionName, $value, $context, $callback = null)
+    public static function forge($optionName, $value, $context, $arborescence = null)
     {
         if (!isset(self::$_optionToClass[$optionName]))
         {
@@ -55,7 +54,7 @@ abstract class Option
 
         $sClass = '\SimpleAR\Query\Option\\' .  self::$_optionToClass[$optionName];
 
-        return new $sClass($value, $context, $callback);
+        return new $sClass($value, $context, $arborescence);
     }
 
     /**
