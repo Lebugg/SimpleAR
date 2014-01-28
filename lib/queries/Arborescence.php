@@ -1,6 +1,8 @@
 <?php
 namespace SimpleAR\Query;
 
+use \SimpleAR\Query\Condition;
+
 class Arborescence
 {
     public $model;
@@ -192,9 +194,22 @@ class Arborescence
      *
      * @return void
      */
-    public function addChild($child)
+    public function addChild(Arborescence $child)
     {
         $this->children[$child->relation->name] = $child;
+    }
+
+    public function addCondition(Condition $condition)
+    {
+        $conditions = is_array($condition)
+            ? $condition
+            : array($condition)
+            ;
+
+        foreach ($conditions as $condition)
+        {
+            $this->conditions[] = $condition;
+        }
     }
 
     public function getChild($relation)
@@ -207,6 +222,10 @@ class Arborescence
         return isset($this->children[$relation->name]);
     }
 
+    public function isRoot()
+    {
+        return $this->parent === null;
+    }
 
     /**
      * Update the node join type.

@@ -35,6 +35,7 @@ abstract class Option
     );
 
     const SYMBOL_COUNT = '#';
+    const SYMBOL_NOT   = '!';
 
     public function __construct($value, $context, $arborescence = null)
     {

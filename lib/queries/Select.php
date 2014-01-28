@@ -23,9 +23,9 @@ class Select extends Where
      *
      * @var array
      */
-	private $_groupBy		= array();
-	private $_orderBy		= array();
-    private $_having = array();
+	private $_groupBys = array();
+	private $_orderBys = array();
+    private $_havings  = array();
     private $_limit;
     private $_offset;
 
@@ -153,16 +153,37 @@ class Select extends Where
 
         $this->_sql .= ' ' . $this->_join();
 		$this->_sql .= $this->_where();
-		$this->_sql .= $this->_groupBy ? ' GROUP BY ' . implode(',', $this->_groupBy) : '';
-        $this->_sql .= $this->_orderBy ? ' ORDER BY ' . implode(',', $this->_orderBy) : '';
-        $this->_sql .= $this->_having  ? ' HAVING '   . implode(',', $this->_having)  : '';
+		$this->_sql .= $this->_groupBys ? ' GROUP BY ' . implode(',',
+        $this->_groupBys) : '';
+        $this->_sql .= $this->_orderBys ? ' ORDER BY ' . implode(',', $this->_orderBys) : '';
+        $this->_sql .= $this->_havings  ? ' HAVING '   . implode(',',
+        $this->_havings)  : '';
         $this->_sql .= $this->_limit   ? ' LIMIT '    . $this->_limit                 : '';
         $this->_sql .= $this->_offset  ? ' OFFSET '   . $this->_offset                : '';
     }
 
+    protected function _conditions(Option $option)
+    {
+        // @see Option\Conditions::build() to check returned array format.
+        $res = $option->build();
+
+        if ($this->_conditions)
+        {
+            $this->_conditions->combine($res['conditions']);
+        }
+        else
+        {
+            $this->_conditions = $res['conditions'];
+        }
+
+        $this->_havings    = array_merge($this->_havings,    $res['havings']);
+        $this->_groupBys    = array_merge($this->_groupBys,  $res['groupBys']);
+        $this->_selects    = array_merge($this->_selects,    $res['selects']);
+    }
+
     protected function _group_by(Option $option)
     {
-        $this->_groupBy = array_merge($this->_groupBy, $option->build());
+        $this->_groupBys = array_merge($this->_groupBys, $option->build());
     }
 
     protected function _filter(Option $option)
@@ -184,8 +205,8 @@ class Select extends Where
 	{
         $res = $option->build();
 
-        $this->_orderBy = array_merge($this->_orderBy, $res['order_by']);
-        $this->_groupBy = array_merge($this->_groupBy, $res['group_by']);
+        $this->_orderBys = array_merge($this->_orderBys, $res['order_by']);
+        $this->_groupBys = array_merge($this->_groupBys, $res['group_by']);
         $this->_selects = array_merge($this->_selects, $res['selects']);
 	}
 

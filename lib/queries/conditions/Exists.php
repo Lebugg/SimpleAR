@@ -21,27 +21,16 @@ class ExistsCondition extends Condition
      */
     public $exists;
 
+    public $subconditions;
+
     /**
-     * This function is used to format value array for PDO.
-     *
-     * @return array
-     *      Condition values.
+     * @override.
      */
-    public function flattenValues()
+    public function canMergeWith(Condition $c)
     {
-        $aRes = array();
-
-        foreach ((array) $this->subconditions as $mItem)
-        {
-            if ($mItem instanceof Condition)
-            {
-                $aRes = array_merge($aRes, $mItem->flattenValues());
-            }
-        }
-
-        return $aRes;
+        return parent::canMergeWith($c)
+                && $this->exists === $c->exists;
     }
-
     public function toSql($bUseAliases = true, $bToColumn = true)
     {
         if (($r = $this->relation) === null)
@@ -49,34 +38,75 @@ class ExistsCondition extends Condition
             throw new Exception('Cannot transform Condition to SQL because “relation” is not set.');
         }
 
-        $sAlias    = $r->lm->alias . ($this->depth ?: '');
-        $sCMColumn = self::leftHandSide($r->cm->column, $r->cm->alias . ($this->depth - 1 ?: ''));
+        $depth         = (string) ($this->depth ?: '');
+        $previousDepth = (string) ($this->depth - 1 ?: '');
+
+        $cmColumn = self::leftHandSide($r->cm->column, $r->cm->alias .  $previousDepth);
 
         // Not the same for ManyMany, we use join table.
         if ($r instanceof ManyMany)
         {
-            $sTable    = $r->jm->table;
-            $sLMColumn = self::leftHandSide($r->jm->from, $sAlias);
+            // If there are subconditions, we use linked table.
+            if ($this->attributes)
+            {
+                $tableAlias = $r->lm->alias . $depth;
+                $tableName  = $r->lm->table;
+                $lmColumn   = self::leftHandSide($r->lm->column, $tableAlias);
+            }
+            // Otherwise, the middle table suffises.
+            else
+            {
+                $tableAlias = $r->jm->alias . $depth;
+                $tableName  = $r->jm->table;
+                $lmColumn   = self::leftHandSide($r->jm->from, $tableAlias);
+            }
         }
         // For all other Relation type, we use linked table.
         else
         {
-            $sTable    = $r->lm->table;
-            $sLMColumn = self::leftHandSide($r->lm->column, $sAlias);
+            $tableAlias = $r->lm->alias . $depth;
+            $tableName  = $r->lm->table;
+            $lmColumn   = self::leftHandSide($r->lm->column, $tableAlias);
         }
 
         // True for EXISTS, false for NOT EXISTS.
         $b = $this->exists ? '' : 'NOT';
 
-        var_dump(Condition::arrayToSql($this->subconditions));
+        $subconditions = array();
+        foreach ($this->attributes as $attribute)
+        {
+            $column = $r->lm->t->columnRealName($attribute->name);
+            $subconditions[] = self::leftHandSide($column, $tableAlias) . ' ' .  $attribute->operator . ' ' . self::rightHandSide($attribute->value);
+        }
+
+        $subconditionValues = array();
+        if ($this->subconditions)
+        {
+            $tmp = $this->subconditions->toSql();
+
+            $subconditions[]    = $tmp[0];
+            $subconditionValues = $tmp[1];
+        }
+
+        $subconditions = implode(' AND ', $subconditions);
+        if ($subconditions)
+        {
+            $subconditions = ' AND ' . $subconditions;
+        }
 
         // Easy subquery.
         // $b contains '' or 'NOT'. It relies on $this->exists value.
-        return " $b EXISTS (
+        $sql = " $b EXISTS (
                     SELECT NULL
-                    FROM {$sTable} {$sAlias}
-                    WHERE {$sLMColumn} = {$sCMColumn}
+                    FROM `{$tableName}` `{$tableAlias}`
+                    WHERE {$lmColumn} = {$cmColumn}
+                    {$subconditions}
                 )";
+
+        return array(
+            $sql,
+            array_merge($this->flattenValues(), $subconditionValues),
+        );
     }
 }
 

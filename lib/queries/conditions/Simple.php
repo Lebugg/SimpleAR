@@ -1,18 +1,29 @@
 <?php
 namespace SimpleAR\Query\Condition;
 
-use \SimpleAR\Query\Option;
+use SimpleAR\Query\Option;
 
 class SimpleCondition extends \SimpleAR\Query\Condition
 {
-    public function toSql($bUseAliases = true, $bToColumn = true)
+    public function toSql($useAliases = true, $toColumn = true)
     {
-        $sAlias   = $bUseAliases ? $this->table->alias : '';
-        $mColumns = $bToColumn   ? $this->table->columnRealName($this->attribute) : $this->attribute;
+        $depth      = (string) $this->depth ?: '';
+        $tableAlias = ($useAliases ? $this->table->alias : '') . $depth;
 
-        $sLHS = self::leftHandSide($mColumns, $sAlias);
-        $sRHS = self::rightHandSide($this->value);
+        $res = array();
+        foreach ($this->attributes as $attribute)
+        {
+            $columns = $toColumn ? $this->table->columnRealName($attribute->name) : $attribute->name;
 
-        return $sLHS . ' ' . $this->operator . ' ' . $sRHS;
+            $lhs = self::leftHandSide($columns, $tableAlias);
+            $rhs = self::rightHandSide($attribute->value);
+
+            $res[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+        }
+
+        return array(
+            implode(' ' . self::LOGICAL_OP_AND . ' ', $res), // SQL
+            $this->flattenValues(), // Values to bind (flattened).
+        );
     }
 }

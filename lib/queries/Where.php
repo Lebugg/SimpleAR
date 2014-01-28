@@ -19,7 +19,17 @@ abstract class Where extends \SimpleAR\Query
 
     protected function _conditions(Option $option)
     {
-        $this->_conditions = array_merge($this->_conditions, $option->build());
+        // @see Option\Conditions::build() to check returned array format.
+        $res = $option->build();
+
+        if ($this->_conditions)
+        {
+            $this->_conditions->combine($res['conditions']);
+        }
+        else
+        {
+            $this->_conditions = $res['conditions'];
+        }
     }
     
     protected function _initContext($sRoot)
@@ -34,7 +44,17 @@ abstract class Where extends \SimpleAR\Query
 
     protected function _has(Option $option)
     {
-        $this->_conditions = array_merge($this->_conditions, $option->build());
+        // @see Option\Has::build() to check returned array format.
+        $res = $option->build();
+
+        if ($this->_conditions)
+        {
+            $this->_conditions->combine($res['conditions']);
+        }
+        else
+        {
+            $this->_conditions = $res['conditions'];
+        }
     }
 
     /**
@@ -59,14 +79,19 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _where()
     {
-        // We made all wanted treatments; get SQL out of Condition array.
-        list($sql, $values) = Condition::arrayToSql($this->_conditions, $this->_context->useAlias, $this->_context->useModel);
+        if ($this->_conditions && ! $this->_conditions->isEmpty())
+        {
+            // We made all wanted treatments; get SQL out of Condition array.
+            list($sql, $values) = $this->_conditions->toSql();
 
-        // Add condition values. $aValues is a flatten array.
-        // @see Condition::flattenValues()
-        $this->_values = array_merge($this->_values, $values);
+            // Add condition values. $values is a flatten array.
+            // @see Condition::flattenValues()
+            $this->_values = array_merge($this->_values, $values);
 
-		return $sql ? ' WHERE ' . $sql : '';
+            return $sql ? ' WHERE ' . $sql : '';
+        }
+
+        return '';
     }
 
 }

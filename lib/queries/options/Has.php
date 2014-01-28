@@ -3,15 +3,30 @@ namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Option\Conditions;
+
 use \SimpleAR\Query\Condition;
+use \SimpleAR\Query\Condition\Attribute;
+use \SimpleAR\Query\Condition\ConditionGroup;
 use \SimpleAR\Query\Condition\ExistsCondition;
-use \SimpleAR\Query\Condition\RelationCondition;
-use \SimpleAR\Query\Condition\SimpleCondition;
 
 use \SimpleAR\MalformedOptionException;
 
+use \SimpleAR\Query\Arborescence;
+
 class Has extends Conditions
 {
+    public function build()
+    {
+        $conditions = $this->_parseHas($this->_value, $this->_arborescence);
+
+        return array(
+            'conditions' => $conditions,
+            'havings'    => $this->_havings,
+            'groupBys'   => $this->_groupBys,
+            'selects'    => $this->_selects,
+        );
+    }
+
     /**
      * Handle a "has condition".
      *
@@ -22,36 +37,53 @@ class Has extends Conditions
      *
      * @return ExistsCondition
      */
-    protected function _has($attribute, array $conditions = null)
+    protected function _has($attribute, Arborescence $arborescence, array $conditions = null)
     {
-        $node      = $this->_arborescence->add($attribute->relations);
-        $condition = new ExistsCondition($attribute->attribute, null, null);
+        $attribute = self::_parseAttribute($attribute, true);
 
-        $condition->depth    = $node->depth;
-        $condition->exists   = ! (bool) $attribute->specialChar;
-        $condition->relation = $node->relation;
+        $node = $arborescence->add($attribute->relations);
+        $cHas = new ExistsCondition($attribute->attribute, null, null);
 
-        $node->conditions[] = $condition;
+        $cHas->depth    = $node->depth;
+        $cHas->exists   = $attribute->specialChar !== self::SYMBOL_NOT;
+        $cHas->relation = $node->relation;
+
+        $node->addCondition($cHas);
 
         if ($conditions)
         {
-            $condition->subconditions = $this->_parseConditions($conditions);
+            $node->parent = null;
+            $cHas->subconditions = $this->_parse($conditions, $node);
         }
 
-        return $condition;
+        return $cHas;
     }
 
 
-    public function _parse($has)
+    public function _parseHas($has, $arborescence)
     {
-        $res             = array();
-        $logicalOperator = Condition::DEFAULT_LOGICAL_OP;
+        $orGroup  = new ConditionGroup(ConditionGroup::T_OR);
+        $andGroup = new ConditionGroup(ConditionGroup::T_AND);
 
         foreach ($has as $key => $value)
         {
             // It is a logical operator.
-            if     ($value === 'OR'  || $value === '||') { $logicalOperator = 'OR';  }
-            elseif ($value === 'AND' || $value === '&&') { $logicalOperator = 'AND'; }
+            if ($value === Condition::LOGICAL_OP_OR)
+            {
+                // Add current group.
+                if (! $andGroup->isEmpty())
+                {
+                    $orGroup->add($andGroup);
+                }
+
+                // And initialize a new one.
+                $andGroup = new ConditionGroup(ConditionGroup::T_AND);
+                continue;
+            }
+            elseif($value === Condition::LOGICAL_OP_AND)
+            {
+                continue;
+            }
 
             if (is_string($key))
             {
@@ -60,28 +92,26 @@ class Has extends Conditions
                     throw new MalformedOptionException('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
                 }
 
-                $condition = $this->_has(self::_parseAttribute($key, true), $value);
-                $res[]     = array($logicalOperator, $condition);
+                $condition = $this->_has($key, $arborescence, $value);
+                $andGroup->add($condition);
             }
             elseif (is_string($value))
             {
-                $condition = $this->_has(self::_parseAttribute($value, true));
-                $res[]     = array($logicalOperator, $condition);
+                $condition = $this->_has($value, $arborescence);
+                $andGroup->add($condition);
             }
             else
             {
                 throw new MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
             }
-
-            // Reset operator.
-            $logicalOperator = Condition::DEFAULT_LOGICAL_OP;
         }
 
-        return $res;
-    }
+        // Add last values.
+        if (! $andGroup->isEmpty())
+        {
+            $orGroup->add($andGroup);
+        }
 
-    protected function _parseConditions($conditions)
-    {
-        return parent::_parse($conditions);
+        return $orGroup;
     }
 }

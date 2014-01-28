@@ -219,9 +219,6 @@ class OrderBy extends Option
         // Count alias: `<result alias>.#<relation name>`;
         $this->_selects[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
 
-        // Order by the COUNT, that the point of all that.
-        $this->_orderBy[] = $resultAttribute . ' ' . $direction;
-
         // We have to group rows on something if we want the COUNT to make
         // sense.
         $tableToGroupOn = $relation->cm->t;
@@ -230,6 +227,9 @@ class OrderBy extends Option
         {
             $this->_groupBy[] = $tableAlias . '`' . $column . '`';
         }
+
+        // Order by the COUNT, that the point of all that.
+        $this->_orderBy[] = $resultAttribute . ' ' . $direction;
     }
 
     /**

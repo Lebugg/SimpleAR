@@ -6,9 +6,15 @@
  */
 namespace SimpleAR\Query;
 
+require 'conditions/Attribute.php';
+require 'conditions/ConditionGroup.php';
 require 'conditions/Exists.php';
 require 'conditions/Relation.php';
 require 'conditions/Simple.php';
+
+use SimpleAR\Query\Condition\Attribute;
+
+use SimpleAR\Exception;
 
 /**
  * The Condition class modelize a SQL condition (in a WHERE clause).
@@ -23,56 +29,13 @@ abstract class Condition
      *
      * @var array
      */
-    protected static $_aOperators = array(
-        '='  => 'IN',
-        '!=' => 'NOT IN',
-        '<'  => '< ANY',
-        '>'  => '> ANY',
-        '<=' => '<= ANY',
-        '>=' => '>= ANY',
-        'IN' => 'IN',
-        'NOT IN' => 'NOT IN',
-    );
-
-    const DEFAULT_OP = '=';
 
     const LOGICAL_OP_AND = 'AND';
     const LOGICAL_OP_OR  = 'OR';
 
     const DEFAULT_LOGICAL_OP = self::LOGICAL_OP_AND;
 
-    /**
-     * The condition logic.
-     *
-     * Can take these values: "and" or "or".
-     *
-     * @var string
-     */
-    public $logic;
-
-    /**
-     * Attribute(s) the condition is made on.
-     *
-     * @var string|array
-     */
-    public $attribute;
-
-    /**
-     * The condition operator.
-     *
-     * @var string
-     */
-    public $operator;
-
-    /**
-     * The condition value(s).
-     *
-     * It contains one or several values that attribute(s) must verify to make condition true.
-     *
-     * @var mixed
-     */
-    public $value;
-    
+    public $attributes = array();
 
     /**
      * A Table object corresponding to the attribute's Model.
@@ -80,149 +43,54 @@ abstract class Condition
      * @var Table
      */
     public $table;
-
     public $depth = 0;
-    public $virtual = false;
-    public $subconditions = array();
+
+    public $relation;
 
     /**
-     * Constructor
+     * Add an attribute to the condition.
      *
-     * @param string|array $sAttribute Attribute(s) of condition.
-     * @param string       $sOperator  Operator to use.
-     * @param mixed        $mValue     Value(s) to test attribute(s) against.
-     * @param string       $sLogic     The logic of the condition.
+     * @param string|array $attribute Attribute(s) of condition.
+     * @param string       $operator  Operator to use.
+     * @param mixed        $value     Value(s) to test attribute(s) against.
+     * @param string       $logic     The logic of the condition.
      *
      * @throws Exception if operator, value, or logic is invalid.
      */
-    public function __construct($sAttribute, $sOperator, $mValue, $sLogic = 'or')
+    public function addAttribute(Attribute $attribute)
     {
-        $this->attribute = $sAttribute;
-
-        // Set operator and check its validity.
-        $this->operator  = $sOperator ?: '=';
-        if (! isset(self::$_aOperators[$this->operator]))
-        {
-            $sMessage  = 'Unknown SQL operator: "' . $this->operator .  '".' .  PHP_EOL;
-            $sMessage .= 'List of available operators: ' . implode(', ', array_keys(self::$_aOperators)); 
-
-            throw new \SimpleAR\Exception($sMessage);
-        }
-
-        // Set logic and check its validity.
-        $this->logic     = $sLogic;
-        if (! ($this->logic === 'or' || $o->logic === 'and'))
-        {
-            throw new \SimpleAR\Exception('Logical operator "' . $o->logic . '" is not valid.');
-        }
-
-        // Set value.
-        // $mValue can be: an object, a scalar value or an array.
-        // If $mValue is an array, it can contain: objects, scalar values or 1-dimension array.
-
-        // Specific case: applying (array) on object would transform it, not wrap it.
-        if (is_object($mValue))
-        {
-            $this->value = $mValue->id;
-        }
-        else
-        {
-            $this->value = array();
-            // Extract IDs if objects are passed.
-            foreach ((array) $mValue as $mVal)
-            {
-                $this->value[] = is_object($mVal) ? $mVal->id : $mVal;
-            }
-
-            if (!isset($this->value[0]))
-            {
-                $this->value    = NULL;
-                $this->operator = $this->operator === '=' ? 'IS' : 'IS NOT';
-                //throw new Exception('Invalid condition value: ' . $mValue . '.');
-            }
-
-            // Several values, we have to *arrayfy* the operator.
-            if (isset($this->value[1]))
-            {
-                $this->operator = self::$_aOperators[$this->operator];
-            }
-            // Else, we do not need an array.
-            else
-            {
-                $this->value = $this->value[0];
-            }
-        }
+        $this->attributes[] = $attribute;
     }
 
     /**
-     * Generate a valid SQL string out of a Condition array.
+     * Check that a Condition can safely merged with another.
      *
-     * @param array $aArray         The Condition array.
-     * @param bool  $bUseAliases    Should we prefix columns with aliases? Default: true.
-     * @param bool  $bToColumn      Do condition's attribute have to be converted to column's names?Have
+     * @param Condition $c The Condition to check against.
      *
-     * @return string The SQL string.
+     * @return bool Returns true when $this condition can be merged with $c.
      */
-    public static function arrayToSql($aArray, $bUseAliases = true, $bToColumn = true)
+    public function canMergeWith(Condition $c)
     {
-        $sSql    = '';
-        $aValues = array();
+        return $this->relation === $c->relation
+                && get_class() === get_class($c);
+    }
 
-        $bFirst  = true;
-
-		foreach ($aArray as $aItem)
-		{
-            $sLogicalOperator = $aItem[0];
-            $mItem            = $aItem[1];
-
-            if ($bFirst)
+    public function merge(Condition $c)
+    {
+        if ($c instanceof SimpleAR\Query\Condition\ConditionGroup)
+        {
+            foreach ($c->_elements as $element)
             {
-                $bFirst = false;
-            }
-            else
-            {
-                $sSql .= ' ' . $sLogicalOperator . ' ';
-            }
-
-            if ($mItem instanceof Condition)
-            {
-                // Clearer.
-                $oCondition = $mItem;
-
-                if ($oCondition->virtual)
-                {
-                    if ($oCondition->subconditions)
-                    {
-                        list($s, $a) = self::arrayToSql($oCondition->subconditions, $bUseAliases, $bToColumn);
-
-                        $sSql   .= '(' . $s . ')';
-                        $aValues = array_merge($aValues, $a);
-                    }
-                }
-                else
-                {
-                    $sSql .= ' ' . $oCondition->toSql($bUseAliases, $bToColumn);
-                    $m     = $oCondition->flattenValues();
-
-                    // $m may be null and we don't want it because it is handled by a IS [NOT] NULL
-                    // condition.
-                    if ($m)
-                    {
-                        $aValues = array_merge($aValues, $m);
-                    }
-                }
-            }
-            // $mItem is an array of Conditions.
-            else
-            {
-                list($s, $a) = self::arrayToSql($mItem, $bUseAliases, $bToColumn);
-
-                $sSql   .= '(' . $s . ')';
-                $aValues = array_merge($aValues, $a);
+                $this->merge($element);
             }
         }
-
-        return array($sSql, $aValues);
+        else
+        {
+            foreach ($c->attributes as $a)
+            {
+                $this->addAttribute($a);
+            }
+        }
     }
 
     /**
@@ -233,45 +101,57 @@ abstract class Condition
      */
     public function flattenValues()
     {
-        if ($this->value === null) { return; }
+        $res = array();
 
-        if (is_array($this->value))
+        foreach ($this->attributes as $attribute)
         {
-            if (is_array($this->value[0]))
+            $value = $attribute->value;
+
+            if ($value === null)
             {
-                return call_user_func_array('array_merge', $this->value);
+                $res[] = null;
+            }
+
+            if (is_array($value))
+            {
+                if (is_array($value[0]))
+                {
+                    $res = array_merge($res, call_user_func_array('array_merge', $value));
+                }
+                else
+                {
+                    $res = array_merge($res, $value);
+                }
             }
             else
             {
-                return $this->value;
+                $res[] = $value;
             }
         }
-        else
-        {
-            return array($this->value);
-        }
+
+        return $res;
     }
 
     /**
      * Creates the left hand side of an SQL condition.
      *
-     * @param string|array  $mColumns    One or several columns the condition is made on.
-     * @param string|Table  $sTableAlias The table alias to use to prefix columns.
+     * @param string|array  $columns    One or several columns the condition is made on.
+     * @param string|Table  $tableAlias The table alias to use to prefix columns.
      *
      * @return string A valid left hand side SQL condition.
      */
-    public static function leftHandSide($mColumns, $sTableAlias = '')
+    public static function leftHandSide($columns, $tableAlias = '')
     {
         // Add dot to alias to prevent additional concatenations in foreach.
-        if ($sTableAlias !== '')
+        if ($tableAlias !== '')
         {
-            $sTableAlias .= '.';
+            $tableAlias = '`' . $tableAlias . '`.';
         }
 
         $a = array();
-        foreach ((array) $mColumns as $sColumn)
+        foreach ((array) $columns as $column)
         {
-            $a[] = $sTableAlias . $sColumn;
+            $a[] = $tableAlias . '`' . $column . '`';
         }
 
         // If several conditions, we have to wrap them with brackets in order to assure about
@@ -280,184 +160,54 @@ abstract class Condition
     }
 
     /**
-     * Creates the left hand side of an SQL condition.
+     * Creates the right hand side of an SQL condition.
      *
      * Condition is constructed with '?'. So values must be bind to query in some other place.
      * @see Condition::flattenValues()
      *
+     * @param mixed $value The value that will be bound to the condition. It
+     * can be an simple array, a two-dimensional array or a scalar.
+     *
      * @return string A valid right hand side SQL condition.
      */
-    public static function rightHandSide($mValue)
+    public static function rightHandSide($value)
     {
-        $iCount = count($mValue);
+        // First level count.
+        $firstLevelCount = count($value);
 
-        // $mValue is a multidimensional array. Actually, it is a array of
+        // $value is a multidimensional array. Actually, it is a array of
         // tuples.
-        if (is_array($mValue))
+        if (is_array($value))
         {
-            if (is_array($mValue[0]))
+            if (is_array($value[0]))
             {
                 // Tuple cardinal.
-                $iTupleSize = count($mValue[0]);
+                $tupleSize = count($value[0]);
                 
-                $sTuple = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
-                $sRes   = '(' . str_repeat($sTuple . ',', $iCount - 1) . $sTuple .  ')';
+                $tuple = '(' . str_repeat('?,', $tupleSize - 1) . '?)';
+                $res   = '(' . str_repeat($tuple . ',', $firstLevelCount - 1) . $tuple .  ')';
             }
             // Simple array.
             else
             {
-                $sRes = '(' . str_repeat('?,', $iCount - 1) . '?)';
+                $res = '(' . str_repeat('?,', $firstLevelCount - 1) . '?)';
             }
         }
         else
         {
-            $sRes = '?';
+            $res = '?';
         }
 
-        return $sRes;
+        return $res;
     }
-
-	/**
-     *
-	 * We accept two forms of conditions:
-	 * 1) Basic conditions:
-     *  ```php
-	 *      array(
-	 *          'my/attribute' => 'myValue',
-	 *          ...
-	 *      )
-     *  ```
-	 * 2) Conditions with operator:
-     *  ```php
-	 *      array(
-	 *          array('my/attribute', 'myOperator', 'myValue'),
-	 *          ...
-	 *      )
-     *  ```
-     *
-     * Of course, you can combine both form in a same condition array.
-     *
-     * By default, conditions are linked with a AND operator but you can use an
-     * OR by specifying it in condition array:
-     *  ```php
-	 *      array(
-	 *          'attr1' => 'val1',
-     *          'OR',
-     *          'attr2' => 'val2',
-     *          'attr3' => 'val3,
-	 *      )
-     *  ```
-     *
-     * This correspond to the following exhaustive array:
-     *  ```php
-	 *      array(
-	 *          'attr1' => 'val1',
-     *          'OR',
-     *          'attr2' => 'val2',
-     *          'AND',
-     *          'attr3' => 'val3,
-	 *      )
-     *  ```
-	 *
-     * You can nest condition arrays. Example:
-     *  ```php
-	 *      array(
-	 *          array(
-	 *              'attr1' => 'val1',
-     *              'attr2' => 'val2',
-	 *          )
-     *          'OR',
-	 *          array(
-     *              'attr3' => 'val3,
-     *              'attr1' => 'val4,
-	 *          )
-	 *      )
-     *  ```
-     *
-     * So we come with this condition array syntax tree:
-     *  ```php
-     *  condition_array:
-     *      array(
-     *          [condition | condition_array | (OR | AND)] *
-     *      );
-     *
-     *  condition:
-     *      [
-     *          'attribute' => 'value'
-     *          |
-     *          array('attribute', 'operator', 'value')
-     *      ]
-     *  attribute: <string>
-     *  operator: <string>
-     *  value: <mixed>
-     *  ```
-     *
-	 * Operators: =, !=, IN, NOT IN, >, <, <=, >=.
-     *
-     * @param array $aArray The condition array to parse.
-     *
-     * @return array A well formatted condition array.
-	 */
-    /*
-    public static function parseConditionArray($aArray)
-    {
-        $aRes = array();
-
-        $sLogicalOperator = 'AND';
-
-        foreach ($aArray as $mKey => $mValue)
-        {
-            // It is bound to be a condition.
-            // 'myAttribute' => 'myValue'
-            if (is_string($mKey))
-            {
-                $aRes[] = array($sLogicalOperator, new Condition($mKey, null, $mValue));
-                // Reset operator.
-                $sLogicalOperator = 'AND';
-            }
-            // It can be a condition, a condition group, or a logical operator.
-            else
-            {
-                // It is a logical operator.
-                if ($mValue === 'OR' || $mValue === '||')
-                {
-                    $sLogicalOperator = 'OR';
-                }
-                elseif ($mValue === 'AND' || $mValue === '&&')
-                {
-                    $sLogicalOperator = 'AND';
-                }
-                // Condition or condition group.
-                else
-                {
-                    // Condition.
-                    if (isset($mValue[0]) && is_string($mValue[0]))
-                    {
-                        $aRes[] = array($sLogicalOperator, new Condition($mValue[0], $mValue[1], $mValue[2]));
-                    }
-                    // Condition group.
-                    else
-                    {
-                        $aRes[] = array($sLogicalOperator, self::parseConditionArray($mValue));
-                    }
-
-                    // Reset operator.
-                    $sLogicalOperator = 'AND';
-                }
-            }
-        }
-
-        return $aRes;
-    }
-    */
 
     /**
      * This function transforms the Condition object into SQL.
      *
-     * @param bool $bUseAliases Should table aliases be used?
-     * @param bool $bToColumn   Should attributes be transformed to columns?
+     * @param bool $useAliases Should table aliases be used?
+     * @param bool $toColumn   Should attributes be transformed to columns?
      *
      * @retutn string A valid SQL condition string.
      */
-    public abstract function toSql($bUseAliases = true, $bToColumn = true);
+    public abstract function toSql($useAliases = true, $toColumn = true);
 }
