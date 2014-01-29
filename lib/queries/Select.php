@@ -107,7 +107,7 @@ class Select extends Where
             if ($res)
             {
                 // Merge related models.
-                $res = \SimpleAR\array_merge_recursive_distinct($res, $parse_row);
+                $res = \array_merge_recursive_distinct($res, $parse_row);
             }
             else
             {

@@ -53,7 +53,8 @@ require 'lib/exceptions/DuplicateKeyException.php';
 require 'lib/exceptions/RecordNotFoundException.php';
 require 'lib/exceptions/ReadOnlyException.php';
 require 'lib/exceptions/MalformedOptionException.php';
-require 'lib/Tools.php';
+
+require 'tools/array_merge_recursive_distinct.php';
 
 /**
  * This function initializes the library.
