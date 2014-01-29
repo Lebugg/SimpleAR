@@ -387,14 +387,14 @@ abstract class Model
      * `Model::$_defaultValues`.
      *
      * @param array $attributes Array of attributes to fill the new instance
-     * with. The `Model::_hydrate()` method will be used for this.
+     * with. The `Model::modify()` method will be used for this.
      *
      * @param array $options. An array option to extra configure the new
      * instance. It can contain following entries:
      *
      *  * "filter": An optional filter to apply to the model.
      *
-     * @see SimpleAR\Model::_hydrate()
+     * @see SimpleAR\Model::modify()
      * @see SimpleAR\Model::_setDefaultValues()
      */
     public function __construct($attributes = array(), $options = array())
@@ -404,12 +404,12 @@ abstract class Model
             $this->filter($options['filter']);
         }
 
+        $this->_setDefaultValues();
+
 		if ($attributes)
 		{
 			$this->modify($attributes);
 		}
-
-        $this->_setDefaultValues();
     }
 
     /**
@@ -998,7 +998,10 @@ abstract class Model
 
     public function modify($attributes)
     {
-        $this->_hydrate($attributes);
+        foreach ($attributes as $key => $value)
+        {
+            $this->$key = $value;
+        }
 
         return $this;
     }
@@ -1095,7 +1098,7 @@ abstract class Model
      */
     public function save()
     {
-        if ($this->_bIsDirty)
+        if ($this->_isDirty)
         {
             if ($this->_id === null)
             {
@@ -1106,7 +1109,7 @@ abstract class Model
                 $this->_update();
             }
 
-            $this->_bIsDirty = false;
+            $this->_isDirty = false;
         }
 
         return $this;
@@ -1189,23 +1192,36 @@ abstract class Model
 		}
     }
 
-    protected function _attr($attributeName)
+    /**
+     * Direct Getter/Setter.
+     *
+     * Directly get or set a value of an attribute without using any magic.
+     *
+     * @param string $name The attribute name.
+     *
+     * There is no second optional argument in order to allow function caller to
+     * set a NULL value because in that case we could not know if user wants to
+     * get a value or set it. So, the function uses func_num_args() to know what
+     * action to process.
+     *
+     * @return void|mixed
+     */
+    protected function _attr($name)
     {
         if (func_num_args() === 1)
         {
-            return $this->_attributes[$attributeName];
+            return $this->_attributes[$name];
         }
         else
         {
             $newValue = func_get_arg(1);
-            $oldValue = isset($this->_attributes[$attributeName]) ? $this->_attributes[$attributeName] : null;
+            $oldValue = isset($this->_attributes[$name]) ? $this->_attributes[$name] : null;
 
             if ($newValue !== $oldValue)
             {
-                $this->_attributes[$attributeName] = $newValue;
-                $this->_bIsDirty = true;
+                $this->_attributes[$name] = $newValue;
+                $this->_isDirty = true;
             }
-
         }
     }
 
@@ -1367,23 +1383,22 @@ abstract class Model
         }
     }
 
-    private function _hydrate($attributes, $useSetter = true)
+    /**
+     * Hydrate the object.
+     *
+     * Does not call any setter.
+     * Does not set _isDirty flag to true.
+     *
+     * @param array $attributes Associative array containing the attributes to
+     * set.
+     *
+     * @return void.
+     */
+    private function _hydrate($attributes)
     {
-        // The following does not call setters if any.
-		//$this->_attributes = $attributes + $this->_attributes;
-
-        // This is not as efficient as above, but it is more consistent with what we want because it
-        // will call setters.
         foreach ($attributes as $key => $value)
         {
-            if ($useSetter)
-            {
-                $this->$key = $value;
-            }
-            else
-            {
-                $this->_attr($key, $value);
-            }
+            $this->_attributes[$key] = $value;
         }
     }
 
@@ -1664,6 +1679,7 @@ abstract class Model
         }
 
         $this->_onAfterLoad();
+        $this->_isDirty = false;
 
         return $this;
     }
@@ -1778,12 +1794,16 @@ abstract class Model
         return $res;
     }
 
+    /**
+     * Set default attribute values defined in $_defaultValues.
+     *
+     * @see Model::_hydrate()
+     *
+     * return void
+     */
     private function _setDefaultValues()
     {
-        foreach (static::$_defaultValues as $key => $value)
-		{
-            $this->_attributes[$key] = $value;
-        }
+        $this->_hydrate(static::$_defaultValues);
     }
 
     /**
