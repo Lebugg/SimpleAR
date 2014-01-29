@@ -16,7 +16,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public function addTo($sRelation, $mLinkedModel)
+    public function addTo($relation, $linkedModel)
     {
         throw new ReadOnlyException('addTo');
     }
@@ -26,7 +26,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public static function create($aAttributes)
+    public static function create($attributes)
     {
         throw new ReadOnlyException('create');
     }
@@ -36,7 +36,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public function delete($sRelationName = null)
+    public function delete($relationName = null)
     {
         throw new ReadOnlyException('delete');
     }
@@ -46,7 +46,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public static function remove($aConditions = array())
+    public static function remove($conditions = array())
     {
         throw new ReadOnlyException('remove');
     }
@@ -56,7 +56,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public function removeFrom($sRelation, $mLinkedModel)
+    public function removeFrom($relation, $linkedModel)
     {
         throw new ReadOnlyException('removeFrom');
     }

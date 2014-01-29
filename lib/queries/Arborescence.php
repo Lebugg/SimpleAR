@@ -21,7 +21,7 @@ class Arborescence
     const JOIN_RIGHT = 21;
     const JOIN_OUTER = 10;
 
-    private static $_aJoinTypes = array(
+    private static $_joinTypes = array(
         self::JOIN_INNER => 'INNER',
         self::JOIN_LEFT  => 'LEFT',
         self::JOIN_RIGHT => 'RIGHT',
@@ -49,7 +49,7 @@ class Arborescence
         $this->children  = array();
 
         // Initiliaze join type "int to string" translation array.
-        /* $this->_aJoinTypes = array( */
+        /* $this->__joinTypes = array( */
         /*     self::JOIN_INNER => 'INNER', */
         /*     self::JOIN_LEFT  => 'LEFT', */
         /*     self::JOIN_RIGHT => 'RIGHT', */
@@ -60,16 +60,16 @@ class Arborescence
     /**
      * Add a relation array into the join arborescence of the query.
      *
-     * @param array $aRelationNames Array containing relations ordered by depth to add to join
+     * @param array $relatio_names Array containing relations ordered by depth to add to join
      * arborescence.
      * @param int $joinType The type of join to use to join this relation. Default: inner join.
-     * @param bool $bForceJoin Does relation *must* be joined?
+     * @param bool $forceJoin Does relation *must* be joined?
      *
      * To be used as:
      *  ```php
-     *  $a = $this->_addToArborescence(...);
-     *  $aArborescence = &$a[0];
-     *  $oRelation     = $a[1];
+     *  $a = $this->_ad_t_arborescence(...);
+     *  $arborescence = &$a[0];
+     *  $relation     = $a[1];
      *  ```
      * @return array
      */
@@ -83,8 +83,8 @@ class Arborescence
         // NOTE: "n" prefix in variable names means stands for "node", that is
         // an Arborescence instance.
 
-        $nCurrent         = $this;
-        $nPrevious = null;
+        $current         = $this;
+        $previous = null;
         // "cm" stands for Current Model.
         $cm = $this->model;
 
@@ -96,34 +96,34 @@ class Arborescence
         // equals $i + 1. That means that first relation will have a depth of 1.
         foreach ($relations as $i => $relation)
         {
-            $nPrevious = $nCurrent;
+            $previous = $current;
             // $relation is now a Relationship object.
             $relation = $cm::relation($relation);
             $cm       = $relation->lm->class;
 
             // Add a new node if needed.
-            if (! $nCurrent->hasChild($relation))
+            if (! $current->hasChild($relation))
             {
                 // @see Arborescence::__construct().
-                $nNew = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $nCurrent, $forceJoin);
-                $nCurrent->addChild($nNew);
+                $new = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $current, $forceJoin);
+                $current->addChild($new);
 
                 // Go forward.
-                $nCurrent = $nNew;
+                $current = $new;
             }
             // Already present? We may have to change some values.
             else
             {
-                $nCurrent = $nCurrent->getChild($relation);
-                $nCurrent->updateJoinType($joinType);
+                $current = $current->getChild($relation);
+                $current->updateJoinType($joinType);
             }
 
             // Force join on last node if required.
-            $nCurrent->forceJoin = $forceJoin || $nCurrent->forceJoin;
+            $current->forceJoin = $forceJoin || $current->forceJoin;
         }
 
         // Return arborescence leaf.
-        return $nCurrent;
+        return $current;
     }
 
 	public function process($joinedTables = array())
@@ -136,9 +136,9 @@ class Arborescence
             $joinedTables[$this->depth] = array();
         }
 
-		foreach ($this->children as $relation => $nNext)
+		foreach ($this->children as $relation => $next)
 		{
-			$relation  = $nNext->relation;
+			$relation  = $next->relation;
             $tableName = $relation->lm->table;
 
             // We *have to* to join table if not already joined *and* it is not
@@ -146,9 +146,9 @@ class Arborescence
             //
             // "force" bypasses the last relation condition. True typically when
             // we have to join this table for a "with" option.
-            if (! in_array($tableName, $joinedTables[$this->depth]) && ($nNext->children || $nNext->forceJoin) )
+            if (! in_array($tableName, $joinedTables[$this->depth]) && ($next->children || $next->forceJoin) )
             {
-                $res .= $relation->joinLinkedModel($nNext->depth, self::$_aJoinTypes[$nNext->joinType]);
+                $res .= $relation->joinLinkedModel($next->depth, self::$_joinTypes[$next->joinType]);
 
                 // Add it to joined tables array.
                 $joinedTables[$this->depth][] = $tableName;
@@ -157,13 +157,13 @@ class Arborescence
             // We have stuff to do with conditions:
             // 1. Join the relation as last if not already joined (to be able to apply potential
             // conditions).
-            if ($nNext->conditions)
+            if ($next->conditions)
             {
                 // If not already joined, do it as last relation.
                 if (! in_array($tableName, $joinedTables[$this->depth]))
                 {
                     // $s is false if joining table was not necessary.
-                    if ($s = $relation->joinAsLast($nNext->conditions, $nNext->depth, self::$_aJoinTypes[$nNext->joinType]));
+                    if ($s = $relation->joinAsLast($next->conditions, $next->depth, self::$_joinTypes[$next->joinType]));
                     {
                         $res .= $s;
 
@@ -174,9 +174,9 @@ class Arborescence
             }
 
             // Go through arborescence.
-            if ($nNext->children)
+            if ($next->children)
             {
-				$res .= $nNext->process($joinedTables);
+				$res .= $next->process($joinedTables);
             }
 
 		}

@@ -23,14 +23,14 @@ class Delete extends \SimpleAR\Query\Where
     protected function _compile()
     {
 		$this->_sql = $this->_context->useAlias
-            ? 'DELETE ' . $this->_context->rootTableAlias . ' FROM ' .  $this->_context->rootTableName . ' AS ' .  $this->_context->rootTableAlias
-            : 'DELETE FROM ' . $this->_context->rootTableName
+            ? 'DELETE `' . $this->_context->rootTableAlias . '` FROM `' .  $this->_context->rootTableName . '` AS `' .  $this->_context->rootTableAlias . '`'
+            : 'DELETE FROM `' . $this->_context->rootTableName . '`'
             ;
 
-        $sJoin = $this->_join();
+        $join = $this->_join();
 
         // Equivalent FROM clause for DELETE queries.
-        $this->_sql .= $sJoin ? ' USING ' . $sJoin : '';
+        $this->_sql .= $join ? ' USING ' . $join : '';
         $this->_sql .= $this->_where();
 	}
 }

@@ -42,21 +42,21 @@ class Has extends Conditions
         $attribute = self::_parseAttribute($attribute, true);
 
         $node = $arborescence->add($attribute->relations);
-        $cHas = new ExistsCondition($attribute->attribute, null, null);
+        $has = new ExistsCondition($attribute->attribute, null, null);
 
-        $cHas->depth    = $node->depth;
-        $cHas->exists   = $attribute->specialChar !== self::SYMBOL_NOT;
-        $cHas->relation = $node->relation;
+        $has->depth    = $node->depth;
+        $has->exists   = $attribute->specialChar !== self::SYMBOL_NOT;
+        $has->relation = $node->relation;
 
-        $node->addCondition($cHas);
+        $node->addCondition($has);
 
         if ($conditions)
         {
             $node->parent = null;
-            $cHas->subconditions = $this->_parse($conditions, $node);
+            $has->subconditions = $this->_parse($conditions, $node);
         }
 
-        return $cHas;
+        return $has;
     }
 
 

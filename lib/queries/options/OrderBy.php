@@ -35,11 +35,11 @@ class OrderBy extends Option
 	{
         // Merge order by arrays.
         //
-        // _context->rootTable->orderBy corresponds to static::$_aOrderBy.
+        // _context->rootTable->orderBy corresponds to static::$_orderBy.
         // @see Model::wakeup()
         //
-        // If there are common keys between static::$_aOrder and $aOrder,
-        // entries of static::$_aOrder will be overwritten.
+        // If there are common keys between static::$_order and $order,
+        // entries of static::$_order will be overwritten.
         $orderBy = array_merge($this->_context->rootTable->orderBy, (array) $this->_value);
 
         // Two array entry format possibilities:

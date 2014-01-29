@@ -103,6 +103,7 @@ abstract class Condition
     {
         $res = array();
 
+        var_dump($this->attributes);
         foreach ($this->attributes as $attribute)
         {
             $value = $attribute->value;
@@ -111,8 +112,7 @@ abstract class Condition
             {
                 $res[] = null;
             }
-
-            if (is_array($value))
+            elseif (is_array($value))
             {
                 if (is_array($value[0]))
                 {
@@ -129,6 +129,7 @@ abstract class Condition
             }
         }
 
+        var_dump($res);
         return $res;
     }
 

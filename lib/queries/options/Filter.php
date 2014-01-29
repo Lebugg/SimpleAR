@@ -13,15 +13,15 @@ class Filter extends Option
      * Then, it apply aliasing according to contextual values.
      *
      * Final columns to select (in a string form) are stored in
-     * Select::$_aSelects.
+     * Select::$_selects.
      *
-     * @param string $sFilter The filter to apply or null to not filter.
+     * @param string $filter The filter to apply or null to not filter.
      *
      * @return void
      *
      * @see Model::columnsToSelect()
      * @see Query::attributeAliasing()
-     * @see Query\Select::$_aSelects
+     * @see Query\Select::$_selects
      */
     public function build()
     {

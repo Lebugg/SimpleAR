@@ -35,13 +35,13 @@ namespace SimpleAR;
  */
 abstract class Relationship
 {
-    protected static $_oDb;
+    protected static $_db;
     protected static $_cfg;
 
     /**
      * The relation name.
      *
-     * It corresponds to the key in `Model::$_aRelations`.
+     * It corresponds to the key in `Model::$_relations`.
      *
      * @var string
      */
@@ -74,7 +74,7 @@ abstract class Relationship
      *  ```php
      *  class Zoo
      *  {
-     *      protected $_aRelations = array(
+     *      protected $_relations = array(
      *          'birds' => array(
      *              'type'  => 'has_many',
      *              'model' => 'Animal',
@@ -101,7 +101,7 @@ abstract class Relationship
      *  ```php
      *  class School
      *  {
-     *      protected $_aRelations = array(
+     *      protected $_relations = array(
      *          'students' => array(
      *              'type'  => 'has_many',
      *              'model' => 'Student',
@@ -128,7 +128,7 @@ abstract class Relationship
      *  // Person with information retrieved by NSA.
      *  class NSA_Person
      *  {
-     *      protected $_aFilters = array(
+     *      protected $_filters = array(
      *          'restricted' => array(
      *              'age',
      *              'firstName',
@@ -139,7 +139,7 @@ abstract class Relationship
      *
      *  class Company
      *  {
-     *      protected $_aRelations = array(
+     *      protected $_relations = array(
      *          'workers' => array(
      *              'type'  => 'has_many',
      *              'model' => 'NSA_Person',
@@ -177,7 +177,7 @@ abstract class Relationship
      *  ```php
      *  class Monkey
      *  {
-     *      protected $_aRelations = array(
+     *      protected $_relations = array(
      *          // A monkey can have several children.
      *          'children' => array(
      *              'type'  => 'has_many',
@@ -205,7 +205,7 @@ abstract class Relationship
      *
      *  @var array
      */
-    private static $_aTypeToClass = array(
+    private static $_typeToClass = array(
         'belongs_to' => 'BelongsTo',
         'has_one'    => 'HasOne',
         'has_many'   => 'HasMany',
@@ -228,19 +228,19 @@ abstract class Relationship
      *
      * @var string
      */
-    protected static $_sForeignKeySuffix;
+    protected static $_foreignKeySuffix;
 
     /**
      * Constructor.
      *
      * @param array  $a         The relation definition array define in the current model.
-     * @param string $sCMClass  The Current Model (CM). This is the Model that defines the relation.
+     * @param string $cMClass  The Current Model (CM). This is the Model that defines the relation.
      */
-    protected function __construct($a, $sCMClass)
+    protected function __construct($a, $cMClass)
     {
         $this->cm = new \StdClass();
-        $this->cm->class     = $sCMClass;
-        $this->cm->t         = $sCMClass::table();
+        $this->cm->class     = $cMClass;
+        $this->cm->t         = $cMClass::table();
         $this->cm->table     = $this->cm->t->name;
         $this->cm->alias     = $this->cm->t->alias;
 
@@ -257,29 +257,29 @@ abstract class Relationship
 		if (isset($a['order']))				{ $this->order           = $a['order']; }
     }
 
-    public function deleteLinkedModel($mValue)
+    public function deleteLinkedModel($value)
     {
-        $oQuery = Query::delete(array($this->lm->attribute => $mValue), $this->lm->class);
-        $oQuery->run();
+        $query = Query::delete(array($this->lm->attribute => $value), $this->lm->class);
+        $query->run();
     }
 
-    public static function forge($sName, $a, $sCMClass)
+    public static function forge($name, $a, $cMClass)
     {
-        $s = 'SimpleAR\\' . self::$_aTypeToClass[$a['type']];
+        $s = 'SimpleAR\\' . self::$_typeToClass[$a['type']];
 
-        $o = new $s($a, $sCMClass);
-        $o->name = $sName;
+        $o = new $s($a, $cMClass);
+        $o->name = $name;
 
         return $o;
     }
 
-    public static function init($oConfig, $oDatabase)
+    public static function init($config, $database)
     {
-        self::$_modelClassSuffix = $oConfig->modelClassSuffix;
-        self::$_sForeignKeySuffix = $oConfig->foreignKeySuffix;
+        self::$_modelClassSuffix = $config->modelClassSuffix;
+        self::$_foreignKeySuffix = $config->foreignKeySuffix;
 
-        self::$_oDb  = $oDatabase;
-        self::$_cfg = $oConfig;
+        self::$_db  = $database;
+        self::$_cfg = $config;
     }
 
     public function joinLinkedModel($depth, $joinType)
@@ -298,9 +298,9 @@ abstract class Relationship
 
 class BelongsTo extends Relationship
 {
-    protected function __construct($a, $sCMClass)
+    protected function __construct($a, $cMClass)
     {
-        parent::__construct($a, $sCMClass);
+        parent::__construct($a, $cMClass);
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
@@ -331,9 +331,9 @@ class BelongsTo extends Relationship
 
 class HasOne extends Relationship
 {
-    protected function __construct($a, $sCMClass)
+    protected function __construct($a, $cMClass)
     {
-        parent::__construct($a, $sCMClass);
+        parent::__construct($a, $cMClass);
 
         $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -350,9 +350,9 @@ class HasOne extends Relationship
 
 class HasMany extends Relationship
 {
-    protected function __construct($a, $sCMClass)
+    protected function __construct($a, $cMClass)
     {
-        parent::__construct($a, $sCMClass);
+        parent::__construct($a, $cMClass);
         
         $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -385,9 +385,9 @@ class ManyMany extends Relationship
 {
     public $jm;
 
-    protected function __construct($a, $sCMClass)
+    protected function __construct($a, $cMClass)
     {
-        parent::__construct($a, $sCMClass);
+        parent::__construct($a, $cMClass);
 
         $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -418,27 +418,27 @@ class ManyMany extends Relationship
         $this->jm->alias = '_' . strtolower($this->jm->table);
     }
 
-    public function deleteJoinModel($mValue)
+    public function deleteJoinModel($value)
     {
-        $oQuery = Query::delete(array($this->jm->from => $mValue), $this->jm->table);
-        $oQuery->run();
+        $query = Query::delete(array($this->jm->from => $value), $this->jm->table);
+        $query->run();
     }
 
-    public function deleteLinkedModel($mValue)
+    public function deleteLinkedModel($value)
     {
-        $sLHS = Condition::leftHandSide($this->lm->pk, 'a');
-        $sRHS = Condition::leftHandSide($this->jm->to, 'b');
-        $sCondition = $sLHS . ' = ' . $sRHS;
+        $lHS = Condition::leftHandSide($this->lm->pk, 'a');
+        $rHS = Condition::leftHandSide($this->jm->to, 'b');
+        $condition = $lHS . ' = ' . $rHS;
 
-        $sQuery =  "DELETE FROM {$this->lm->table} a
+        $query =  "DELETE FROM {$this->lm->table} a
                     WHERE EXISTS (
                         SELECT NULL
                         FROM {$this->jm->table} b
                         WHERE b." . implode(' = ? AND b.', $this->jm->from) ." = ?
-                        AND $sCondition
+                        AND $condition
                     )";
 
-        self::$_oDb->query($sQuery, $mValue);
+        self::$_db->query($query, $value);
     }
 
     public function joinLinkedModel($depth, $joinType)
@@ -448,10 +448,10 @@ class ManyMany extends Relationship
 
     public function joinAsLast($conditions, $depth, $joinType)
     {
-        $sRes = '';
+        $res = '';
 
        // We always want to join the middle table.
-        $sRes .= $this->_joinJM($depth, $joinType);
+        $res .= $this->_joinJM($depth, $joinType);
 
 		foreach ($conditions as $condition)
 		{
@@ -460,13 +460,13 @@ class ManyMany extends Relationship
                 // And, under certain conditions, the linked table.
                 if ($a->logic !== 'or' || $a->name !== 'id')
                 {
-                    $sRes .= $this->_joinLM($depth, $joinType);
+                    $res .= $this->_joinLM($depth, $joinType);
                     break;
                 }
             }
 		}
 
-        return $sRes;
+        return $res;
     }
 
 	public function reverse()

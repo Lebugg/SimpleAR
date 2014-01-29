@@ -14,9 +14,9 @@ namespace SimpleAR;
  *  try {
  *      /// Stuff with PDO (i.e. execute a query).
  *  }
- *  catch (\PDOException $oEx)
+ *  catch (\PDOException $ex)
  *  {
- *      throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
+ *      throw new DatabaseException($ex->getMessage(), $query, $ex);
  *  }
  *  ```
  */
@@ -27,21 +27,21 @@ class DatabaseException extends Exception
      *
      * Parameters meaning is a bit different than classic Exception class.
      *
-     * @param string $sMessage See \Exception::__construct().
-     * @param string $sQuery   The SQL query that caused error. It will be concat to exception
+     * @param string $message See \Exception::__construct().
+     * @param string $query   The SQL query that caused error. It will be concat to exception
      * message.
-     * @param string $oPrevious See \Exception::__construct().
+     * @param string $previous See \Exception::__construct().
      */
-    public function __construct($sMessage, $sQuery, \Exception $oPrevious = null)
+    public function __construct($message, $query, \Exception $previous = null)
 	{
 		$s  = 'A database error occured' . PHP_EOL;
-		$s .= 'Error: ' . $sMessage . PHP_EOL;
+		$s .= 'Error: ' . $message . PHP_EOL;
 
-		if ($sQuery)
+		if ($query)
 		{
-			$s .= 'SQL query: ' . $sQuery . PHP_EOL;
+			$s .= 'SQL query: ' . $query . PHP_EOL;
 		}
 
-        parent::__construct($s, 0, $oPrevious);
+        parent::__construct($s, 0, $previous);
 	}
 }

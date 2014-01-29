@@ -14,14 +14,14 @@ class Table
 	public $alias;
     public $isSimplePrimaryKey;
 
-    public function __construct($sName, $mPrimaryKey, $aColumns)
+    public function __construct($name, $primaryKey, $columns)
     {
-        $this->name       = $sName;
-        $this->primaryKey = $mPrimaryKey;
-        $this->columns    = $aColumns;
+        $this->name       = $name;
+        $this->primaryKey = $primaryKey;
+        $this->columns    = $columns;
 
         /**
-         * Allows $_aColumns declaration like:
+         * Allows $_columns declaration like:
          * array(
          *      'attrName'  => 'colName',
          *      'attr2Name' => 'col2Name',
@@ -32,17 +32,17 @@ class Table
          * This way, attribute to column translation is super easy and
          * practical.
          */
-        foreach ($aColumns as $mKey => $sValue)
+        foreach ($columns as $key => $value)
         {
-            if (is_int($mKey))
+            if (is_int($key))
             {
-                $this->columns[$sValue] = $sValue;
-                unset($this->columns[$mKey]);
+                $this->columns[$value] = $value;
+                unset($this->columns[$key]);
             }
         }
 
-		$this->alias		      = '_' . strtolower($sName);
-        $this->isSimplePrimaryKey = is_string($mPrimaryKey);
+		$this->alias		      = '_' . strtolower($name);
+        $this->isSimplePrimaryKey = is_string($primaryKey);
 
         $this->primaryKeyColumns  = $this->isSimplePrimaryKey ? $this->primaryKey : $this->columnRealName($this->primaryKey);
     }
@@ -50,31 +50,31 @@ class Table
     /**
      * Gives a column name according to its key that is a class member name.
      *
-     * @param string|array $mKey The key of $_aColumns. If $mKey is equal to "id", it
+     * @param string|array $key The key of $_columns. If $key is equal to "id", it
      * will return the model primary key.
      *
      * @return string|array The DB field name.
      */
-    public function columnRealName($mKey)
+    public function columnRealName($key)
     {
-        if (! $mKey) { return $mKey; }
+        if (! $key) { return $key; }
 
-        $aRes = array();
-        foreach ((array) $mKey as $sKey)
+        $res = array();
+        foreach ((array) $key as $key)
         {
-            if (! isset($this->columns[$sKey]) && $sKey !== 'id')
+            if (! isset($this->columns[$key]) && $key !== 'id')
             {
-                throw new Exception('Attribute “' . $sKey . '” does not exist for model “' .  $this->modelBaseName . '”.');
+                throw new Exception('Attribute “' . $key . '” does not exist for model “' .  $this->modelBaseName . '”.');
             }
 
-            $aRes[] = $sKey === 'id'
+            $res[] = $key === 'id'
                 ? $this->primaryKeyColumns
-                : $this->columns[$sKey]
+                : $this->columns[$key]
                 ;
         }
 
         // Return a string if only one element.
-        return isset($aRes[1]) ? $aRes : $aRes[0];
+        return isset($res[1]) ? $res : $res[0];
     }
 
     public function hasAttribute($s)

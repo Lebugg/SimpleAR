@@ -32,9 +32,9 @@ abstract class Where extends \SimpleAR\Query
         }
     }
     
-    protected function _initContext($sRoot)
+    protected function _initContext($root)
     {
-        parent::_initContext($sRoot);
+        parent::_initContext($root);
 
         $this->_context->arborescence = new Arborescence(
             $this->_context->rootModel,
@@ -75,7 +75,7 @@ abstract class Where extends \SimpleAR\Query
      *
      * @return string
      *
-     * @see Condition::arrayToSql()
+     * @see Condition::arra_toSql()
      */
     protected function _where()
     {
@@ -85,7 +85,7 @@ abstract class Where extends \SimpleAR\Query
             list($sql, $values) = $this->_conditions->toSql();
 
             // Add condition values. $values is a flatten array.
-            // @see Condition::flattenValues()
+            // @see Condition::flatte_values()
             $this->_values = array_merge($this->_values, $values);
 
             return $sql ? ' WHERE ' . $sql : '';

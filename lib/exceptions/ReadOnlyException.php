@@ -14,10 +14,10 @@ class ReadOnlyException extends Exception
     /**
      * Constructor.
      *
-     * @param string $sMethodName The method the user tried to use.
+     * @param string $methodName The method the user tried to use.
      */
-	public function __construct($sMethodName)
+	public function __construct($methodName)
 	{
-		parent::__construct('You cannot use "' . $sMethodName . '" method because your model extends ReadOnlyModel.');
+		parent::__construct('You cannot use "' . $methodName . '" method because your model extends ReadOnlyModel.');
 	}
 }

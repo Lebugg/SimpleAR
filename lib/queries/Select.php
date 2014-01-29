@@ -24,12 +24,12 @@ class Select extends Where
      * @var array
      */
 	private $_groupBys = array();
-	private $_orderBys = array();
+	private $_orde_bys = array();
     private $_havings  = array();
     private $_limit;
     private $_offset;
 
-    private $_aPendingRow = false;
+    private $_pendingRow = false;
 
     protected static $_options = array('conditions', 'filter', 'group_by',
             'has', 'limit', 'offset', 'order_by', 'with');
@@ -47,14 +47,14 @@ class Select extends Where
      */
     public function all()
     {
-        $aRes = array();
+        $res = array();
 
-        while ($aOne = $this->row())
+        while ($one = $this->row())
         {
-            $aRes[] = $aOne;
+            $res[] = $one;
         }
 
-        return $aRes;
+        return $res;
     }
 
     /**
@@ -64,82 +64,82 @@ class Select extends Where
      */
     public function row()
     {
-        $aRes = array();
+        $res = array();
 
-        $aReversedPK = $this->_context->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_context->rootTable->primaryKey);
-        $aResId      = null;
+        $reverse_pK = $this->_context->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_context->rootTable->primar_key);
+        $re_id      = null;
 
         // We want one resulting object. But we may have to process several lines in case that eager
         // load of related models have been made with has_many or many_many relations.
         while (
-               ($aRow = $this->_aPendingRow)                    !== false ||
-               ($aRow = $this->_oSth->fetch(\PDO::FETCH_ASSOC)) !== false
+               ($row = $this->_pendingRow)                    !== false ||
+               ($row = $this->_sth->fetch(\PDO::FETCH_ASSOC)) !== false
         ) {
 
-            if ($this->_aPendingRow)
+            if ($this->_pendingRow)
             {
                 // Prevent infinite loop.
-                $this->_aPendingRow = false;
+                $this->_pendingRow = false;
                 // Pending row is already parsed.
-                $aParsedRow = $aRow;
+                $parse_row = $row;
             }
             else
             {
-                $aParsedRow = $this->_parseRow($aRow);
+                $parse_row = $this->_parseRow($row);
             }
 
             // New main object, we are finished.
-            if ($aRes && $aResId !== array_intersect_key($aParsedRow, $aReversedPK)) // Compare IDs
+            if ($res && $re_id !== array_intersect_key($parse_row, $reverse_pK)) // Compare IDs
             {
-                $this->_aPendingRow = $aParsedRow;
+                $this->_pendingRow = $parse_row;
                 break;
             }
 
             // Same row but there is no linked model to fetch. Weird. Query must be not well
             // constructed. (Lack of GROUP BY).
-            if ($aRes && !isset($aParsedRow['_WITH_']))
+            if ($res && !isset($parse_row['_WITH_']))
             {
                 continue;
             }
 
             // Now, we have to combined new parsed row with our constructing result.
 
-            if ($aRes)
+            if ($res)
             {
                 // Merge related models.
-                $aRes = array_merge_recursive_distinct($aRes, $aParsedRow);
+                $res = array_merge_recursive_distinct($res, $parse_row);
             }
             else
             {
-                $aRes   = $aParsedRow;
+                $res   = $parse_row;
 
                 // Store result object ID for later use.
-                $aResId = array_intersect_key($aRes, $aReversedPK);
+                $re_id = array_intersect_key($res, $reverse_pK);
             }
         }
 
-        return $aRes;
+        return $res;
     }
 
-    protected function _build(array $aOptions)
+    protected function _build(array $options)
     {
         // If we don't set a filter entry, Select::filter() will never be
         // called.
-        if (! isset($aOptions['filter']))
+        if (! isset($options['filter']))
         {
-            $aOptions['filter'] = null;
+            $options['filter'] = null;
         }
 
         // We have to use result alias in order to distinguish root model from
         // its linked models. It will cost more operations to parse result.
         //
         // @see Select::_parseRow().
-        if (! empty($aOptions['with']))
+        if (! empty($options['with']))
         {
             $this->_context->useResultAlias = true;
         }
 
-        parent::_build($aOptions);
+        parent::_build($options);
     }
 
     protected function _compile()
@@ -155,7 +155,7 @@ class Select extends Where
 		$this->_sql .= $this->_where();
 		$this->_sql .= $this->_groupBys ? ' GROUP BY ' . implode(',',
         $this->_groupBys) : '';
-        $this->_sql .= $this->_orderBys ? ' ORDER BY ' . implode(',', $this->_orderBys) : '';
+        $this->_sql .= $this->_orde_bys ? ' ORDER BY ' . implode(',', $this->_orde_bys) : '';
         $this->_sql .= $this->_havings  ? ' HAVING '   . implode(',',
         $this->_havings)  : '';
         $this->_sql .= $this->_limit   ? ' LIMIT '    . $this->_limit                 : '';
@@ -205,7 +205,7 @@ class Select extends Where
 	{
         $res = $option->build();
 
-        $this->_orderBys = array_merge($this->_orderBys, $res['order_by']);
+        $this->_orde_bys = array_merge($this->_orde_bys, $res['order_by']);
         $this->_groupBys = array_merge($this->_groupBys, $res['group_by']);
         $this->_selects = array_merge($this->_selects, $res['selects']);
 	}
@@ -215,9 +215,9 @@ class Select extends Where
         $this->_selects = array_merge($this->_selects, $option->build());
     }
 
-    protected function _initContext($sRoot)
+    protected function _initContext($root)
     {
-        parent::_initContext($sRoot);
+        parent::_initContext($root);
 
         // False by default. It will be set true if we have to fetch
         // attributes from other tables. This is checked in

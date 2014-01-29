@@ -15,7 +15,7 @@ namespace SimpleAR;
  *
  * How to execute a query:
  *  ```php
- *  $oDb->query($sQuery, $aParams);
+ *  $db->query($query, $params);
  *  ```
  */
 class Database
@@ -26,7 +26,7 @@ class Database
      *
      * @var PDO
      */
-    private $_oPdo;
+    private $_pdo;
 
     /**
      * The current/last PDO Statement used.
@@ -35,21 +35,21 @@ class Database
      *
      * @var PDOStatement
      */
-    private $_oSth;
+    private $_sth;
 
     /**
      * Are we in debug mode?
      *
      * @var bool
      */
-    private $_bDebug;
+    private $_debug;
 
     /**
      * Database name.
      *
      * @var string
      */
-    private $_sDatabase;
+    private $_database;
 
     /**
      * Executed query array.
@@ -72,18 +72,18 @@ class Database
      *
      * You can retrieve this array with the following:
      *  ```php
-     *  $oDbInstance->queries();
+     *  $dbInstance->queries();
      *  ```
      *
      * @see Database::queries()
      * @var array
      */
-    private $_aQueries = array();
+    private $_queries = array();
 
     /**
      * Constructor.
      *
-     * @param Config $oConfig The configuration object. Database is instanciate by SimpleAR.php.
+     * @param Config $config The configuration object. Database is instanciate by SimpleAR.php.
      *
      * Used PDO configuration:
      *
@@ -92,26 +92,26 @@ class Database
      * @see SimpleAR.php
      * @see http://www.php.net/manual/en/pdo.construct.php
      */
-    public function __construct($oConfig)
+    public function __construct($config)
     {
-        $a    = $oConfig->dsn;
-        $sDsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
+        $a    = $config->dsn;
+        $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
-        $aOptions = array();
-        $aOptions[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
-        //$aOptions[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
+        $options = array();
+        $options[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
+        //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
 
         try
         {
-            $this->_oPdo = new \PDO($sDsn, $a['user'], $a['password'], $aOptions);
+            $this->_oPdo = new \PDO($dsn, $a['user'], $a['password'], $options);
         }
-        catch (\PDOException $oEx)
+        catch (\PDOException $ex)
 		{
-            throw new DatabaseException($oEx->getMessage(), null, $oEx);
+            throw new DatabaseException($ex->getMessage(), null, $ex);
         }
 
         $this->_sDatabase = $a['name'];
-        $this->_bDebug    = $oConfig->debug;
+        $this->_bDebug    = $config->debug;
     }
 
     /**
@@ -152,12 +152,12 @@ class Database
      * Actually, it prepares and executes the request in two steps. It provides
      * security against SQL injection.
      *
-     * @param string $sQuery  The SQL query.
-     * @param array  $aParams The query parameters.
+     * @param string $query  The SQL query.
+     * @param array  $params The query parameters.
      *
      * @return PDOStatement
      */
-    public function query($sQuery, $aParams = array())
+    public function query($query, $params = array())
     {
         if ($this->_bDebug)
         {
@@ -166,35 +166,35 @@ class Database
 
         try
         {
-            $oSth = $this->_oPdo->prepare($sQuery);
-            $oSth->execute((array) $aParams);
+            $sth = $this->_oPdo->prepare($query);
+            $sth->execute((array) $params);
 
             if ($this->_bDebug)
             {
-                $sQueryDebug  = $sQuery;
-                $aParamsDebug = $aParams;
+                $queryDebug  = $query;
+                $paramsDebug = $params;
 
-                //$s = str_replace(array_pad(array(), count($aParams), '?'), $aParams, $sQuery);
-                $sQueryDebug = preg_replace_callback( '/\?/', function( $match) use( &$aParamsDebug) {
-                    if (!is_array($aParamsDebug)) {
-                        $aParamsDebug = array($aParamsDebug);
+                //$s = str_replace(array_pad(array(), count($params), '?'), $params, $query);
+                $queryDebug = preg_replace_callback( '/\?/', function( $match) use( &$paramsDebug) {
+                    if (!is_array($paramsDebug)) {
+                        $paramsDebug = array($paramsDebug);
                     }
-                    return var_export(array_shift($aParamsDebug), true);
-                }, $sQueryDebug);
+                    return var_export(array_shift($paramsDebug), true);
+                }, $queryDebug);
 
                 $this->_aQueries[] = array(
-                    'sql'  => $sQueryDebug,
+                    'sql'  => $queryDebug,
                     'time' => (microtime(TRUE) - $time) * 1000,
                 );
             }
 
         }
-        catch (\PDOException $oEx)
+        catch (\PDOException $ex)
         {
-            throw new DatabaseException($oEx->getMessage(), $sQuery, $oEx);
+            throw new DatabaseException($ex->getMessage(), $query, $ex);
         }
 
-        return $oSth;
+        return $sth;
     }
 
     /**
@@ -212,7 +212,7 @@ class Database
      * Executed queries getter.
      *
      * @return array The executed queries.
-     * @see Database::$_aQueries for further information on how returned array is constructed.
+     * @see Database::$_queries for further information on how returned array is constructed.
      */
     public function queries()
     {

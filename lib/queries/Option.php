@@ -21,7 +21,7 @@ abstract class Option
     protected $_context;
     protected $_arborescence;
 
-    protected static $_optionToClass = array(
+    protected static $_optio_t_class = array(
         'conditions' => 'Conditions',
         'fields'     => 'Fields',
         'filter'     => 'Filter',
@@ -46,16 +46,16 @@ abstract class Option
 
     public abstract function build();
 
-    public static function forge($optionName, $value, $context, $arborescence = null)
+    public static function forge($optio_name, $value, $context, $arborescence = null)
     {
-        if (!isset(self::$_optionToClass[$optionName]))
+        if (!isset(self::$_optio_t_class[$optio_name]))
         {
-            throw new MalformedOptionException('Use of unknown option "' .  $optionName . '".');
+            throw new MalformedOptionException('Use of unknown option "' .  $optio_name . '".');
         }
 
-        $sClass = '\SimpleAR\Query\Option\\' .  self::$_optionToClass[$optionName];
+        $class = '\SimpleAR\Query\Option\\' .  self::$_optio_t_class[$optio_name];
 
-        return new $sClass($value, $context, $arborescence);
+        return new $class($value, $context, $arborescence);
     }
 
     /**
@@ -65,7 +65,7 @@ abstract class Option
      * @param bool   $relationOnly If true, it tells that the attribute string
      * must contain relation names only.
      *
-     * @return StdClass
+     * @return St_class
      *
      * Returned object format:
      *  - relations:    Array of relations contained in attribute;

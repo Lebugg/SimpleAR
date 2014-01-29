@@ -14,11 +14,11 @@ class RecordNotFoundException extends Exception
     /**
      * Constructor.
      *
-     * @param mixed $mId ID of Model instance that user tried to retrieve.
+     * @param mixed $id ID of Model instance that user tried to retrieve.
      */
-	public function __construct($mId)
+	public function __construct($id)
 	{
-        $sId = (is_string($mId) ? $mId : '(' .  implode(', ', $mId) . ')');
-		parent::__construct('Record not found with ID: "' . $sId . '".');
+        $id = (is_string($id) ? $id : '(' .  implode(', ', $id) . ')');
+		parent::__construct('Record not found with ID: "' . $id . '".');
 	}
 }

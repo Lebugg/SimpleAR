@@ -23,8 +23,8 @@ class Update extends \SimpleAR\Query\Where
     protected function _compile()
     {
 		$this->_sql = $this->_context->useAlias
-            ? 'UPDATE ' . $this->_context->rootTableName . ' ' .  $this->_context->rootTableAlias
-            : 'UPDATE ' . $this->_context->rootTableName
+            ? 'UPDATE `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
+            : 'UPDATE `' . $this->_context->rootTableName . '`'
             ;
 
         $this->_sql .= ' SET ' . implode(' = ?, ', (array) $this->_columns) . ' = ?';
@@ -41,8 +41,8 @@ class Update extends \SimpleAR\Query\Where
         $this->_columns = array_merge($this->_columns, $option->build());
     }
 
-    protected function _initContext($sRoot)
+    protected function _initContext($root)
     {
-        parent::_initContext($sRoot);
+        parent::_initContext($root);
     }
 }

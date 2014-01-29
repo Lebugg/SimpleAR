@@ -22,21 +22,21 @@ class DateTime extends \DateTime
      *
      * @var string Default: 'Y-m-d';
      */
-    private static $_sFormat = 'Y-m-d';
+    private static $_format = 'Y-m-d';
 
     /**
      * PHP magical __toString method.
      *
      * When the DateTime will be used as a string, this function will be magically fired and it will
-     * automatically format the DateTime to the format specified by `$_sFormat` property.
+     * automatically format the DateTime to the format specified by `$_format` property.
      *
      * @return string
      *
-     * @see DateTime::$_sFormat.
+     * @see DateTime::$_format.
      */
     public function __toString()
     {
-        return $this->format(self::$_sFormat);
+        return $this->format(self::$_format);
     }
 
     /**
@@ -46,6 +46,6 @@ class DateTime extends \DateTime
      */
     public static function setFormat($s)
     {
-        self::$_sFormat = $s;
+        self::$_format = $s;
     }
 }

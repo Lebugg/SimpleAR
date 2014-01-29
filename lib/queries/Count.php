@@ -15,7 +15,7 @@ class Count extends Select
 
     public function _compile()
     {
-        $sJoin = $this->_processArborescence();
+        $join = $this->_proces_arborescence();
 
 		$this->_sql  = 'SELECT COUNT(*)';
         $this->_sql .= $this->_context->useAlias
@@ -35,6 +35,6 @@ class Count extends Select
      */
     public function res()
     {
-        return $this->_oSth->fetch(\PDO::FETCH_COLUMN);
+        return $this->_sth->fetch(\PDO::FETCH_COLUMN);
     }
 }

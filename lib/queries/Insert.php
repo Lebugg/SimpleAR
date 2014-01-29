@@ -16,13 +16,13 @@ class Insert extends \SimpleAR\Query
     /**
      * Last inserted ID getter.
      *
-     * @see Database::lastInsertId()
+     * @see Database::las_inser_id()
      *
      * @return mixed
      */
-    public function insertId()
+    public function inser_id()
     {
-        return self::$_oDb->lastInsertId();
+        return self::$_db->lastInsertId();
     }
 
 	protected function _compile()
@@ -42,17 +42,17 @@ class Insert extends \SimpleAR\Query
             ;
 
         $this->_sql .= '(' . implode(',', (array) $this->_columns) . ') VALUES';
-        $iCount       = count($this->_values);
+        $count       = count($this->_values);
 
         // $this->_values is a multidimensional array. Actually, it is an array of
         // tuples.
         if (is_array($this->_values[0]))
         {
             // Tuple cardinal.
-            $iTupleSize = count($this->_values[0]);
+            $tupleSize = count($this->_values[0]);
             
-            $sTuple     = '(' . str_repeat('?,', $iTupleSize - 1) . '?)';
-            $this->_sql .= str_repeat($sTuple . ',', $iCount - 1) . $sTuple;
+            $tuple     = '(' . str_repeat('?,', $tupleSize - 1) . '?)';
+            $this->_sql .= str_repeat($tuple . ',', $count - 1) . $tuple;
 
             // We also need to flatten value array.
             $this->_values = call_user_func_array('array_merge', $this->_values);
@@ -60,7 +60,7 @@ class Insert extends \SimpleAR\Query
         // Simple array.
         else
         {
-            $this->_sql .= '(' . str_repeat('?,', $iCount - 1) . '?)';
+            $this->_sql .= '(' . str_repeat('?,', $count - 1) . '?)';
         }
 	}
 
@@ -74,9 +74,9 @@ class Insert extends \SimpleAR\Query
         $this->_columns = array_merge($this->_columns, $option->build());
     }
 
-    protected function _initContext($sRoot)
+    protected function _initContext($root)
     {
-        parent::_initContext($sRoot);
+        parent::_initContext($root);
 
         $this->_context->useAlias = false;
     }

@@ -18,26 +18,26 @@ namespace SimpleAR;
  *
  * ```php
  * // Set
- * $oConfig->charset = 'utf8';
+ * $config->charset = 'utf8';
  *
  * // Get
- * $sCharset = $oConfig->charset;
+ * $charset = $config->charset;
  * ```
  *
  * Config class implements `__get()` and `__set()` magic methods to get and set
  * options. This allows developper to add a specific setter for an option by
  * creating a function called by the *option* name.
  *
- * Example: for the "charset" option, you can write a `charset($sCharset)`
+ * Example: for the "charset" option, you can write a `charset($charset)`
  * function that will handle `Config::$_charset`
  * set:
  *
  * ```php
- * public function charset($sCharset)
+ * public function charset($charset)
  * {
- *     if (in_array($sCharset, array('utf8', 'latin1')))
+ *     if (in_array($charset, array('utf8', 'latin1')))
  *     {
- *         $this->_charset = $sCharset;
+ *         $this->_charset = $charset;
  *     }
  *     else
  *     {
@@ -68,7 +68,7 @@ class Config
      *
      * By default this function is set in the constructor. Here is its content:
      *  ```php
-     *  return strtolower($sModelBaseName) . $this->_foreignKeySuffix;
+     *  return strtolower($modelBaseName) . $this->_foreignKeySuffix;
      *  ```
      *
      * `$this` is the Config instance.
@@ -224,7 +224,7 @@ class Config
      *
      * Example:
      * ```php
-     * $oCfg->modelDirectory = 'my/model/directory/';
+     * $cfg->modelDirectory = 'my/model/directory/';
      * ```
      * Usually, you will only use one model directory source, but it may happen
      * that you need several ones. In that case, you can set a array containing
@@ -233,7 +233,7 @@ class Config
      *
      * Example:
      * ```php
-     * $oCfg->modelDirectory = array('my/model/directory/', 'my/other/path/');
+     * $cfg->modelDirectory = array('my/model/directory/', 'my/other/path/');
      * ```
      *
      * @note Every path needs to end by a trailing slash.
@@ -254,7 +254,7 @@ class Config
      *
      * Default value: 'id';
      *
-     * @see \SimpleAR\Model::$_mPrimaryKey for further information on primary
+     * @see \SimpleAR\Model::$_primaryKey for further information on primary
      * keys.
      */
     private $_primaryKey = 'id';
@@ -269,9 +269,9 @@ class Config
      */
     public function __construct()
     {
-        $sSuffix = $this->_foreignKeySuffix;
-        $this->_buildForeignKey = function($sModelBaseName) use ($sSuffix) {
-            return strtolower($sModelBaseName) . $sSuffix;
+        $suffix = $this->_foreignKeySuffix;
+        $this->_buildForeignKey = function($modelBaseName) use ($suffix) {
+            return strtolower($modelBaseName) . $suffix;
         };
     }
 
@@ -290,11 +290,11 @@ class Config
             return $this->{'_' . $s};
         }
 
-        $aTrace = debug_backtrace();
+        $trace = debug_backtrace();
         trigger_error(
             'Undefined property via __get(): ' . $s .
-            ' in ' . $aTrace[0]['file'] .
-            ' on line ' . $aTrace[0]['line'],
+            ' in ' . $trace[0]['file'] .
+            ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
 
         return null;
@@ -323,11 +323,11 @@ class Config
             return;
         }
 
-        $aTrace = debug_backtrace();
+        $trace = debug_backtrace();
         trigger_error(
             'Undefined property via __set(): ' . $s .
-            ' in ' . $aTrace[0]['file'] .
-            ' on line ' . $aTrace[0]['line'],
+            ' in ' . $trace[0]['file'] .
+            ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
 
         return null;
