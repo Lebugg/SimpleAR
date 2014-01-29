@@ -26,7 +26,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public static function create($attributes)
+    public static function create(array $attributes = null)
     {
         throw new ReadOnlyException('create');
     }
@@ -46,7 +46,7 @@ abstract class ReadOnlyModel extends Model
      *
      * @throws ReadOnlyException in any case.
      */
-    public static function remove($conditions = array())
+    public static function remove(array $conditions = array())
     {
         throw new ReadOnlyException('remove');
     }

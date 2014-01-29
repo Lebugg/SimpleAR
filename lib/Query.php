@@ -65,47 +65,10 @@ abstract class Query
     protected $_columns = array();
 
     /**
-     * Use Model properties to construct query?
+     * Available options for this query class.
      *
-     * Some query classes can be construct by directly giving table name and table column names. But
-     * using model offers more functionalities.
-     *
-     * @var bool Default true
+     * @var array
      */
-    /* protected $_useModel  = true; */
-
-    /**
-     * Use aliases in queries?
-     *
-     * @var bool Default true
-     */
-    //protected $_useAlias  = true;
-
-    /**
-     * Root model name.
-     *
-     * Only used when `$_useModel` is true.
-     *
-     * @var string
-     */
-	//protected $_rootModel;
-
-    /**
-     * Table object of root model.
-     *
-     * Only used when `$_useModel` is true.
-     *
-     * @var Table
-     */
-	//protected $_rootTable;
-
-    /**
-     * Root model table name.
-     *
-     * @var string
-     */
-	/* protected $_rootTable = ''; */
-
     protected static $_options = array();
 
     /**
@@ -132,14 +95,21 @@ abstract class Query
      */
     protected $_context;
 
+    /**
+     * Statement object of the last executed query.
+     *
+     * @var PDOStatement
+     */
     protected $_sth;
 
     /**
      * Constructor.
      *
+     * It just calls _initContext().
+     *
      * @param string $root The root model class name or the table name.
-     * If $root is a not a class name, `$_useModel` is set to `false` and $root is considered as
-     * a table name.
+     *
+     * @see SimpleAR\Query::_initContext()
      */
 	public function __construct($root)
 	{
@@ -198,7 +168,7 @@ abstract class Query
      *
      * @return array
      */
-    public static function columnAliasing($columns, $tableAlias = '', $resultAlias = '')
+    public static function columnAliasing(array $columns, $tableAlias = '', $resultAlias = '')
     {
         $res = array();
 
@@ -241,7 +211,7 @@ abstract class Query
      *
      * @return Query\Count
      */
-	public static function count($options, $root)
+	public static function count(array $options, $root)
 	{
         return self::_query('Count', $options, $root);
 	}
@@ -254,7 +224,7 @@ abstract class Query
      *
      * @return Query\Delete
      */
-	public static function delete($conditions, $root)
+	public static function delete(array $conditions, $root)
 	{
         // Delete query only needs a condition array, but we do not want to
         // redefine _build() for this.
@@ -263,7 +233,15 @@ abstract class Query
         return self::_query('Delete', $options, $root);
 	}
 
-    public static function init($database)
+    /**
+     * Initialize Query class.
+     *
+     * This function is called only once. It is called by SimpleAR's main file,
+     * SimpleAR.php
+     *
+     * It sets Database object.
+     */
+    public static function init(Database $database)
     {
         self::$_db = $database;
     }
@@ -276,7 +254,7 @@ abstract class Query
      *
      * @return Query\Insert
      */
-	public static function insert($options, $root)
+	public static function insert(array $options, $root)
 	{
         return self::_query('Insert', $options, $root);
 	}
@@ -298,12 +276,16 @@ abstract class Query
      *
      * @see http://www.php.net/manual/en/pdostatement.execute.php
      *
+     * For queries that are "critical", there must be a WHERE clause in the
+     * query string. Otherwise, an exception will be thrown.
+     *
      * @return $this
      */
     public function run()
     {
         $this->_compile();
 
+        // No WHERE condition for critical query? Do not process.
         if ($this->_context->isCriticalQuery)
         {
             if (strpos($this->_sql, ' WHERE ') === false)
@@ -312,6 +294,7 @@ abstract class Query
             }
         }
 
+        // At last, execute the query.
         $this->_sth = self::$_db->query($this->_sql, $this->_values);
 
         return $this;
@@ -325,7 +308,7 @@ abstract class Query
      *
      * @return Query\Select
      */
-	public static function select($options, $root)
+	public static function select(array $options, $root)
 	{
         return self::_query('Select', $options, $root);
 	}
@@ -338,7 +321,7 @@ abstract class Query
      *
      * @return Query\Update
      */
-	public static function update($options, $root)
+	public static function update(array $options, $root)
 	{
         return self::_query('Update', $options, $root);
 	}
@@ -346,9 +329,11 @@ abstract class Query
     /**
      * This function builds the query.
      *
+     * Actually, it 
+     *
      * @param array $options The option array.
      *
-     * @return void
+     * @return $this
      */
 	protected function _build(array $options)
     {
@@ -362,53 +347,88 @@ abstract class Query
                 $this->$fn($option);
             }
         }
+
+        return $this;
     }
 
+    /**
+     * This function compile all pieces of the query into a well-formated SQL
+     * string.
+     *
+     * In the same time, $_values has to contains every value in correct order
+     * so that run() can safely be called.
+     *
+     * @return void.
+     */
     protected abstract function _compile();
 
+    /**
+     * Initialize the query build context.
+     *
+     * The context will be used at almost every step of the query.
+     *
+     * @param string $root The name of the class that called the query or the
+     * name of the table on which to execute the query.
+     *
+     * @see SimpleAR\Query::$_context for more information on query build
+     * context.
+     *
+     * @return void
+     */
     protected function _initContext($root)
     {
-        $this->_context = new \StdClass();
+        $context = new \StdClass();
 
         // A Model class name is given.
 		if (class_exists($root))
 		{
+            // Oh, you made a mistake.
             if (! is_subclass_of($root, '\SimpleAR\Model'))
             {
                 throw new Exception('Given class "' . $root . '" is not a subclass of Model.');
             }
 
-            $this->_context->useModel = true;
-            $this->_context->useAlias = true;
+            $context->useModel = true;
+            $context->useAlias = true;
 
-            $this->_context->rootModel       = $root;
-            $this->_context->rootTable       = $t = $root::table();
-            $this->_context->rootTableName   = $t->name;
-            $this->_context->rootTableAlias  = $t->alias;
+            $context->rootModel       = $root;
+            $context->rootTable       = $t = $root::table();
+            $context->rootTableName   = $t->name;
+            $context->rootTableAlias  = $t->alias;
 		}
 
         // A table name is given.
 		else
 		{
             // We cannot use models if we only have a table name.
-            $this->_context->useModel = false;
-            $this->_context->useAlias = true;
+            $context->useModel = false;
+            $context->useAlias = true;
 
-            $this->_context->rootTableName   = $root;
-            $this->_context->rootTableAlias  = '_' . strtolower($root);
+            $context->rootTableName   = $root;
+            $context->rootTableAlias  = '_' . strtolower($root);
 		}
 
-        $this->_context->isCriticalQuery = self::$_isCriticalQuery;
+        // Careful!
+        $context->isCriticalQuery = self::$_isCriticalQuery;
+
+        $this->_context = $context;
 	}
 
-    private static function _query($queryClass, $options, $root)
+    /**
+     * Instanciate the actual query.
+     *
+     * @param string $class     A valid query class name.
+     * @param array  $options   The option array.
+     * @param string $root      The root Model or table name.
+     *
+     * @return Query
+     */
+    private static function _query($class, array $options, $root)
     {
-        $queryClass = "\SimpleAR\Query\\$queryClass";
-        $query      = new $queryClass($root);
+        $class = "\SimpleAR\Query\\$class";
+        $query = new $class($root);
 
-        $query->_build($options);
-
-        return $query;
+        return $query->_build($options);
     }
 
 }

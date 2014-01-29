@@ -139,7 +139,7 @@ class Select extends Where
             $this->_context->useResultAlias = true;
         }
 
-        parent::_build($options);
+        return parent::_build($options);
     }
 
     protected function _compile()

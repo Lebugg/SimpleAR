@@ -397,7 +397,7 @@ abstract class Model
      * @see SimpleAR\Model::modify()
      * @see SimpleAR\Model::_setDefaultValues()
      */
-    public function __construct($attributes = array(), $options = array())
+    public function __construct(array $attributes = null, array $options = null)
     {
         if (isset($options['filter']))
         {
@@ -626,7 +626,7 @@ abstract class Model
      *
      * @see SimpleAR\Model::find()
      */
-    public static function all($options = array())
+    public static function all(array $options = array())
     {
         return self::find('all', $options);
     }
@@ -643,7 +643,7 @@ abstract class Model
      *
      * return array
      */
-    public static function arrayToArray($array)
+    public static function arrayToArray(array $array)
     {
         foreach ($array as &$m)
         {
@@ -716,7 +716,7 @@ abstract class Model
      *
      * @see SimpleAR\Model::find()
      */
-    public static function count($options = array())
+    public static function count(array $options = array())
     {
         return self::find('count', $options);
     }
@@ -738,7 +738,7 @@ abstract class Model
      * @see SimpleAR\Model::__construct()
      * @see SimpleAR\Model::save()
      */
-    public static function create($attributes)
+    public static function create(array $attributes = null)
     {
         $o = new static($attributes);
         return $o->save();
@@ -881,7 +881,7 @@ abstract class Model
      *
      * @throws Exception When first parameter is invalid.
      */
-    public static function find($first, $options = array())
+    public static function find($first, array $options = array())
     {
         // Find by primary key. It can be an array when using compound primary 
         // keys.
@@ -940,7 +940,7 @@ abstract class Model
      *
      * @return mixed.
      */
-    public static function findByPK($id, $options = array())
+    public static function findByPK($id, array $options = array())
     {
         // Handles multiple primary keys, too.
         $options['conditions']['id'] = $id;
@@ -974,7 +974,7 @@ abstract class Model
      *
      * @see Model::find()
      */
-    public static function first($options = array())
+    public static function first(array $options = array())
     {
         return self::find('first', $options);
     }
@@ -984,7 +984,7 @@ abstract class Model
      *
      * @see Model::one()
      */
-    public static function one($options = array())
+    public static function one(array $options = array())
     {
         return self::first($options);
     }
@@ -997,7 +997,7 @@ abstract class Model
      *
      * @see Model::find()
      */
-    public static function last($options = array())
+    public static function last(array $options = array())
     {
         return self::find('last', $options);
     }
@@ -1063,7 +1063,7 @@ abstract class Model
      *
      * It sets Config and Database object.
      */
-    public static function init($config, $database)
+    public static function init(Config $config, Database $database)
     {
         self::$_config = $config;
         self::$_db     = $database;
@@ -1076,7 +1076,7 @@ abstract class Model
      *
      * @return void
      */
-    public function load($relation)
+    public function load(Relationship $relation)
     {
         $this->_loadLinkedModel($relation);
     }
@@ -1111,7 +1111,7 @@ abstract class Model
      * @return object A Relationship object.
      * @throw SimpleAR\Exception if used as getter and $relationName is unknown.
      */
-    public static function relation($name, $relation = null)
+    public static function relation($name, Relationship $relation = null)
     {
 		if ($relation === null)
 		{
@@ -1144,7 +1144,7 @@ abstract class Model
      * @param array $conditions A condition option array.
      * @return int Number of affected rows.
      */
-    public static function remove($conditions = array())
+    public static function remove(array $conditions = null)
     {
         return Query::delete($conditions, get_called_class())
                 ->run()
@@ -1597,7 +1597,7 @@ abstract class Model
      *
      * @return void.
      */
-    private function _hydrate($attributes)
+    private function _hydrate(array $attributes)
     {
         foreach ($attributes as $key => $value)
         {
@@ -1776,7 +1776,7 @@ abstract class Model
      * @see SimpleAR\Model::_onBeforeLoad()
      * @see SimpleAR\Model::_onAfterLoad()
      */
-    private function _load($row)
+    private function _load(array $row)
     {
         // Need to prepare?
         $this->_onBeforeLoad();
