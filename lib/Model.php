@@ -586,29 +586,32 @@ abstract class Model
      *
      * @return void.
      */
-    public function addTo($relation, $linkedModel)
+    public function addTo($relation, $what)
     {
         $relation = static::relation($relation);
 
-        if ($relation instanceof ManyMany)
+        if (! $relation instanceof ManyMany)
         {
-            if ($linkedModel instanceof Model)
-            {
-                $linkedModel->save();
-                $id = $linkedModel->_id;
-            }
-            else
-            {
-                $id = $linkedModel;
-            }
+            throw new Exception('addTo can only be used on ManyMany relations.');
+        }
 
-            $query = Query::insert(array(
+        if ($what instanceof Model)
+        {
+            $what->save();
+            $id = $what->_id;
+        }
+        else
+        {
+            if ($what === null) { return; }
+
+            $id = $what;
+        }
+
+        Query::insert(array(
                 'fields' => array($relation->jm->from, $relation->jm->to),
                 'values' => array($this->_id, $id),
-            ), $relation->jm->table);
-
-            $query->run();
-        }
+            ), $relation->jm->table)
+            ->run();
     }
 
     /**
@@ -628,6 +631,18 @@ abstract class Model
         return self::find('all', $options);
     }
 
+    /**
+     * Transform a bunch of models into associative arrays.
+     *
+     * @param array $array An array of models to convert into array or an array
+     * of attributes to loop through to recursively transform linked models to
+     * arrays.
+     *
+     * @see Model::toArray()
+     * @see Model::attributes()
+     *
+     * return array
+     */
     public static function arrayToArray($array)
     {
         foreach ($array as &$m)
@@ -731,39 +746,49 @@ abstract class Model
 
 
     /**
-     * Deletes the instance.
+     * Deletes current instance or linked models specified by a relation name.
      *
-     * Default behaviour (implemented here) uses primary key to delete the
-     * object.
+     * _onBeforeDelete() and _onAfterDelete() event functions will be fired.
+     *
+     * @param string $relation A relation name. If given, `delete()` will delete
+     * corresponding linked models instead of delete the current object.
+     *
+     * @see Model::_deleteLinkedModel()
+     * @see Model::_onBeforeDelete()
+     * @see Model::_onAfterDelete()
      *
      * @return bool True on success.
      * @throws Exception if object is not present in database.
      */
-    public function delete($relationName = null)
+    public function delete($relation = null)
     {
-        if ($relationName !== null)
+        // Want to delete linked models? All right!
+        if ($relation !== null && is_string($relation))
         {
-            $this->_deleteLinkedModel($relationName);
+            $this->_deleteLinkedModel($relation);
             return $this;
         }
 
+        // Any last words to say?
         $this->_onBeforeDelete();
 
-        $query = Query::delete(array('id' => $this->_id), get_called_class());
-        $count = $query->run()->rowCount();
+        $count = Query::delete(array('id' => $this->_id), get_called_class())
+                    ->run()
+                    ->rowCount();
 
+        // Was not here? Weird. Tell user.
         if ($count === 0)
         {
             throw new RecordNotFoundException($this->_id);
         }
 
+        // If the database is lazy, save integrity for it.
         if (self::$_config->doForeignKeyWork)
         {
             $this->_deleteLinkedModels();
         }
 
         $this->_onAfterDelete();
-
         $this->_id = null;
 
         return $this;
@@ -787,9 +812,9 @@ abstract class Model
     }
 
     /**
-     * Tests if a model instance represented by its ID exists.
+     * Check if a model instance represented by its ID exists.
      *
-     * @param mixed $m              Can be either the ID to test on or a condition array.
+     * @param mixed $m             Can be either the ID to test on or a condition array.
      * @param bool  $byPrimaryKey  Should $m be considered as a primary key or as a condition
      * array?
      *
@@ -843,10 +868,10 @@ abstract class Model
      * This methods allows you to retrieve models from database. You can process several differents
      * finds. First parameter specifies find type:
      *
-     * * "all": Retrieve several Model instances. Function will return an array;
-     * * "first": Retrieve first found Model. Function will return a Model instance;
-     * * "last": Retrieve last found Model. Function will return a Model instance;
-     * * "count": Return number of found Models.
+     *  * "all": Retrieve several Model instances. Function will return an array;
+     *  * "first": Retrieve first found Model. Function will return a Model instance;
+     *  * "last": Retrieve last found Model. Function will return a Model instance;
+     *  * "count": Return number of found Models.
      * 
      * @param mixed $first Can be a ID to search on (shorthand for `Model::findByPK()`) or the find
      * type. For this to be considered as an ID, you must pass an integer or an array.
@@ -907,38 +932,84 @@ abstract class Model
         return self::_processSqlQuery($query, $multiplicity, $options);
     }
 
+    /**
+     * Retrieve object by primary key.
+     *
+     * @param mixed $id      The object ID or an array of object IDs.
+     * @param array $options Option array.
+     *
+     * @return mixed.
+     */
     public static function findByPK($id, $options = array())
     {
         // Handles multiple primary keys, too.
-        $options['conditions'] = array('id' => $id);
+        $options['conditions']['id'] = $id;
 
-        // Fetch model.
+        $multiplicity = 'one';
+        // If $id is an array, the user may want several objects.
+        if (is_array($id))
+        {
+            // But only if the primary key is not compound *or*, if it is
+            // compound, if $id is multidimensional.
+            if (self::table()->isSimplePrimaryKey || is_array($id[0]))
+            {
+                $multiplicity = 'several';
+            }
+        }
+
 		$query = Query::select($options, get_called_class());
-        if (!$model = self::_processSqlQuery($query, 'one', $options))
+        if (!$res = self::_processSqlQuery($query, $multiplicity, $options))
         {
             throw new RecordNotFoundException($id);
         }
 
-        return $model;
+        return $res;
     }
 
-	public static function findBySql($sql, $params = array(), $options = array())
-	{
-        return self::_processSqlQuery($sql, $params, 'several', $options);
-	}
-
+    /**
+     * Retrieve first found object of database.
+     *
+     * @param array $options The option array.
+     * @return mixed.
+     *
+     * @see Model::find()
+     */
     public static function first($options = array())
     {
         return self::find('first', $options);
     }
 
     /**
+     * Alias for first().
+     *
+     * @see Model::one()
+     */
+    public static function one($options = array())
+    {
+        return self::first($options);
+    }
+
+    /**
+     * Retrieve last found object of database.
+     *
+     * @param array $options The option array.
+     * @return mixed.
+     *
+     * @see Model::find()
+     */
+    public static function last($options = array())
+    {
+        return self::find('last', $options);
+    }
+
+    /**
      * This function checks that current object is linked to another.
      *
-     * It is the matching of addTo() and removeFrom() methods.
+     * It is the matching of addTo() and removeFrom() methods but it works with
+     * any type of relation.
      *
      * @param string $relation The name of the relation to check on.
-     * @param mixed  $m         Linked object or object's ID.
+     * @param mixed  $what     Linked object or object's ID.
      *
      * @return bool True if current object is linked to the other, false
      * otherwise.
@@ -946,25 +1017,36 @@ abstract class Model
      * @see Model::addTo()
      * @see Model::removeFrom()
      */
-    public function has($relation, $m)
+    public function has($relation, $what = null)
     {
-        $a = $this->$relation;
+        $lms = $this->$relation;
 
-        if (!is_array($a)) { $a = array($a); }
-
-        // We want to test by IDs, not by objects.
-        if ($m instanceof Model)
+        // User just wants to know if current object has any linked model
+        // through this relation.
+        //
+        // @TODO We should process an EXISTS query instead of retrieving linked
+        // models.
+        if ($what === null)
         {
-            $m = $m->id;
+            return (bool) $lms;
         }
 
-        // $a is an array of Model instances
-        // $o is a Model instance.
-        foreach ($a as $o)
+        // User wants to know if current object is linked to $what.
+        
+        // We want to test by IDs, not by objects.
+        $id = $what instanceof Model
+            ? $what->id
+            : $what
+            ;
+
+        // $lms is the array of Linked ModelS.
+        // $lm  is a Linked Model instance.
+        if (!is_array($lms)) { $lms = array($lms); }
+        foreach ($lms as $lm)
         {
             // I would like to use === operator but we are not sure that int IDs
             // really are integers.
-            if ($o->id == $m)
+            if ($lm->id == $id)
             {
                 return true;
             }
@@ -973,19 +1055,22 @@ abstract class Model
         return false;
     }
 
+    /**
+     * Initialize Model class.
+     *
+     * This function is called only once. It is called by SimpleAR's main file,
+     * SimpleAR.php
+     *
+     * It sets Config and Database object.
+     */
     public static function init($config, $database)
     {
         self::$_config = $config;
         self::$_db     = $database;
     }
 
-    public static function last($options = array())
-    {
-        return self::find('last', $options);
-    }
-
     /**
-     * Manually load linked model(s). Useful to reload the linked model(s).
+     * Manually load linked model(s). Useful to refresh relationships.
      *
      * @param string $relation The relation to load.
      *
@@ -996,7 +1081,15 @@ abstract class Model
         $this->_loadLinkedModel($relation);
     }
 
-    public function modify($attributes)
+    /**
+     * Modify attributes of current object.
+     *
+     * @param array $attributes Associative array containing attributes to
+     * modify and the new values to set.
+     *
+     * @return $this
+     */
+    public function modify(array $attributes)
     {
         foreach ($attributes as $key => $value)
         {
@@ -1007,39 +1100,56 @@ abstract class Model
     }
 
     /**
-     * Get the relation identified by its name.
+     * Get or set the relation identified by its name. 
      *
-     * @param $relationName The name of the relation.
+     * If second parameter is null, it works like a getter.
+     * It works like a setter if second parameter is not null.
+     *
+     * @param $name     The name of the relation.
+     * @param $relation The relation to set instead
+     *
      * @return object A Relationship object.
+     * @throw SimpleAR\Exception if used as getter and $relationName is unknown.
      */
-    public static function relation($relationName, $relation = null)
+    public static function relation($name, $relation = null)
     {
 		if ($relation === null)
 		{
-			if (! isset(static::$_relations[$relationName]))
+			if (! isset(static::$_relations[$name]))
 			{
-				throw new Exception('Relation "' . $relationName . '" does not exist for class "' . get_called_class() . '".');
+				throw new Exception('Relation "' . $name . '" does not exist for class "' . get_called_class() . '".');
 			}
 
+            // Avoid array accesses.
+            $val =& static::$_relations[$name];
+
 			// If relation is not yet initlialized, do it.
-			if (!is_object(static::$_relations[$relationName]))
+			if (! $val instanceof Relationship)
 			{
-				static::$_relations[$relationName] = Relationship::forge($relationName, static::$_relations[$relationName], get_called_class());
+				$val = Relationship::forge($name, $val, get_called_class());
 			}
 
 			// Return the Relationship object.
-			return static::$_relations[$relationName];
+			return $val;
 		}
 		else
 		{
-			static::$_relations[$relationName] = $relation;
+			static::$_relations[$name] = $relation;
 		}
     }
 
+    /**
+     * Delete rows from database.
+     *
+     * @param array $conditions A condition option array.
+     * @return int Number of affected rows.
+     */
     public static function remove($conditions = array())
     {
-        $query = Query::delete($conditions, get_called_class());
-        return $query->run()->rowCount();
+        return Query::delete($conditions, get_called_class())
+                ->run()
+                ->rowCount()
+                ;
     }
 
     /**
@@ -1062,32 +1172,28 @@ abstract class Model
      *
      * @return void.
      */
-    public function removeFrom($relation, $linkedModel)
+    public function removeFrom($relation, $what)
     {
         $relation = static::relation($relation);
 
-        if ($relation instanceof ManyMany)
+        if (! $relation instanceof ManyMany)
         {
-            if ($linkedModel instanceof Model)
-            {
-                if ($linkedModel->_id === null) { return; }
-
-                $id = $linkedModel->_id;
-            }
-            else
-            {
-                $id = $linkedModel;
-            }
-
-            $query = Query::delete(
-                array(
-                    $relation->jm->from => $this->_id,
-                    $relation->jm->to   => $id,
-                ),
-            $relation->jm->table);
-
-            $query->run();
+            throw new Exception('removeFrom can only be used on ManyMany relations.');
         }
+
+        $id = $what instanceof Model
+            ? $what->_id
+            : $what;
+
+        if ($id === null) { return; }
+
+        Query::delete(
+            array(
+                $relation->jm->from => $this->_id,
+                $relation->jm->to   => $what,
+            ),
+            $relation->jm->table)
+            ->run();
     }
 
     /**
@@ -1116,12 +1222,15 @@ abstract class Model
     }
 
 	/**
+     * Search for object in database. It combines count() and all() functions.
+     *
 	 * This function makes pagination easier.
 	 *
-	 * @param $page int Page number. Min: 1.
-	 * @param $nbItems int Number of items. Min: 1.
+     * @param array $options The option array.
+	 * @param int   $page    Page number. Min: 1.
+	 * @param int   $nbItems Number of items. Min: 1.
 	 */
-	public static function search($options, $page, $nbItems)
+	public static function search(array $options, $page, $nbItems)
 	{
 		$page    = $page    >= 1 ? $page    : 1;
 		$nbItems = $nbItems >= 1 ? $nbItems : 1;
@@ -1129,13 +1238,19 @@ abstract class Model
 		$options['limit']  = $nbItems;
 		$options['offset'] = ($page - 1) * $nbItems;
 
-		$res          = array();
 		$res['count'] = static::count($options);
 		$res['rows']  = static::all($options);
 
 		return $res;
 	}
 
+    /**
+     * Return the Table object corresponding to the current model class.
+     *
+     * @return SimpleAR\Table
+     * 
+     * @see SimpleAR\Model::$_tables
+     */
     public static function table()
     {
         $a = explode('\\', get_called_class());
@@ -1143,13 +1258,34 @@ abstract class Model
         return self::$_tables[array_pop($a)];
     }
 
+    /**
+     * Transforms current object into an array.
+     *
+     * Array will contains all currently defined attributes.
+     *
+     * @return array
+     * @see SimpleAR\Model::attributes()
+     */
     public function toArray()
     {
-        $res = $this->attributes();
-
-        return self::arrayToArray($res);
+        return self::arrayToArray($this->attributes());
     }
 
+    /**
+     * Initialize current model class.
+     *
+     * This function is called by the SimpleAR autoloading system.
+     *
+     * What does it do?
+     * ----------------
+     *
+     *  1. Initiliaze non defined information by convention (table name, primary
+     *  key, columns...)
+     *
+     *  2. Create a unique Table instance for this model class.
+     *
+     *  @return void
+     */
     public static function wakeup()
     {
 		// get_called_class() returns the namespaced class. So we have to parse
@@ -1255,38 +1391,95 @@ abstract class Model
         return $this;
     }
 
+    /**
+     * Event function called after object is deleted.
+     *
+     * @see SimpleAR\Model::delete();
+     */
     protected function _onAfterDelete()
     {
     }
 
+    /**
+     * Event function called after object is inserted.
+     *
+     * @see SimpleAR\Model::_insert();
+     */
     protected function _onAfterInsert()
     {
     }
 
+    /**
+     * Event function called after object is loaded.
+     *
+     * @see SimpleAR\Model::_load();
+     */
     protected function _onAfterLoad()
     {
     }
 
+    /**
+     * Event function called after object is updated.
+     *
+     * @see SimpleAR\Model::_update();
+     */
     protected function _onAfterUpdate()
     {
     }
 
+    /**
+     * Event function called before object is deleted.
+     *
+     * @see SimpleAR\Model::delete();
+     */
     protected function _onBeforeDelete()
     {
     }
 
+    /**
+     * Event function called before object is inserted.
+     *
+     * @see SimpleAR\Model::_insert();
+     */
     protected function _onBeforeInsert()
     {
     }
 
+    /**
+     * Event function called before object is loaded.
+     *
+     * @see SimpleAR\Model::_load();
+     */
     protected function _onBeforeLoad()
     {
     }
 
+    /**
+     * Event function called before object is updated.
+     *
+     * @see SimpleAR\Model::_update();
+     */
     protected function _onBeforeUpdate()
     {
     }
 
+    /**
+     * Retrieve number of linked models linked by a relation.
+     *
+     * Of course, this function is useful only with HasMany and ManyMany
+     * relationships.
+     *
+     * Count value will be stored in the attribute array with the following
+     * name: `#$relationName`.
+     *
+     * You can access it this way:
+     *
+     *  ```php
+     *  echo $myObject->{'#relationName'};
+     *  ```
+     *
+     * @param string $relationName The relation name.
+     */
     private function _countLinkedModel($relationName)
     {
         $relation = static::relation($relationName);
@@ -1305,7 +1498,7 @@ abstract class Model
 
         if ($relation instanceof BelongsTo)
         {
-            return $this->{$relation->cm->attribute} === NULL ? 0 : 1;
+            return $this->{$relation->cm->attribute} === null ? 0 : 1;
         }
         elseif ($relation instanceof HasOne || $relation instanceof HasMany)
         {
@@ -1332,6 +1525,16 @@ abstract class Model
         return $res;
     }
 
+    /**
+     * Delete linked models of a relationship.
+     *
+     * Proper user method is delete()
+     *
+     * @param string $relationName The name of the relation.
+     *
+     * @return void
+     * @see SimpleAR\Model::delete()
+     */
     private function _deleteLinkedModel($relationName)
     {
         $relation = static::relation($relationName);
@@ -1407,6 +1610,9 @@ abstract class Model
      *
      * @return bool True on success, false otherwise.
      * @throws \PDOException if a database error occurs.
+     *
+     * @see SimpleAR\Model::_onBeforeInsert()
+     * @see SimpleAR\Model::_onAfterInsert()
      */
     private function _insert()
     {
@@ -1566,9 +1772,13 @@ abstract class Model
      * correspond to attribute name, not to column's (@see columnsToSelect()).
      *
      * @return $this
+     *
+     * @see SimpleAR\Model::_onBeforeLoad()
+     * @see SimpleAR\Model::_onAfterLoad()
      */
     private function _load($row)
     {
+        // Need to prepare?
         $this->_onBeforeLoad();
 
         $table = static::table();
@@ -1751,18 +1961,24 @@ abstract class Model
         $this->_attr($relationName, $res);
     }
 
-
-    private static function _processSqlQuery($query, $multiplicity, $options)
+    /**
+     * Run Select queries.
+     *
+     * @param Select $query         The query to run.
+     * @param string $multiplicity  Should we expect a count, one row, or
+     * several rows to be returned?
+     * @param array $options The option array. It will be passed to constructor.
+     *
+     * @return mixed.
+     */
+    private static function _processSqlQuery(Query\Select $query, $multiplicity, array $options)
     {
-        $res   = null;
-
         $query->run();
 
         switch ($multiplicity)
 		{
             case 'count':
-                $res = $query->res();
-                break;
+                return $query->res();
 
             case 'one':
                 $row = $query->row();
@@ -1772,7 +1988,8 @@ abstract class Model
                     $res = new static(null, $options);
                     $res->_load($row);
                 }
-                break;
+
+                return $res;
 
             case 'several':
                 $rows = $query->all();
@@ -1785,10 +2002,11 @@ abstract class Model
 
                     $res[] = $model;
                 }
-                break;
+
+                return $res;
+
             default:
                 throw new Exception('Unknown multiplicity: "' . $multiplicity . '".');
-                break;
         }
 
         return $res;
@@ -1811,6 +2029,9 @@ abstract class Model
      *
      * @throws Exception if a database error occurs.
      * @return $this
+     *
+     * @see SimpleAR\Model::_onBeforeUpdate()
+     * @see SimpleAR\Model::_onAfterUpdate()
      */
     private function _update()
     {
