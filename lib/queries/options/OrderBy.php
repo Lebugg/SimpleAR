@@ -65,7 +65,7 @@ class OrderBy extends Option
             }
 
             // Now, $attribute is an object.
-            $attribute = self::_parseAttribute($attribute);
+            $attribute = Attribute::parse($attribute);
 
             // Handle special "order by" clauses.
             if ($attribute->specialChar)
@@ -124,7 +124,7 @@ class OrderBy extends Option
      * Handle "order by" option on linked model row count.
      *
      * @param StdClass $attribute An attribute object returned by
-     * Option::_parseAttribute().
+     * Attribute::parse().
      * @param string   $direction The order direction.
      *
      * @return void
@@ -133,7 +133,7 @@ class OrderBy extends Option
     {
         // Add related model(s) in join arborescence.
         //
-        // We couldn't use second parameter of Option::_parseAttribute() in
+        // We couldn't use second parameter of Attribute::parse() in
         // build() to specify that there must be relations only in the raw
         // attribute because we weren't able to know if it was an "order by
         // count" case.
@@ -236,7 +236,7 @@ class OrderBy extends Option
      * Handle an "order by" option made through a relation.
      *
      * @param StdClass $attribute An attribute object returned by
-     * Option::_parseAttribute().
+     * Attribute::parse().
      * @param string   $direction The order direction.
      * @param StdClass $node      An arborescence node.
      *

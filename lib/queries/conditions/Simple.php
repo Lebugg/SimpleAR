@@ -10,15 +10,11 @@ class SimpleCondition extends \SimpleAR\Query\Condition
         $depth      = (string) $this->depth ?: '';
         $tableAlias = ($useAliases ? $this->table->alias : '') . $depth;
 
-        $res = array();
+        $res   = array();
+        $table = $toColumn ? $this->table : null;
         foreach ($this->attributes as $attribute)
         {
-            $columns = $toColumn ? $this->table->columnRealName($attribute->name) : $attribute->name;
-
-            $lhs = self::leftHandSide($columns, $tableAlias);
-            $rhs = self::rightHandSide($attribute->value);
-
-            $res[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+            $res[] = $attribute->toSql($table, $tableAlias);
         }
 
         return array(

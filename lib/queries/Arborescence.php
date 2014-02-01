@@ -3,24 +3,115 @@ namespace SimpleAR\Query;
 
 use \SimpleAR\Query\Condition;
 
+/**
+ * This class modelizes an arborescence of nodes that represent a join between
+ * two models. This arborescence is used to construct joins and conditions of
+ * Where queries.
+ *
+ * An Arborescence object is equivalent to a node of this arborescence:
+ *
+ * Example:
+ * --------
+ *
+ * Root --> N1 --> N2
+ *      `-> N3
+ *      `-> N4 --> N5 --> N6
+ *
+ *
+ * In this pretty schema, Root and the Ni are all Arborescence objects.
+ */
 class Arborescence
 {
+    /**
+     * A Model class name.
+     *
+     * @var string
+     */
     public $model;
-    public $table;
-    public $relation;
-    public $parent;
-    public $conditions = array();
-    public $depth;
-    public $joinType;
-    public $forcejoin = false;
 
+    /**
+     * A Table instance associated to the model class.
+     *
+     * @var Table
+     */
+    public $table;
+
+    /**
+     * A relation object.
+     *
+     * @var Relationship
+     */
+    public $relation;
+
+    /**
+     * The parent node of the current node.
+     *
+     * @var Arborescence
+     */
+    public $parent;
+
+    /**
+     * An array of conditions that is used to figure out if the node should be
+     * joined when it is a leaf (Sometimes, it is not useful to compute the
+     * join).
+     *
+     * @var array
+     */
+    public $conditions = array();
+
+    /**
+     * The depth of the node from the arborescence root.
+     *
+     * @var int
+     */
+    public $depth;
+
+    /**
+     * The type of join that should be computed (INNER, LEFT, RIGHT, FULL).
+     *
+     * @var int
+     */
+    public $joinType;
+
+    /**
+     * Should the node be joined in any case?
+     *
+     * @var bool
+     */
+    public $forceJoin = false;
+
+    /**
+     * Children of the current node.
+     *
+     * @var array of Arborescence objects
+     */
     public $children = array();
 
+    /**
+     * Inner join type.
+     */
     const JOIN_INNER = 30;
+
+    /**
+     * Left outer join type.
+     */
     const JOIN_LEFT  = 20;
+
+    /**
+     * Right outer join type.
+     */
     const JOIN_RIGHT = 21;
+
+    /**
+     * Full outer join type.
+     */
     const JOIN_OUTER = 10;
 
+    /**
+     * Associate an join type to the corresponding SQL keyword(s).
+     *
+     * @var array
+     */
     private static $_joinTypes = array(
         self::JOIN_INNER => 'INNER',
         self::JOIN_LEFT  => 'LEFT',
@@ -28,14 +119,25 @@ class Arborescence
         self::JOIN_OUTER => 'OUTER',
     );
 
+    /**
+     * Constructor.
+     *
+     * @param string        $model     The model class name.
+     * @param Table         $table     The table object associated to the model.
+     * @param Relationship  $relation  An optional relation associated to the current node.
+     * @param int           $joinType  The type of the join that should be performed.
+     * @param int           $depth     The depth of the node.
+     * @param Arborescence  $parent    The parent node.
+     * @param bool          $forceJoin Should the join be mandatory?
+     */
     public function __construct(
         $model,
-        $table,
-        $relation = null,
-        $joinType = self::JOIN_INNER,
-        $depth = 0,
-        $parent = null,
-        $forceJoin = false
+        Table $table,
+        Relationship $relation = null,
+        $joinType              = self::JOIN_INNER,
+        $depth                 = 0,
+        Arborescence $parent   = null,
+        $forceJoin             = false
     ) {
         $this->model     = $model;
         $this->table     = $table;
@@ -47,34 +149,23 @@ class Arborescence
 
         $this->parent    = $parent;
         $this->children  = array();
-
-        // Initiliaze join type "int to string" translation array.
-        /* $this->__joinTypes = array( */
-        /*     self::JOIN_INNER => 'INNER', */
-        /*     self::JOIN_LEFT  => 'LEFT', */
-        /*     self::JOIN_RIGHT => 'RIGHT', */
-        /*     self::JOIN_OUTER => 'OUTER', */
-        /* ); */
     }
 
     /**
-     * Add a relation array into the join arborescence of the query.
+     * Add a relation array into the arborescence.
      *
-     * @param array $relatio_names Array containing relations ordered by depth to add to join
-     * arborescence.
-     * @param int $joinType The type of join to use to join this relation. Default: inner join.
+     * @param array $relations Array containing relations ordered by depth to
+     * add to arborescence.
+     * @param int $joinType The type of join to use to join this relation.
+     * Default: inner join.
      * @param bool $forceJoin Does relation *must* be joined?
      *
-     * To be used as:
-     *  ```php
-     *  $a = $this->_ad_t_arborescence(...);
-     *  $arborescence = &$a[0];
-     *  $relation     = $a[1];
-     *  ```
-     * @return array
+     * @return the last added or accessed node. It allows calling function to
+     * get more information about its context.
      */
-    public function add($relations, $joinType = self::JOIN_INNER, $forceJoin = false)
+    public function add(array $relations, $joinType = self::JOIN_INNER, $forceJoin = false)
     {
+        // If no relation to add, return 
         if (! $relations)
         {
             return $this;
@@ -82,13 +173,13 @@ class Arborescence
 
         // NOTE: "n" prefix in variable names means stands for "node", that is
         // an Arborescence instance.
+        $nCurrent  = $this;
+        $nPrevious = null;
 
-        $current         = $this;
-        $previous = null;
         // "cm" stands for Current Model.
         $cm = $this->model;
 
-        $relation         = null;
+        $relation = null;
 
         // Foreach relation to add, set some "config" elements.
         //
@@ -96,50 +187,59 @@ class Arborescence
         // equals $i + 1. That means that first relation will have a depth of 1.
         foreach ($relations as $i => $relation)
         {
-            $previous = $current;
+            $nPrevious = $nCurrent;
             // $relation is now a Relationship object.
             $relation = $cm::relation($relation);
             $cm       = $relation->lm->class;
 
             // Add a new node if needed.
-            if (! $current->hasChild($relation))
+            if (! $nCurrent->hasChild($relation))
             {
                 // @see Arborescence::__construct().
-                $new = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $current, $forceJoin);
-                $current->addChild($new);
+                $new = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $nCurrent, $forceJoin);
+                $nCurrent->addChild($new);
 
                 // Go forward.
-                $current = $new;
+                $nCurrent = $new;
             }
             // Already present? We may have to change some values.
             else
             {
-                $current = $current->getChild($relation);
-                $current->updateJoinType($joinType);
+                $nCurrent = $nCurrent->getChild($relation);
+                $nCurrent->updateJoinType($joinType);
             }
 
             // Force join on last node if required.
-            $current->forceJoin = $forceJoin || $current->forceJoin;
+            $nCurrent->forceJoin = $forceJoin || $nCurrent->forceJoin;
         }
 
         // Return arborescence leaf.
-        return $current;
+        return $nCurrent;
     }
 
-	public function process($joinedTables = array())
+    /**
+     * Transform the arborescence to SQL JOIN clause.
+     *
+     * This a recursive function, it calls itself on each node.
+     *
+     * @param array $joinedTables The currently joined tables. It is used to not join a
+     * table several times (for a same depth).
+     *
+     * @return string
+     */
+	public function toSql(array $joinedTables = array())
 	{
+        // The SQL string.
         $res = '';
-
-        // Construct joined table array according to depth.
-        if (! isset($joinedTables[$this->depth]))
-        {
-            $joinedTables[$this->depth] = array();
-        }
 
 		foreach ($this->children as $relation => $next)
 		{
 			$relation  = $next->relation;
             $tableName = $relation->lm->table;
+
+            // It is possible to join a table several times if the depth is
+            // different each time.
+            $fullTableName = $table . $this->depth;
 
             // We *have to* to join table if not already joined *and* it is not
             // the last relation.
@@ -176,7 +276,7 @@ class Arborescence
             // Go through arborescence.
             if ($next->children)
             {
-				$res .= $next->process($joinedTables);
+				$res .= $next->toSql($joinedTables);
             }
 
 		}
@@ -199,29 +299,48 @@ class Arborescence
         $this->children[$child->relation->name] = $child;
     }
 
-    public function addCondition(Condition $condition)
+    /**
+     * Add a condition to condition list.
+     *
+     * @param Condition $c The condition to add.
+     *
+     * @return void
+     */
+    public function addCondition(Condition $c)
     {
-        $conditions = is_array($condition)
-            ? $condition
-            : array($condition)
-            ;
-
-        foreach ($conditions as $condition)
-        {
-            $this->conditions[] = $condition;
-        }
+        $this->conditions[] = $c;
     }
 
-    public function getChild($relation)
+    /**
+     * Return a child that from a relation.
+     *
+     * @param Relationship $r The relation through which retrieve the child
+     * node.
+     *
+     * @return Arborescence
+     */
+    public function getChild(Relationship $r)
     {
-        return $this->children[$relation->name];
+        return $this->children[$r->name];
     }
 
-    public function hasChild($relation)
+    /**
+     * Does the node has a child associated to the given relation?
+     *
+     * @param Relationship $r The relation to test on.
+     *
+     * @return bool True if there is a child, false otherwise.
+     */
+    public function hasChild(Relationship $r)
     {
-        return isset($this->children[$relation->name]);
+        return isset($this->children[$r->name]);
     }
 
+    /**
+     * Is the node the root?
+     *
+     * @return bool True if the node is the root, false otherwise.
+     */
     public function isRoot()
     {
         return $this->parent === null;

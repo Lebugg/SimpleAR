@@ -19,7 +19,7 @@ class GroupBy extends Option
         foreach ((array) $this->_value as $attribute)
         {
             // $attribute is now an object.
-            $attribute = self::_parseAttribute($attribute);
+            $attribute = Attribute::parse($attribute);
 
             $columns = $attribute->attribute;
             if ($this->_context->useModel)

@@ -31,7 +31,7 @@ class Has extends Conditions
      * Handle a "has condition".
      *
      * @param stdClass $attribute An attribute object returned by
-     * Option::_parseAttribute().
+     * Attribute::parse().
      * @param array    $conditions Optional conditions to add to the "has
      * condition".
      *
@@ -39,7 +39,7 @@ class Has extends Conditions
      */
     protected function _has($attribute, Arborescence $arborescence, array $conditions = null)
     {
-        $attribute = self::_parseAttribute($attribute, true);
+        $attribute = Attribute::parse($attribute, true);
 
         $node = $arborescence->add($attribute->relations);
         $has = new ExistsCondition($attribute->attribute, null, null);

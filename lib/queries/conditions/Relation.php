@@ -94,12 +94,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             {
                 if ($attribute->logic === 'or')
                 {
-                    $column = $r->lm->t->columnRealName($attribute->name);
-
-                    $lhs = self::leftHandSide($column, $r->lm->t->alias . '_sub');
-                    $rhs = self::rightHandSide($attribute->value);
-
-                    $orConditions[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+                    $orConditions[] = $attribute->toSql($r->lm->t, $r->lm->t->alias . '_sub');
                 }
                 else // logic == 'and'
                 {

@@ -62,11 +62,11 @@ abstract class Where extends \SimpleAR\Query
      *
      * @return string
      *
-     * @see Arborescence::process()
+     * @see Arborescence::toSql()
      */
     protected function _join()
     {
-        return $this->_context->arborescence->process();
+        return $this->_context->arborescence->toSql();
     }
 
 

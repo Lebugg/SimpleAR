@@ -31,7 +31,7 @@ class ExistsCondition extends Condition
         return parent::canMergeWith($c)
                 && $this->exists === $c->exists;
     }
-    public function toSql($bUseAliases = true, $bToColumn = true)
+    public function toSql($useAliases = true, $toColumn = true)
     {
         if (($r = $this->relation) === null)
         {
@@ -75,8 +75,7 @@ class ExistsCondition extends Condition
         $subconditions = array();
         foreach ($this->attributes as $attribute)
         {
-            $column = $r->lm->t->columnRealName($attribute->name);
-            $subconditions[] = self::leftHandSide($column, $tableAlias) . ' ' .  $attribute->operator . ' ' . self::rightHandSide($attribute->value);
+            $subconditions[] = $attribute->toSql($r->lm->t, $tableAlias);
         }
 
         $subconditionValues = array();

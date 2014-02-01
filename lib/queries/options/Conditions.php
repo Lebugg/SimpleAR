@@ -116,7 +116,7 @@ class Conditions extends Option
      * Handle a condition.
      *
      * @param stdClass $attribute An attribute object returned by
-     * _parseAttribute().
+     * Attribute::parse().
      * @param string   $operator  A logical operator 'OR' or 'AND'.
      * @param mixed    $value     The condition value (scalar value or array).
      *
@@ -124,7 +124,7 @@ class Conditions extends Option
      */
     protected function _condition($attribute, $operator, $value, $arborescence)
     {
-        $attribute = self::_parseAttribute($attribute);
+        $attribute = Attribute::parse($attribute);
 
         // Special attributes check.
         if ($c = $attribute->specialChar)
@@ -189,7 +189,7 @@ class Conditions extends Option
     {
         // Add related model(s) in join arborescence.
         //
-        // We couldn't use second parameter of Option::_parseAttribute() in
+        // We couldn't use second parameter of Attribute::parse() in
         // build() to specify that there must be relations only in the raw
         // attribute because we weren't able to know if it was an "order by
         // count" case.
