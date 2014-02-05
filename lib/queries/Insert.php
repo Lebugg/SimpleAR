@@ -20,7 +20,7 @@ class Insert extends \SimpleAR\Query
      *
      * @return mixed
      */
-    public function inser_id()
+    public function insertId()
     {
         return self::$_db->lastInsertId();
     }
