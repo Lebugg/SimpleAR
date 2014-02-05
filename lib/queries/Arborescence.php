@@ -2,6 +2,8 @@
 namespace SimpleAR\Query;
 
 use \SimpleAR\Query\Condition;
+use \SimpleAR\Table;
+use \SimpleAR\Relationship;
 
 /**
  * This class modelizes an arborescence of nodes that represent a join between
@@ -232,6 +234,11 @@ class Arborescence
         // The SQL string.
         $res = '';
 
+        if (! isset($joinedTables[$this->depth]))
+        {
+            $joinedTables[$this->depth] = array();
+        }
+
 		foreach ($this->children as $relation => $next)
 		{
 			$relation  = $next->relation;
@@ -239,7 +246,7 @@ class Arborescence
 
             // It is possible to join a table several times if the depth is
             // different each time.
-            $fullTableName = $table . $this->depth;
+            $fullTableName = $tableName . $this->depth;
 
             // We *have to* to join table if not already joined *and* it is not
             // the last relation.

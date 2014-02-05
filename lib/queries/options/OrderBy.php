@@ -3,6 +3,7 @@ namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
+use \SimpleAR\Query\Condition\Attribute;
 
 use \SimpleAR\MalformedOptionException;
 

@@ -4,6 +4,7 @@ namespace SimpleAR\Query\Condition;
 use SimpleAR\Query\Condition;
 
 use SimpleAR\Exception;
+use SimpleAR\Table;
 
 /**
  * This class modelizes a condtion attribue.
@@ -217,8 +218,8 @@ class Attribute
     {
         $columns = $t ? $t->columnRealName($this->name) : $this->name;
 
-        $lhs = self::leftHandSide($columns, $tableAlias);
-        $rhs = self::rightHandSide($this->value);
+        $lhs = Condition::leftHandSide($columns, $tableAlias);
+        $rhs = Condition::rightHandSide($this->value);
 
         return $lhs . ' ' . $this->operator . ' ' . $rhs;
 
