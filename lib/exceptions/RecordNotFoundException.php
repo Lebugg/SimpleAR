@@ -18,7 +18,7 @@ class RecordNotFoundException extends Exception
      */
 	public function __construct($id)
 	{
-        $id = (is_string($id) ? $id : '(' .  implode(', ', $id) . ')');
+        $id = is_array($id) ? '(' .  implode(', ', $id) . ')' : $id;
 		parent::__construct('Record not found with ID: "' . $id . '".');
 	}
 }
