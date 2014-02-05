@@ -21,7 +21,7 @@ abstract class Option
     protected $_context;
     protected $_arborescence;
 
-    protected static $_optio_t_class = array(
+    protected static $_optionToClass = array(
         'conditions' => 'Conditions',
         'fields'     => 'Fields',
         'filter'     => 'Filter',
@@ -46,14 +46,14 @@ abstract class Option
 
     public abstract function build();
 
-    public static function forge($optio_name, $value, $context, $arborescence = null)
+    public static function forge($optionName, $value, $context, $arborescence = null)
     {
-        if (!isset(self::$_optio_t_class[$optio_name]))
+        if (!isset(self::$_optionToClass[$optionName]))
         {
-            throw new MalformedOptionException('Use of unknown option "' .  $optio_name . '".');
+            throw new MalformedOptionException('Use of unknown option "' .  $optionName . '".');
         }
 
-        $class = '\SimpleAR\Query\Option\\' .  self::$_optio_t_class[$optio_name];
+        $class = '\SimpleAR\Query\Option\\' .  self::$_optionToClass[$optionName];
 
         return new $class($value, $context, $arborescence);
     }
