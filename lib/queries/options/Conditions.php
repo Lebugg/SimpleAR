@@ -122,8 +122,18 @@ class Conditions extends Option
      *
      * @see _attribute()
      */
-    protected function _condition($attribute, $operator, $value, $arborescence)
+    protected function _condition($attribute, $operator, $value, Arborescence $arborescence = null)
     {
+        // If we are not using model, treatment is much more simple.
+        if (! $this->_context->useModel)
+        {
+            $condition = new SimpleCondition();
+            $condition->addAttribute(new Attribute($attribute, $value, $operator));
+            $condition->tableAlias = $this->_context->rootTableAlias;
+
+            return $condition;
+        }
+
         $attribute = Attribute::parse($attribute);
 
         // Special attributes check.
@@ -161,7 +171,7 @@ class Conditions extends Option
         $condition->addAttribute($attribute);
 
         // Is there a Model's method to handle this attribute? Useful for virtual attributes.
-        if ($this->_context->useModel && is_string($attr))
+        if (is_string($attr))
         {
             $cmClass = $node->relation ? $node->relation->lm->class : $this->_context->rootModel;
             $method  = 'to_conditions_' . $attr;
@@ -175,8 +185,9 @@ class Conditions extends Option
             }
         }
 
-        $condition->depth = $node->depth;
-        $condition->table = $node->table;
+        $condition->depth      = $node->depth;
+        $condition->table      = $node->table;
+        $condition->tableAlias = $node->table->alias;
 
         // Arborescence needs it to know if it useful to join some tables or
         // not.
@@ -272,7 +283,7 @@ class Conditions extends Option
      *
      * @return array
      */
-    protected function _parse(array $conditions, Arborescence $arborescence)
+    protected function _parse(array $conditions, Arborescence $arborescence = null)
     {
         $orGroup  = new ConditionGroup(ConditionGroup::T_OR);
         $andGroup = new ConditionGroup(ConditionGroup::T_AND);

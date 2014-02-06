@@ -43,7 +43,8 @@ abstract class Condition
      * @var Table
      */
     public $table;
-    public $depth = 0;
+    public $tableAlias = '';
+    public $depth      = 0;
 
     public $relation;
 

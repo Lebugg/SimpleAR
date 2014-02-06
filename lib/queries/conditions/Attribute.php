@@ -214,7 +214,7 @@ class Attribute
         );
     }
 
-    public function toSql(Table $t = null, $tableAlias = '')
+    public function toSql($tableAlias = '', Table $t = null)
     {
         $columns = $t ? $t->columnRealName($this->name) : $this->name;
 

@@ -94,7 +94,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             {
                 if ($attribute->logic === 'or')
                 {
-                    $orConditions[] = $attribute->toSql($r->lm->t, $r->lm->t->alias . '_sub');
+                    $orConditions[] = $attribute->toSql($r->lm->t->alias . '_sub', $r->lm->t);
                 }
                 else // logic == 'and'
                 {

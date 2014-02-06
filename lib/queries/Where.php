@@ -32,14 +32,25 @@ abstract class Where extends \SimpleAR\Query
         }
     }
     
+    /**
+     * Initialize query context from within Where scope.
+     *
+     * It initializes an Arborescence if _context->useModel is true.
+     *
+     * @override
+     */
     protected function _initContext($root)
     {
         parent::_initContext($root);
 
-        $this->_context->arborescence = new Arborescence(
-            $this->_context->rootModel,
-            $this->_context->rootTable
-        );
+        // Arborescence can be used only when we are using models.
+        if ($this->_context->useModel)
+        {
+            $this->_context->arborescence = new Arborescence(
+                $this->_context->rootModel,
+                $this->_context->rootTable
+            );
+        }
     }
 
     protected function _has(Option $option)
@@ -60,12 +71,20 @@ abstract class Where extends \SimpleAR\Query
     /**
      * Fire arborescence processing.
      *
+     * If _context->useModel is false, _context->arborescence does not exist, and this 
+     * function will *always* return the empty string ('').
+     *
      * @return string
      *
      * @see Arborescence::toSql()
      */
     protected function _join()
     {
+        if (! isset($this->_context->arborescence))
+        {
+            return '';
+        }
+
         return $this->_context->arborescence->toSql();
     }
 

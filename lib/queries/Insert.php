@@ -46,6 +46,8 @@ class Insert extends \SimpleAR\Query
 
         // $this->_values is a multidimensional array. Actually, it is an array of
         // tuples.
+        var_dump($this->_columns);
+        var_dump($this->_values);
         if (is_array($this->_values[0]))
         {
             // Tuple cardinal.

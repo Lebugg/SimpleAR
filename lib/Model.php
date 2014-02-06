@@ -1740,12 +1740,17 @@ abstract class Model
                         }
                     }
 
-					$query = Query::insert(array(
-                        'fields' => array($relation->jm->from, $relation->jm->to),
-                        'values' => $values
-                    ), $relation->jm->table);
+                    // Run insert query only if there are values to insert. It 
+                    // would throw a PDO Exception otherwise.
+                    if ($values)
+                    {
+                        $query = Query::insert(array(
+                            'fields' => array($relation->jm->from, $relation->jm->to),
+                            'values' => $values
+                        ), $relation->jm->table);
 
-                    $query->run();
+                        $query->run();
+                    }
                 }
             }
         }
@@ -2166,12 +2171,17 @@ abstract class Model
                         }
                     }
 
-					$query = Query::insert(array(
-                        'fields' => array($relation->jm->from, $relation->jm->to),
-                        'values' => $values
-                    ), $relation->jm->table);
+                    // Run insert query only if there are values to insert. It 
+                    // would throw a PDO Exception otherwise.
+                    if ($values)
+                    {
+                        $query = Query::insert(array(
+                            'fields' => array($relation->jm->from, $relation->jm->to),
+                            'values' => $values
+                        ), $relation->jm->table);
 
-                    $query->run();
+                        $query->run();
+                    }
                 }
             }
         }
