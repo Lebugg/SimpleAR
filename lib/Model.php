@@ -1987,6 +1987,7 @@ abstract class Model
 
             case 'one':
                 $row = $query->row();
+                $res = null;
 
                 if ($row)
 				{
