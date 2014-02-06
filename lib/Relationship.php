@@ -461,7 +461,7 @@ class ManyMany extends Relationship
                 if ($a->logic !== 'or' || $a->name !== 'id')
                 {
                     $res .= $this->_joinLM($depth, $joinType);
-                    break;
+                    break 2;
                 }
             }
 		}
