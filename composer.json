@@ -1,0 +1,7 @@
+{
+    "require-dev": {
+        "phpspec/phpspec": "2.0.*@dev",
+        "sebastian/phpcpd": "*"
+    },
+    "autoload": {"psr-0": {"": "src"}}
+}

@@ -1,1 +1,4 @@
 test/iq
+/vendor
+composer.phar
+composer.lock
