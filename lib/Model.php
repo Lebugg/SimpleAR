@@ -525,6 +525,17 @@ abstract class Model
     }
 
     /**
+     * Test if an attribute is set.
+     *
+     * @param string $name The name of the attribute to test.
+     * @return bool True if the attribute is set, false otherwise.
+     */
+    public function __isset($name)
+    {
+        return isset($this->_attributes[$name]) || isset(static::$_relations[$name]);
+    }
+
+    /**
      * Property setter.
      *
      * Since no public property is declared in `Model`, this method will be
@@ -564,6 +575,16 @@ abstract class Model
             ' on line ' . $trace[0]['line'],
             E_USER_NOTICE
 		);
+    }
+
+    /**
+     * Unset an attribute.
+     *
+     * @param string $name The name of the attribute to unset.
+     */
+    public function __unset($name)
+    {
+        unset($this->_attributes[$name]);
     }
 
     /**
@@ -1067,6 +1088,11 @@ abstract class Model
     {
         self::$_config = $config;
         self::$_db     = $database;
+    }
+
+    public function isDirty()
+    {
+        return $this->_isDirty;
     }
 
     /**
