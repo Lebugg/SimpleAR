@@ -76,4 +76,14 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $expected = array('description', 'name', 'url');
         $this->assertEquals($expected, array_values(Blog::columns()));
     }
+
+    /**
+     * @expectedException SimpleAR\Exception
+     */
+    public function testDeleteInstanceOnNewModel()
+    {
+        // Cannot delete a new model instance.
+        $blog = new Blog();
+        $blog->delete();
+    }
 }

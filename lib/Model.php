@@ -803,7 +803,9 @@ abstract class Model
      * @see Model::_onAfterDelete()
      *
      * @return bool True on success.
+     *
      * @throws Exception if object is not present in database.
+     * @throws Exception if object ID is null.
      */
     public function delete($relation = null)
     {
@@ -812,6 +814,12 @@ abstract class Model
         {
             $this->_deleteLinkedModel($relation);
             return $this;
+        }
+
+        // Cannot delete a new model.
+        if ($this->_id === null)
+        {
+            throw new Exception('Impossible to delete a new model instance.');
         }
 
         // Any last words to say?
