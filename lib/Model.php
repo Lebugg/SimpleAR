@@ -1092,7 +1092,7 @@ abstract class Model
      */
     public function has($relation, $what = null)
     {
-        $lms = $this->$relation;
+        $lms = $this->__get($relation);
 
         // User just wants to know if current object has any linked model
         // through this relation.
@@ -1171,7 +1171,7 @@ abstract class Model
     {
         foreach ($attributes as $key => $value)
         {
-            $this->$key = $value;
+            $this->__set($key, $value);
         }
 
         return $this;
@@ -1456,7 +1456,7 @@ abstract class Model
             $conditions = array();
             foreach ($constraint as $attribute)
             {
-                $conditions[$attribute] = $this->$attribute;
+                $conditions[$attribute] = $this->__get($attribute);
             }
 
             // Row already exists, we cannot insert a new row with these values.
@@ -1572,30 +1572,30 @@ abstract class Model
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
 		$res     = 0;
-		$mClass = $relation->lm->class;
+		$class = $relation->lm->class;
 
         if ($relation instanceof BelongsTo)
         {
-            return $this->{$relation->cm->attribute} === null ? 0 : 1;
+            return $this->__get($relation->cm->attribute) === null ? 0 : 1;
         }
         elseif ($relation instanceof HasOne || $relation instanceof HasMany)
         {
-            $res = $mClass::count(array(
-                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->{$relation->cm->attribute})),
+            $res = $class::count(array(
+                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->__get($relation->cm->attribute))),
             ));
         }
         else // ManyMany
         {
 			$reversed = $relation->reverse();
 
-			$mClass::relation($reversed->name, $reversed);
+			$class::relation($reversed->name, $reversed);
 
 			$conditions = array_merge(
 				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->{$reversed->cm->attribute})
+				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
 			);
 
-			$res = $mClass::count(array(
+			$res = $class::count(array(
                 'conditions' => $conditions,
 			));
         }
@@ -1889,7 +1889,7 @@ abstract class Model
             foreach ($row['_WITH_'] as $relation => $value)
             {
                 $relation = static::relation($relation);
-                $mClass  = $relation->lm->class;
+                $class  = $relation->lm->class;
 
                 if ($relation instanceof BelongsTo || $relation instanceof HasOne)
                 {
@@ -1903,7 +1903,7 @@ abstract class Model
                     // Array of arrays ==> array of attribute.
                     if (isset($value[0])) { $value = $value[0]; }
 
-                    $o = new $mClass();
+                    $o = new $class();
                     $o->_load($value);
 
                     if ($o->id !== null)
@@ -1928,7 +1928,7 @@ abstract class Model
 
                         foreach ($value as $attributes)
                         {
-                            $o = new $mClass();
+                            $o = new $class();
                             $o->_load($attributes);
 
                             if ($o->id !== null)
@@ -2005,20 +2005,26 @@ abstract class Model
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
         $res	  = null;
-		$mClass = $relation->lm->class;
+		$class = $relation->lm->class;
 
         if ($relation instanceof BelongsTo || $relation instanceof HasOne)
         {
-            $res = $mClass::first(array(
-                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->{$relation->cm->attribute})),
+            $res = $class::first(array(
+                'conditions' => array_merge(
+                    $relation->conditions,
+                    array($relation->lm->attribute => $this->__get($relation->cm->attribute))
+                ),
 				'order_by'	 => $relation->order,
                 'filter'     => $relation->filter,
             ));
         }
         elseif ($relation instanceof HasMany)
         {
-            $res = $mClass::all(array(
-                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->{$relation->cm->attribute})),
+            $res = $class::all(array(
+                'conditions' => array_merge(
+                    $relation->conditions,
+                    array($relation->lm->attribute => $this->__get($relation->cm->attribute))
+                ),
 				'order_by'	 => $relation->order,
                 'filter'     => $relation->filter,
             ));
@@ -2027,14 +2033,14 @@ abstract class Model
         {
 			$reversed = $relation->reverse();
 
-			$mClass::relation($reversed->name, $reversed);
+			$class::relation($reversed->name, $reversed);
 
 			$conditions = array_merge(
 				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->{$reversed->cm->attribute})
+				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
 			);
 
-			$res = $mClass::all(array(
+			$res = $class::all(array(
                 'conditions' => $conditions,
 				'order_by'	 => $relation->order,
                 'filter'     => $relation->filter,
@@ -2201,7 +2207,7 @@ abstract class Model
                 {
                     if($object instanceof Model)
                     {
-                        $object->{$relation->lm->attribute} = $this->_id;
+                        $object->__set($relation->lm->attribute, $this->_id);
                         $object->save();
                     }
                 }
@@ -2213,7 +2219,7 @@ abstract class Model
                     {
                         if ($o instanceof Model && $o->id === null)
                         {
-                            $o->{$relation->lm->attribute} = $this->_id;
+                            $o->__set($relation->lm->attribute, $this->_id);
                             $o->save();
                         }
                     }
