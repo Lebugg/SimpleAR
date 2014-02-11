@@ -114,4 +114,11 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
         $this->assertEquals('foo', $blog->name);
     }
+
+    public function testOrderByRand()
+    {
+        $blogs = Blog::all(array('order_by' => 'RAND'));
+
+        $this->assertTrue(is_array($blogs));
+    }
 }

@@ -24,7 +24,7 @@ class Select extends Where
      * @var array
      */
 	private $_groupBys = array();
-	private $_orde_bys = array();
+	private $_optOrderBy = array();
     private $_havings  = array();
     private $_limit;
     private $_offset;
@@ -153,11 +153,9 @@ class Select extends Where
 
         $this->_sql .= ' ' . $this->_join();
 		$this->_sql .= $this->_where();
-		$this->_sql .= $this->_groupBys ? ' GROUP BY ' . implode(',',
-        $this->_groupBys) : '';
-        $this->_sql .= $this->_orde_bys ? ' ORDER BY ' . implode(',', $this->_orde_bys) : '';
-        $this->_sql .= $this->_havings  ? ' HAVING '   . implode(',',
-        $this->_havings)  : '';
+		$this->_sql .= $this->_groupBys ? ' GROUP BY ' . implode(',', $this->_groupBys) : '';
+        $this->_sql .= $this->_optOrderBy ? $this->_optOrderBy->compile() : '';
+        $this->_sql .= $this->_havings  ? ' HAVING '   . implode(',', $this->_havings)  : '';
         $this->_sql .= $this->_limit   ? ' LIMIT '    . $this->_limit                 : '';
         $this->_sql .= $this->_offset  ? ' OFFSET '   . $this->_offset                : '';
     }
@@ -205,9 +203,10 @@ class Select extends Where
 	{
         $res = $option->build();
 
-        $this->_orde_bys = array_merge($this->_orde_bys, $res['order_by']);
         $this->_groupBys = array_merge($this->_groupBys, $res['group_by']);
-        $this->_selects = array_merge($this->_selects, $res['selects']);
+        $this->_selects  = array_merge($this->_selects,  $res['selects']);
+
+        $this->_optOrderBy = $option;
 	}
 
     protected function _with(Option $option)

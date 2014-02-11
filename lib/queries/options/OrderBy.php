@@ -21,6 +21,14 @@ class OrderBy extends Option
 
     const DEFAULT_DIRECTION = 'ASC';
 
+    const CLAUSE_STRING = 'ORDER BY ';
+
+    private static $_sqlFunctions = array(
+        'RAND',
+    );
+
+    private $_useSqlFunction = false;
+
     /**
      *
      * @return array
@@ -34,6 +42,13 @@ class OrderBy extends Option
      */
 	public function build()
 	{
+        // First we check that the user is not using a SQL function (Ex:
+        // RAND()).
+        if (is_string($this->_value) && in_array($this->_value, self::$_sqlFunctions))
+        {
+            return $this->_buildSqlFunction($this->_value);
+        }
+
         // Merge order by arrays.
         //
         // _context->rootTable->orderBy corresponds to static::$_orderBy.
@@ -115,11 +130,33 @@ class OrderBy extends Option
         }
 
         return array(
-            'order_by' => $this->_orderBy,
             'group_by' => $this->_groupBy,
             'selects'  => $this->_selects,
         );
 	}
+
+    public function compile()
+    {
+        if ($this->_useSqlFunction)
+        {
+            return self::CLAUSE_STRING . $this->_value . '()';
+        }
+
+        return $this->_orderBy
+            ? self::CLAUSE_STRING . implode(',', $this->_orderBy)
+            : ''
+            ;
+    }
+
+    private function _buildSqlFunction($fn)
+    {
+        $this->_useSqlFunction = true;
+
+        return array(
+            'group_by' => array(),
+            'selects'  => array(),
+        );
+    }
 
     /**
      * Handle "order by" option on linked model row count.
