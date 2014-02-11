@@ -677,9 +677,16 @@ abstract class Model
     {
         foreach ($array as &$m)
         {
-            if (is_object($m) && $m instanceof Model)
+            if (is_object($m))
             {
-                $m = $m->toArray();
+                if ($m instanceof Model)
+                {
+                    $m = $m->toArray();
+                }
+                elseif ($m instanceof DateTime)
+                {
+                    $m = $m->__toString();
+                }
             }
             elseif (is_array($m))
             {
