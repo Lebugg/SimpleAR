@@ -40,21 +40,21 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 
 define('PHP_SIMPLEAR_VERSION_ID', '1.0');
 
-require 'lib/Config.php';
-require 'lib/Database.php';
-require 'lib/Table.php';
-require 'lib/Query.php';
-require 'lib/Model.php';
-require 'lib/ReadOnlyModel.php';
-require 'lib/Relationship.php';
-require 'lib/exceptions/Exception.php';
-require 'lib/exceptions/DatabaseException.php';
-require 'lib/exceptions/DuplicateKeyException.php';
-require 'lib/exceptions/RecordNotFoundException.php';
-require 'lib/exceptions/ReadOnlyException.php';
-require 'lib/exceptions/MalformedOptionException.php';
+require __DIR__ . '/lib/Config.php';
+require __DIR__ . '/lib/Database.php';
+require __DIR__ . '/lib/Table.php';
+require __DIR__ . '/lib/Query.php';
+require __DIR__ . '/lib/Model.php';
+require __DIR__ . '/lib/ReadOnlyModel.php';
+require __DIR__ . '/lib/Relationship.php';
+require __DIR__ . '/lib/exceptions/Exception.php';
+require __DIR__ . '/lib/exceptions/DatabaseException.php';
+require __DIR__ . '/lib/exceptions/DuplicateKeyException.php';
+require __DIR__ . '/lib/exceptions/RecordNotFoundException.php';
+require __DIR__ . '/lib/exceptions/ReadOnlyException.php';
+require __DIR__ . '/lib/exceptions/MalformedOptionException.php';
 
-require 'tools/array_merge_recursive_distinct.php';
+require __DIR__ . '/tools/array_merge_recursive_distinct.php';
 
 /**
  * This function initializes the library.

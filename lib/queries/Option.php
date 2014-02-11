@@ -1,16 +1,16 @@
 <?php
 namespace SimpleAR\Query;
 
-require 'options/Conditions.php';
-require 'options/Fields.php';
-require 'options/Filter.php';
-require 'options/GroupBy.php';
-require 'options/Has.php';
-require 'options/Limit.php';
-require 'options/Offset.php';
-require 'options/OrderBy.php';
-require 'options/Values.php';
-require 'options/With.php';
+require __DIR__ . '/options/Conditions.php';
+require __DIR__ . '/options/Fields.php';
+require __DIR__ . '/options/Filter.php';
+require __DIR__ . '/options/GroupBy.php';
+require __DIR__ . '/options/Has.php';
+require __DIR__ . '/options/Limit.php';
+require __DIR__ . '/options/Offset.php';
+require __DIR__ . '/options/OrderBy.php';
+require __DIR__ . '/options/Values.php';
+require __DIR__ . '/options/With.php';
 
 use \SimpleAR\MalformedOptionException;
 use \SimpleAR\Query;

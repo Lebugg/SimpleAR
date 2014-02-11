@@ -6,15 +6,15 @@
  */
 namespace SimpleAR;
 
-require 'queries/Condition.php';
-require 'queries/Arborescence.php';
-require 'queries/Option.php';
-require 'queries/Where.php';
-require 'queries/Insert.php';
-require 'queries/Select.php';
-require 'queries/Count.php';
-require 'queries/Update.php';
-require 'queries/Delete.php';
+require __DIR__ . '/queries/Condition.php';
+require __DIR__ . '/queries/Arborescence.php';
+require __DIR__ . '/queries/Option.php';
+require __DIR__ . '/queries/Where.php';
+require __DIR__ . '/queries/Insert.php';
+require __DIR__ . '/queries/Select.php';
+require __DIR__ . '/queries/Count.php';
+require __DIR__ . '/queries/Update.php';
+require __DIR__ . '/queries/Delete.php';
 
 /**
  * This class is the superclass of all SQL queries.
