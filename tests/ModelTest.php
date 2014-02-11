@@ -106,4 +106,12 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $array = $blog->toArray();
         $this->assertEquals(date('d/m/Y'), $array['dateCreation']);
     }
+
+    public function testSet()
+    {
+        $blog = new Blog();
+        $blog->set(array('name' => 'foo', 'url' => 'bar@baz.com'));
+
+        $this->assertEquals('foo', $blog->name);
+    }
 }

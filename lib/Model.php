@@ -1178,6 +1178,16 @@ abstract class Model
     }
 
     /**
+     * Alias of modify().
+     *
+     * @see SimpleAR\Model::modify()
+     */
+    public function set(array $attributes)
+    {
+        return $this->modify($attributes);
+    }
+
+    /**
      * Get or set the relation identified by its name. 
      *
      * If second parameter is null, it works like a getter.
