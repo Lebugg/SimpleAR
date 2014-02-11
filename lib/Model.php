@@ -126,6 +126,15 @@ abstract class Model
     protected static $_filters = array();
 
     /**
+     * Accessible attributes for the current object.
+     *
+     * It is set when using a filter on the current instance.
+     *
+     * @var array
+     */
+    protected static $_whitelist;
+
+    /**
      * An array that allows another way to filter output.
      *
      * All fields present in this array will be excluded from the output. A
@@ -692,6 +701,21 @@ abstract class Model
     }
 
     /**
+     * Return the model columns.
+     *
+     * The keys are the attribute names, the values are the column names. Of
+     * course, they can be identical. It depends on what have be defined in
+     * static::$_columns;
+     *
+     * @return array
+     * @see SimpleAR\Table
+     */
+    public static function columns()
+    {
+        return static::table()->columns;
+    }
+
+    /**
      * Very useful function to get an array of the attributes to select from
      * database. Attributes are values of $_columns.
      *
@@ -869,16 +893,29 @@ abstract class Model
      *
      * @param array|string $filter The filter array that contains all fields we want to
      * keep when output OR the name of the filter we want to apply.
+     *
      * @return $this
      */
     public function filter($filter)
     {
-        if (!isset(static::$_filters[$filter]))
+        // It is an attribute array.
+        if (is_array($filter))
         {
-            throw new Exception('Filter "' . $filter . '" does not exist for model "' . get_class($this) . '".');
+            $this->_whitelist = $filter;
         }
 
-        $this->_currentFilter = $filter;
+        // It is a filter name.
+        else
+        {
+            // Wrong name, tell user.
+            if (! isset(static::$_filters[$filter]))
+            {
+                throw new Exception('Filter "' . $filter . '" does not exist for model "' . get_class() . '".');
+            }
+
+            $this->_whitelist     = static::$_filters[$filter];
+            $this->_currentFilter = $filter;
+        }
 
         return $this;
     }
@@ -1062,7 +1099,7 @@ abstract class Model
 
         // $lms is the array of Linked ModelS.
         // $lm  is a Linked Model instance.
-        if (!is_array($lms)) { $lms = array($lms); }
+        if (! is_array($lms)) { $lms = array($lms); }
         foreach ($lms as $lm)
         {
             // I would like to use === operator but we are not sure that int IDs

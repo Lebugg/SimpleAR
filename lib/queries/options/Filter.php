@@ -15,9 +15,11 @@ class Filter extends Option
      * Final columns to select (in a string form) are stored in
      * Select::$_selects.
      *
-     * @param string $filter The filter to apply or null to not filter.
+     * Value:
+     * ------
+     * The value can be a filter name or an attribute array.
      *
-     * @return void
+     * @return array Attribute to fetch.
      *
      * @see Model::columnsToSelect()
      * @see Query::attributeAliasing()
@@ -25,19 +27,40 @@ class Filter extends Option
      */
     public function build()
     {
-        if (!$this->_context->useModel)
+        // It is an array of attributes.
+        if (is_array($this->_value))
         {
-            throw new MalformedOptionException('"filter" option cannot be used without using model.');
+            $columns = $this->_value;
+
+            // Let's assure that primary key is in the columns to select.
+            // (We cannot do that without a model class.)
+            if ($this->_context->useModel)
+            {
+                $rootTable = $this->_context->rootTable;
+
+                $columns = array_merge($columns, (array) $rootTable->primaryKey);
+                // There might be duplicates.
+                $columns = array_unique($columns);
+            }
         }
 
-        // Mandatory for syntax respect.
-		$rootModel   = $this->_context->rootModel;
+        // It is a filter.
+        else
+        {
+            // We need to use models.
+            if (! $this->_context->useModel)
+            {
+                throw new MalformedOptionException('"filter" option cannot be used without using model.');
+            }
+
+            $rootModel = $this->_context->rootModel;
+            $columns   = $rootModel::columnsToSelect($this->_value);
+        }
 
         // Shortcuts.
 		$rootAlias   = $this->_context->useAlias       ? $this->_context->rootTableAlias  : '';
         $resultAlias = $this->_context->useResultAlias ? $this->_context->rootResultAlias : '';
 
-        $columns = $rootModel::columnsToSelect($this->_value);
         $columns = Query::columnAliasing($columns, $rootAlias, $resultAlias);
 
         return $columns;

@@ -1,4 +1,6 @@
+*.swp
+*.phar
+*.lock
 test/iq
 /vendor
-composer.phar
-composer.lock
+/tests/db.json

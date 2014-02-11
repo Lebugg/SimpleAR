@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<dataset>
+    <table name="blog">
+        <column>id</column>
+        <column>name</column>
+        <column>description</column>
+        <column>url</column>
+        <row>
+            <value>1</value>
+            <value>Blog 1</value>
+            <value>Super blog number one</value>
+            <value>http://www.blog1.com</value>
+        </row>
+        <row>
+            <value>2</value>
+            <value>Blog 2</value>
+            <value>Super blog number two</value>
+            <value>http://www.blog2.com</value>
+        </row>
+        <row>
+            <value>3</value>
+            <value>Blog 3</value>
+            <value>Super blog number three</value>
+            <value>http://www.blog3.com</value>
+        </row>
+    </table>
+</dataset>

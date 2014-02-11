@@ -103,15 +103,15 @@ class Database
 
         try
         {
-            $this->_oPdo = new \PDO($dsn, $a['user'], $a['password'], $options);
+            $this->_pdo = new \PDO($dsn, $a['user'], $a['password'], $options);
         }
         catch (\PDOException $ex)
 		{
             throw new DatabaseException($ex->getMessage(), null, $ex);
         }
 
-        $this->_sDatabase = $a['name'];
-        $this->_bDebug    = $config->debug;
+        $this->_database = $a['name'];
+        $this->_debug    = $config->debug;
     }
 
     /**
@@ -121,7 +121,7 @@ class Database
      */
     public function beginTransaction()
     {
-        $this->_oPdo->beginTransaction();
+        $this->_pdo->beginTransaction();
     }
 
     /**
@@ -131,7 +131,7 @@ class Database
      */
     public function database()
     {
-        return $this->_sDatabase;
+        return $this->_database;
     }
 
     /**
@@ -143,7 +143,17 @@ class Database
      */
     public function lastInsertId()
     {
-        return $this->_oPdo->lastInsertId();
+        return $this->_pdo->lastInsertId();
+    }
+
+    /**
+     * Returns the PDO object used by this instance.
+     *
+     * @return \PDO
+     */
+    public function pdo()
+    {
+        return $this->_pdo;
     }
 
     /**
@@ -159,17 +169,17 @@ class Database
      */
     public function query($query, $params = array())
     {
-        if ($this->_bDebug)
+        if ($this->_debug)
         {
             $time = microtime(TRUE);
         }
 
         try
         {
-            $sth = $this->_oPdo->prepare($query);
+            $sth = $this->_pdo->prepare($query);
             $sth->execute((array) $params);
 
-            if ($this->_bDebug)
+            if ($this->_debug)
             {
                 $queryDebug  = $query;
                 $paramsDebug = $params;
@@ -182,7 +192,7 @@ class Database
                     return var_export(array_shift($paramsDebug), true);
                 }, $queryDebug);
 
-                $this->_aQueries[] = array(
+                $this->_queries[] = array(
                     'sql'  => $queryDebug,
                     'time' => (microtime(TRUE) - $time) * 1000,
                 );
@@ -204,7 +214,7 @@ class Database
      */
     public function rollBack()
     {
-        $this->_oPdo->rollBack();
+        $this->_pdo->rollBack();
     }
 
 
@@ -216,6 +226,6 @@ class Database
      */
     public function queries()
     {
-        return $this->_aQueries;
+        return $this->_queries;
     }
 }
