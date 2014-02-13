@@ -45,7 +45,7 @@ require __DIR__ . '/lib/Table.php';
 require __DIR__ . '/lib/Query.php';
 require __DIR__ . '/lib/Model.php';
 require __DIR__ . '/lib/ReadOnlyModel.php';
-require __DIR__ . '/lib/Relationship.php';
+require __DIR__ . '/lib/Relation.php';
 require __DIR__ . '/lib/Exception.php';
 require __DIR__ . '/lib/DateTime.php';
 require __DIR__ . '/lib/Facades/Facade.php';
