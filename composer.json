@@ -8,10 +8,7 @@
     },
     "autoload": {
         "psr-4": {
-            "SimpleAR\\": "src/"
-        }
-        "psr-0": {
-            "SimpleAR": ""
+            "SimpleAR\\": "lib/"
         }
     }
 }
