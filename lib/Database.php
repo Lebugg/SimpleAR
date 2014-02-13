@@ -5,6 +5,9 @@
  * @author Lebugg
  */
 
+require __DIR__ . '/Database/Connection.php';
+require __DIR__ . '/Database/Expression.php';
+
 /**
  * This class abstracts a database connection.
  *
@@ -19,212 +22,49 @@
  */
 class Database
 {
-    /**
-     * The PDO object.
-     * @link http://www.php.net/manual/en/class.pdo.php The PDO documentation.
-     *
-     * @var PDO
-     */
-    private $_pdo;
+    private $_connection;
 
-    /**
-     * The current/last PDO Statement used.
-     * @link http://www.php.net/manual/en/class.pdostatement.php The
-     * PDOStatement class documentation.
-     *
-     * @var PDOStatement
-     */
-    private $_sth;
-
-    /**
-     * Are we in debug mode?
-     *
-     * @var bool
-     */
-    private $_debug;
-
-    /**
-     * Database name.
-     *
-     * @var string
-     */
-    private $_database;
-
-    /**
-     * Executed query array.
-     *
-     * This array contains every executed queries. It is constructed as follows:
-     *  ```php
-     *  array(
-     *      // First query executed.
-     *      array(
-     *          'sql'  => <The SQL query string>,
-     *          'time' => <The query execution time in milliseconds>
-     *      ),
-     *      // Second query.
-     *      array(
-     *          ...
-     *      ),
-     *      ...,
-     *  )
-     *  ```
-     *
-     * You can retrieve this array with the following:
-     *  ```php
-     *  $dbInstance->queries();
-     *  ```
-     *
-     * @see Database::queries()
-     * @var array
-     */
-    private $_queries = array();
-
-    /**
-     * Constructor.
-     *
-     * @param Config $config The configuration object. Database is instanciate by SimpleAR.php.
-     *
-     * Used PDO configuration:
-     *
-     * * PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-     *
-     * @see SimpleAR.php
-     * @see http://www.php.net/manual/en/pdo.construct.php
-     */
-    public function __construct($config)
+    public function __construct(Config $config)
     {
-        $a    = $config->dsn;
-        $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
+        $this->_connection = new Database\Connection($config);
+    }
 
-        $options = array();
-        $options[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
-        //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
+    public function expr($expression)
+    {
+        return new Expression($expression);
+    }
 
-        try
+    /**
+     * Forward function call to the Connection instance.
+     *
+     * @param  string $method The name of the called method.
+     * @param  array  $args   Array of arguments to pass to the method.
+     * @return mixed
+     *
+     * @throws SimpleAR\Exception when the method does not exist in the
+     * Connection instance.
+     */
+    public function __call($method, $args)
+    {
+        if (method_exists($this->_connection, $method))
         {
-            $this->_pdo = new \PDO($dsn, $a['user'], $a['password'], $options);
-        }
-        catch (\PDOException $ex)
-		{
-            throw new DatabaseException($ex->getMessage(), null, $ex);
-        }
-
-        $this->_database = $a['name'];
-        $this->_debug    = $config->debug;
-    }
-
-    /**
-     * Adapter to PDO::beginTransaction()
-     *
-     * @see http://www.php.net/manual/en/pdo.begintransaction.php
-     */
-    public function beginTransaction()
-    {
-        $this->_pdo->beginTransaction();
-    }
-
-    /**
-     * Database name getter.
-     *
-     * @return string The current database name.
-     */
-    public function database()
-    {
-        return $this->_database;
-    }
-
-    /**
-     * Gets the last inserted ID.
-     *
-     * Warning: Works for MySQL, but it won't for PostgreSQL.
-     *
-     * @return int The last inserted ID.
-     */
-    public function lastInsertId()
-    {
-        return $this->_pdo->lastInsertId();
-    }
-
-    /**
-     * Returns the PDO object used by this instance.
-     *
-     * @return \PDO
-     */
-    public function pdo()
-    {
-        return $this->_pdo;
-    }
-
-    /**
-     * Executes a query.
-     *
-     * Actually, it prepares and executes the request in two steps. It provides
-     * security against SQL injection.
-     *
-     * @param string $query  The SQL query.
-     * @param array  $params The query parameters.
-     *
-     * @return PDOStatement
-     */
-    public function query($query, $params = array())
-    {
-        if ($this->_debug)
-        {
-            $time = microtime(TRUE);
-        }
-
-        try
-        {
-            $sth = $this->_pdo->prepare($query);
-            $sth->execute((array) $params);
-
-            if ($this->_debug)
+            // It is better to call the method via straight statement.
+            // @see http://www.php.net/manual/fr/function.call-user-func-array.php#97473
+            switch (count($args))
             {
-                $queryDebug  = $query;
-                $paramsDebug = $params;
-
-                //$s = str_replace(array_pad(array(), count($params), '?'), $params, $query);
-                $queryDebug = preg_replace_callback( '/\?/', function( $match) use( &$paramsDebug) {
-                    if (!is_array($paramsDebug)) {
-                        $paramsDebug = array($paramsDebug);
-                    }
-                    return var_export(array_shift($paramsDebug), true);
-                }, $queryDebug);
-
-                $this->_queries[] = array(
-                    'sql'  => $queryDebug,
-                    'time' => (microtime(TRUE) - $time) * 1000,
-                );
+                case 0:
+                    return $this->_connection->$method();
+                case 1:
+                    return $this->_connection->$method($args[0]);
+                case 2:
+                    return $this->_connection->$method($args[0], $args[1]);
+                case 3:
+                    return $this->_connection->$method($args[0], $args[1], $args[2]);
+                default:
+                    return call_user_func_array(array($this->_connection, $method), $args);
             }
-
-        }
-        catch (\PDOException $ex)
-        {
-            throw new DatabaseException($ex->getMessage(), $query, $ex);
         }
 
-        return $sth;
-    }
-
-    /**
-     * Adapter to PDO::rollBack()
-     *
-     * @see http://www.php.net/manual/en/pdo.rollback.php
-     */
-    public function rollBack()
-    {
-        $this->_pdo->rollBack();
-    }
-
-
-    /**
-     * Executed queries getter.
-     *
-     * @return array The executed queries.
-     * @see Database::$_queries for further information on how returned array is constructed.
-     */
-    public function queries()
-    {
-        return $this->_queries;
+        throw new Exception('Method "' . $method . '" does not exist.');
     }
 }
