@@ -4,11 +4,13 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
+namespace SimpleAR\Exception;
+
+use SimpleAR\Exception;
 
 /**
  * Specific exception for database unique constraint failure.
  *
  * @package core
  */
-class DuplicateKeyException extends Exception {}
+class DuplicateKey extends Exception {}

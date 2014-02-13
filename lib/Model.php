@@ -6,6 +6,12 @@
  */
 namespace SimpleAR;
 
+use \SimpleAR\Exception\Database as DatabaseEx;
+use \SimpleAR\Exception\RecordNotFound;
+
+use \SimpleAR\Facades\DB;
+use \SimpleAR\Facades\Cfg;
+
 /**
  * This class is the super class of all models.
  * It defines some basic functions shared by all models.
@@ -14,19 +20,6 @@ namespace SimpleAR;
  */
 abstract class Model
 {
-    /**
-     * The database handler instance.
-     *
-     * @var \SimpleAR\Database
-     */
-    protected static $_db;
-
-    /**
-     * Contains configuration.
-     *
-     * @var \SimpleAR\Config
-     */      
-    protected static $_config;
 
     /**
      * The name of the database table this model is associated with.
@@ -839,11 +832,11 @@ abstract class Model
         // Was not here? Weird. Tell user.
         if ($count === 0)
         {
-            throw new RecordNotFoundException($this->_id);
+            throw new RecordNotFound($this->_id);
         }
 
         // If the database is lazy, save integrity for it.
-        if (self::$_config->doForeignKeyWork)
+        if (Cfg::get('doForeignKeyWork'))
         {
             $this->_deleteLinkedModels();
         }
@@ -890,7 +883,7 @@ abstract class Model
                 static::findByPK($m);
                 return true;
             }
-            catch (RecordNotFoundException $ex)
+            catch (RecordNotFound $ex)
             {
                 return false;
             }
@@ -1033,7 +1026,7 @@ abstract class Model
 		$query = Query::select($options, get_called_class());
         if (!$res = self::_processSqlQuery($query, $multiplicity, $options))
         {
-            throw new RecordNotFoundException($id);
+            throw new RecordNotFound($id);
         }
 
         return $res;
@@ -1126,20 +1119,6 @@ abstract class Model
         }
 
         return false;
-    }
-
-    /**
-     * Initialize Model class.
-     *
-     * This function is called only once. It is called by SimpleAR's main file,
-     * SimpleAR.php
-     *
-     * It sets Config and Database object.
-     */
-    public static function init(Config $config, Database $database)
-    {
-        self::$_config = $config;
-        self::$_db     = $database;
     }
 
     public function isDirty()
@@ -1384,11 +1363,11 @@ abstract class Model
 		// Set defaults for model classes
 		if ($currentClass != 'Model')
 		{
-            $suffix        = self::$_config->modelClassSuffix;
-            $modelBaseName = $suffix ? strstr($currentClass, self::$_config->modelClassSuffix, true) : $currentClass;
+            $suffix        = Cfg::get('modelClassSuffix');
+            $modelBaseName = $suffix ? strstr($currentClass, Cfg::get('modelClassSuffix'), true) : $currentClass;
 
-            $tableName  = static::$_tableName  ?: call_user_func(self::$_config->classToTable, $modelBaseName);
-            $primaryKey = static::$_primaryKey ?: self::$_config->primaryKey;
+            $tableName  = static::$_tableName  ?: call_user_func(Cfg::get('classToTable'), $modelBaseName);
+            $primaryKey = static::$_primaryKey ?: Cfg::get('primaryKey');
 
             // Columns are defined in model, perfect!
 			if (static::$_columns)
@@ -1398,7 +1377,7 @@ abstract class Model
 			// They are not, fetch them from database.
             else
             {
-				$columns = self::$_db->query('SHOW COLUMNS FROM ' . $tableName)->fetchAll(\PDO::FETCH_COLUMN);
+				$columns = DB::query('SHOW COLUMNS FROM ' . $tableName)->fetchAll(\PDO::FETCH_COLUMN);
 
                 // We do not want to insert primary key in
                 // static::$_columns unless it is a compound key.
@@ -1717,7 +1696,7 @@ abstract class Model
         $linkedModels = array();
 
         // Avoid retrieving config option several times.
-        $dateTimeFormat = self::$_config->databaseDateTimeFormat;
+        $dateTimeFormat = Cfg::get('databaseDateTimeFormat');
 
         foreach ($this->_attributes as $key => $value)
         {
@@ -1842,7 +1821,7 @@ abstract class Model
                 }
             }
         }
-        catch (DatabaseException $ex)
+        catch (DatabaseEx $ex)
         {
             throw $ex;
         }
@@ -1957,7 +1936,7 @@ abstract class Model
 
         $this->_hydrate($row, false);
 
-        if (self::$_config->convertDateToObject)
+        if (Cfg::get('convertDateToObject'))
         {
             foreach ($this->_attributes as $key => &$value)
             {
@@ -2147,7 +2126,7 @@ abstract class Model
         $linkedModels = array();
 
         // Avoid retrieving config option several times.
-        $dateTimeFormat = self::$_config->databaseDateTimeFormat;
+        $dateTimeFormat = Cfg::get('databaseDateTimeFormat');
 
         foreach ($this->_attributes as $key => $value)
         {
@@ -2280,7 +2259,7 @@ abstract class Model
                 }
             }
         }
-        catch (DatabaseException $ex)
+        catch (DatabaseEx $ex)
         {
             throw $ex;
         }

@@ -2,8 +2,10 @@
 namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
+use \SimpleAR\Exception\MalformedOption;
 
-class Offset extends Option
+
+class Limit extends Option
 {
     public function build()
     {
@@ -11,10 +13,9 @@ class Offset extends Option
 
         if ($this->_value < 0)
         {
-            throw new \SimpleAR\MalformedOptionException('"offset" option value must be a natural integer. Negative integer given: ' . $this->_value . '.');
+            throw new MalformedOption('"limit" option value must be a natural integer. Negative integer given: ' . $this->_value . '.');
         }
 
         return $this->_value;
     }
 }
-

@@ -1,10 +1,9 @@
-<?php
+<?php namespace SimpleAR;
 /**
  * This file contains Config class.
  * 
  * @author Lebugg lebugg@hotmail.com
  */
-namespace SimpleAR;
 
 /**
  * Class Config.
@@ -380,6 +379,11 @@ class Config
         }
 
         $this->_modelDirectory = $a;
+    }
+
+    public function get($option)
+    {
+        return $this->__get($option);
     }
 
 }

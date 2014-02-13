@@ -6,11 +6,11 @@
  */
 namespace SimpleAR\Query;
 
-require __DIR__ . '/conditions/Attribute.php';
-require __DIR__ . '/conditions/ConditionGroup.php';
-require __DIR__ . '/conditions/Exists.php';
-require __DIR__ . '/conditions/Relation.php';
-require __DIR__ . '/conditions/Simple.php';
+require __DIR__ . '/Condition/Attribute.php';
+require __DIR__ . '/Condition/ConditionGroup.php';
+require __DIR__ . '/Condition/Exists.php';
+require __DIR__ . '/Condition/Relation.php';
+require __DIR__ . '/Condition/Simple.php';
 
 use SimpleAR\Query\Condition\Attribute;
 

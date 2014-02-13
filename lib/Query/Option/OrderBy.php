@@ -5,7 +5,7 @@ use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
 use \SimpleAR\Query\Condition\Attribute;
 
-use \SimpleAR\MalformedOptionException;
+use \SimpleAR\Exception\MalformedOption;
 
 class OrderBy extends Option
 {
@@ -77,7 +77,7 @@ class OrderBy extends Option
             // It may happen. So tell user he made a mistake.
             if ($attribute == null)
             {
-                throw new MalformedOptionException('"order_by" option malformed: attribute is empty.');
+                throw new MalformedOption('"order_by" option malformed: attribute is empty.');
             }
 
             // Now, $attribute is an object.
@@ -94,7 +94,7 @@ class OrderBy extends Option
                         $this->_count($attribute, $direction);
                         break;
                     default:
-                        throw new MalformedOptionException('"order_by" option malformed: unknown special character: "' .  $attribute->specialChar . '".');
+                        throw new MalformedOption('"order_by" option malformed: unknown special character: "' .  $attribute->specialChar . '".');
                 }
 
                 // Next!
@@ -280,13 +280,13 @@ class OrderBy extends Option
      *
      * @return void
      *
-     * @throws MalformedOptionException if context->useModel is false.
+     * @throws MalformedOption if context->useModel is false.
      */
     private function _relation($attribute, $direction, $node)
     {
         if (! $this->_context->useModel)
         {
-            throw new MalformedOptionException('Cannot use relations when not using models. "order_by" option: "' . $attribute->original . '".');
+            throw new MalformedOption('Cannot use relations when not using models. "order_by" option: "' . $attribute->original . '".');
         }
 
         // We *have to* include relation if we have to order on one of its

@@ -5,7 +5,7 @@ use \SimpleAR\Query;
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
 
-use \SimpleAR\MalformedOptionException;
+use \SimpleAR\Exception\MalformedOption;
 
 class With extends Option
 {
@@ -13,7 +13,7 @@ class With extends Option
     {
         if (! $this->_context->useModel)
         {
-            throw new MalformedOptionException('Cannot use "with" option when not using models.');
+            throw new MalformedOption('Cannot use "with" option when not using models.');
         }
         
         $res = array();

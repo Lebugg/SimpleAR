@@ -9,7 +9,7 @@ use \SimpleAR\Query\Condition\Attribute;
 use \SimpleAR\Query\Condition\ConditionGroup;
 use \SimpleAR\Query\Condition\ExistsCondition;
 
-use \SimpleAR\MalformedOptionException;
+use \SimpleAR\MalformedOption;
 
 use \SimpleAR\Query\Arborescence;
 
@@ -89,7 +89,7 @@ class Has extends Conditions
             {
                 if (!is_array($value))
                 {
-                    throw new MalformedOptionException('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
+                    throw new MalformedOption('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
                 }
 
                 $condition = $this->_has($key, $arborescence, $value);
@@ -102,7 +102,7 @@ class Has extends Conditions
             }
             else
             {
-                throw new MalformedOptionException('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+                throw new MalformedOption('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
             }
         }
 

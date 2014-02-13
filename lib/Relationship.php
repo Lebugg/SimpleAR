@@ -35,8 +35,6 @@ namespace SimpleAR;
  */
 abstract class Relationship
 {
-    protected static $_db;
-    protected static $_cfg;
 
     /**
      * The relation name.
@@ -273,15 +271,6 @@ abstract class Relationship
         return $o;
     }
 
-    public static function init($config, $database)
-    {
-        self::$_modelClassSuffix = $config->modelClassSuffix;
-        self::$_foreignKeySuffix = $config->foreignKeySuffix;
-
-        self::$_db  = $database;
-        self::$_cfg = $config;
-    }
-
     public function joinLinkedModel($depth, $joinType)
     {
         $previousDepth = $depth <= 1 ? '' : $depth - 1;
@@ -304,7 +293,7 @@ class BelongsTo extends Relationship
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']
-            : call_user_func(self::$_cfg->buildForeignKey, $this->lm->t->modelBaseName);
+            : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName);
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -341,7 +330,7 @@ class HasOne extends Relationship
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']
-            : call_user_func(self::$_cfg->buildForeignKey, $this->cm->t->modelBaseName);
+            : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -360,7 +349,7 @@ class HasMany extends Relationship
 
         $this->lm->attribute = (isset($a['key_to']))
             ? $a['key_to']
-            : call_user_func(self::$_cfg->buildForeignKey, $this->cm->t->modelBaseName);
+            : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName);
             ;
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
@@ -404,8 +393,11 @@ class ManyMany extends Relationship
             $this->jm->class = $s = $a['join_model'] . self::$_modelClassSuffix;
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($a['join_from']) ? $a['join_from'] : call_user_func(self::$_cfg->buildForeignKey, $this->cm->t->modelBaseName));
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])   ? $a['join_to']   : call_user_func(self::$_cfg->buildForeignKey, $this->lm->t->modelBaseName));
+            $this->jm->from  =
+            $this->jm->t->columnRealName(isset($a['join_from']) ?
+            $a['join_from'] : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName));
+            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])
+            ? $a['join_to']   : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName));
         }
         else
         {
@@ -438,7 +430,7 @@ class ManyMany extends Relationship
                         AND $condition
                     )";
 
-        self::$_db->query($query, $value);
+        DB::query($query, $value);
     }
 
     public function joinLinkedModel($depth, $joinType)

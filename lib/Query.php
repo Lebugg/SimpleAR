@@ -1,20 +1,21 @@
-<?php
+<?php namespace SimpleAR;
 /**
  * This file contains the Query class that is the main class to manipulate SQL queries.
  *
  * It handles subclasses and Condition class includes.
  */
-namespace SimpleAR;
 
-require __DIR__ . '/queries/Condition.php';
-require __DIR__ . '/queries/Arborescence.php';
-require __DIR__ . '/queries/Option.php';
-require __DIR__ . '/queries/Where.php';
-require __DIR__ . '/queries/Insert.php';
-require __DIR__ . '/queries/Select.php';
-require __DIR__ . '/queries/Count.php';
-require __DIR__ . '/queries/Update.php';
-require __DIR__ . '/queries/Delete.php';
+require __DIR__ . '/Query/Condition.php';
+require __DIR__ . '/Query/Arborescence.php';
+require __DIR__ . '/Query/Option.php';
+require __DIR__ . '/Query/Where.php';
+require __DIR__ . '/Query/Insert.php';
+require __DIR__ . '/Query/Select.php';
+require __DIR__ . '/Query/Count.php';
+require __DIR__ . '/Query/Update.php';
+require __DIR__ . '/Query/Delete.php';
+
+use \SimpleAR\Facades\DB;
 
 /**
  * This class is the superclass of all SQL queries.
@@ -29,12 +30,6 @@ require __DIR__ . '/queries/Delete.php';
  */
 abstract class Query
 {
-    /**
-     * The database handler instance.
-     *
-     * @var \SimpleAR\Database
-     */
-    protected static $_db;
 
     /**
      * Is this query class critical?
@@ -234,19 +229,6 @@ abstract class Query
 	}
 
     /**
-     * Initialize Query class.
-     *
-     * This function is called only once. It is called by SimpleAR's main file,
-     * SimpleAR.php
-     *
-     * It sets Database object.
-     */
-    public static function init(Database $database)
-    {
-        self::$_db = $database;
-    }
-
-    /**
      * Construct a Insert query.
      *
      * @param array $options The option array.
@@ -295,7 +277,7 @@ abstract class Query
         }
 
         // At last, execute the query.
-        $this->_sth = self::$_db->query($this->_sql, $this->_values);
+        $this->_sth = DB::query($this->_sql, $this->_values);
 
         return $this;
     }

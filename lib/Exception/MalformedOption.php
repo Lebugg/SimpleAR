@@ -4,11 +4,13 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
+namespace SimpleAR\Exception;
+
+use SimpleAR\Exception;
 
 /**
  * This exception is thrown by query classes.
  */
-class MalformedOptionException extends Exception
+class MalformedOption extends Exception
 {
 }

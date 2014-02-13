@@ -2,6 +2,7 @@
 namespace SimpleAR\Query\Condition;
 
 use SimpleAR\Query\Condition;
+use SimpleAR\Exception;
 
 class ExistsCondition extends Condition
 {

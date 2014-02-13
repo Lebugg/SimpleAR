@@ -3,19 +3,18 @@ date_default_timezone_set('Europe/Paris');
 
 class ModelTest extends PHPUnit_Extensions_Database_TestCase
 {
-    private static $_cfg;
-    private static $_db;
+    private static $_sar;
 
     private static function _initializeSimpleAR()
     {
-        self::$_cfg = $cfg = new SimpleAR\Config();
+        $cfg = new SimpleAR\Config();
         $cfg->dsn              = json_decode(file_get_contents(__DIR__ . '/db.json'), true);
         $cfg->doForeignKeyWork = true;
         $cfg->debug            = true;
         $cfg->modelDirectory   = __DIR__ . '/models/';
         $cfg->dateFormat       = 'd/m/Y';
 
-        self::$_db = SimpleAR\init($cfg);
+        self::$_sar = new SimpleAR($cfg);
     }
 
     public static function setUpBeforeClass()
@@ -25,7 +24,7 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
     public function getConnection()
     {
-        return $this->createDefaultDBConnection(self::$_db->pdo(), self::$_db->database());
+        return $this->createDefaultDBConnection(self::$_sar->db->pdo(), self::$_sar->db->database());
     }
 
     public function getDataSet()
@@ -120,5 +119,13 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $blogs = Blog::all(array('order_by' => 'RAND'));
 
         $this->assertTrue(is_array($blogs));
+    }
+
+    /**
+     * @expectedException SimpleAR\Exception\RecordNotFound
+     */
+    public function testRecordNotFoundException()
+    {
+        Blog::findByPK(-1);
     }
 }

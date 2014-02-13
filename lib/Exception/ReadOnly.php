@@ -4,12 +4,14 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
+namespace SimpleAR\Exception;
+
+use SimpleAR\Exception;
 
 /**
  * This exception is thrown by ReadOnlyModel.
  */
-class ReadOnlyException extends Exception
+class ReadOnly extends Exception
 {
     /**
      * Constructor.

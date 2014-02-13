@@ -4,12 +4,14 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
+namespace SimpleAR\Exception;
+
+use SimpleAR\Exception;
 
 /**
  * Specific exception for when a specific record has not been found in database.
  */
-class RecordNotFoundException extends Exception
+class RecordNotFound extends Exception
 {
     /**
      * Constructor.

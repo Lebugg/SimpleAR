@@ -3,6 +3,7 @@ namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query;
+use \SimpleAR\Exception\MalformedOption;
 
 class Filter extends Option
 {
@@ -50,7 +51,7 @@ class Filter extends Option
             // We need to use models.
             if (! $this->_context->useModel)
             {
-                throw new MalformedOptionException('"filter" option cannot be used without using model.');
+                throw new MalformedOption('"filter" option cannot be used without using model.');
             }
 
             $rootModel = $this->_context->rootModel;

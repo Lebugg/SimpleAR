@@ -4,7 +4,9 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
+namespace SimpleAR\Exception;
+
+use SimpleAR\Exception;
 
 /**
  * This class handles exception coming from database.
@@ -16,11 +18,11 @@ namespace SimpleAR;
  *  }
  *  catch (\PDOException $ex)
  *  {
- *      throw new DatabaseException($ex->getMessage(), $query, $ex);
+ *      throw new Database($ex->getMessage(), $query, $ex);
  *  }
  *  ```
  */
-class DatabaseException extends Exception
+class Database extends Exception
 {
     /**
      * Constructor.

@@ -31,7 +31,6 @@
  *
  * @author Lebugg
  */
-namespace SimpleAR;
 
 if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 {
@@ -47,59 +46,64 @@ require __DIR__ . '/lib/Query.php';
 require __DIR__ . '/lib/Model.php';
 require __DIR__ . '/lib/ReadOnlyModel.php';
 require __DIR__ . '/lib/Relationship.php';
-require __DIR__ . '/lib/exceptions/Exception.php';
-require __DIR__ . '/lib/exceptions/DatabaseException.php';
-require __DIR__ . '/lib/exceptions/DuplicateKeyException.php';
-require __DIR__ . '/lib/exceptions/RecordNotFoundException.php';
-require __DIR__ . '/lib/exceptions/ReadOnlyException.php';
-require __DIR__ . '/lib/exceptions/MalformedOptionException.php';
-
+require __DIR__ . '/lib/Exception.php';
+require __DIR__ . '/lib/DateTime.php';
+require __DIR__ . '/lib/Facades/Facade.php';
+require __DIR__ . '/lib/Facades/DB.php';
+require __DIR__ . '/lib/Facades/Cfg.php';
 require __DIR__ . '/tools/array_merge_recursive_distinct.php';
 
-/**
- * This function initializes the library.
- *
- * @param Config $oConfig Your configuration object.
- *
- * @see Config
- */
-function init($oConfig)
+use \SimpleAR\Config;
+use \SimpleAR\Database;
+use \SimpleAR\DateTime;
+use \SimpleAR\Facades\Facade;
+
+class SimpleAR
 {
-    if ($oConfig->convertDateToObject)
+    public $cfg;
+    public $db;
+
+    /**
+     * This function initializes the library.
+     *
+     * @param Config $config Your configuration object.
+     *
+     * @see Config
+     */
+    public function __construct(Config $config)
     {
-        require 'lib/DateTime.php';
+        $this->cfg = $config;
+        $this->db  = new Database($config);
 
-        DateTime::setFormat($oConfig->dateFormat);
-    }
+        // Dependency injection is just this. I tried to use the Facade pattern
+        // the way of Laravel framework uses this; but this is a very
+        // lightweight and not-as-clean implementation.
+        // Facades are located in lib/Facades/.
+        Facade::bind($this);
 
-    spl_autoload_register(function($sClass) use ($oConfig) {
-        foreach ($oConfig->modelDirectory as $sPath)
-        {
-            if (file_exists($sFile = $sPath . $sClass . '.php'))
+        DateTime::setFormat($config->dateFormat);
+
+        spl_autoload_register(function($class) use ($config) {
+            foreach ($config->modelDirectory as $path)
             {
-                include $sFile;
-
-                /**
-                 * Loaded class might not be a subclass of Model. It can just be a
-                 * independant model class located in same directory and loaded by this
-                 * autoload function.
-                 */
-                if (is_subclass_of($sClass, 'SimpleAR\Model'))
+                if (file_exists($file = $path . $class . '.php'))
                 {
-                    $sClass::wakeup();
+                    include $file;
+
+                    /**
+                     * Loaded class might not be a subclass of Model. It can just be a
+                     * independant model class located in same directory and loaded by this
+                     * autoload function.
+                     */
+                    if (is_subclass_of($class, 'SimpleAR\Model'))
+                    {
+                        $class::wakeup();
+                    }
+
+                    // We have included our model, stop here.
+                    break;
                 }
-
-                // We have included our model, stop here.
-                break;
             }
-        }
-    });
-
-    $oDatabase = new Database($oConfig);
-
-    Model::init($oConfig, $oDatabase);
-    Relationship::init($oConfig, $oDatabase);
-    Query::init($oDatabase);
-
-    return $oDatabase;
+        });
+    }
 }

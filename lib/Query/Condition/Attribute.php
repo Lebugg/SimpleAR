@@ -196,7 +196,7 @@ class Attribute
         {
             if (is_array($attribute))
             {
-                throw new \SimpleAR\Exception('Cannot have multiple attributes in “' . $originalString . '”.');
+                throw new Exception('Cannot have multiple attributes in “' . $originalString . '”.');
             }
 
             // We do not have attribute name. We only have an array of relation
