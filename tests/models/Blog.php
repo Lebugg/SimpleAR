@@ -14,4 +14,9 @@ class Blog extends SimpleAR\Model
             'url',
         ),
     );
+
+    public function get_x()
+    {
+        return 'x';
+    }
 }

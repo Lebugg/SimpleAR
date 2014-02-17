@@ -128,4 +128,15 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
     {
         Blog::findByPK(-1);
     }
+
+    public function testGetter()
+    {
+        $stub = $this->getMock('Blog', array('get_x'));
+
+        $stub->expects($this->exactly(2))
+             ->method('get_x');
+
+        $stub->x;
+        $stub->x;
+    }
 }

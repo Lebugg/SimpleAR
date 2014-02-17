@@ -424,9 +424,9 @@ abstract class Model
      * the differents check, by order:
      *
      * 1. Is try-to-be-get attribute called "id"? If yes, return instance's ID;
-     * 2. Is in attribute array (`Model::$_attributes`). If there, return it;
      * 3. Is there a method called `get_<attribute name>()`? If yes, fire it and
      * return its result;
+     * 2. Is in attribute array (`Model::$_attributes`). If there, return it;
      * 4. Is it a relation (in `Model::$_relations`)? If yes, load linked
      * 5. Is it a *count get*? If yes, compute it, store the result in attribute
      * array and return it.
@@ -466,16 +466,16 @@ abstract class Model
             return $this->_id;
         }
 
+        if (method_exists($this, 'get_' . $s))
+        {
+            return call_user_func(array($this, 'get_' . $s));
+        } 
+
         // Classic attribute.
         if (isset($this->_attributes[$s]) || array_key_exists($s, $this->_attributes))
         { 
             return $this->_attributes[$s];
         }
-
-        if (method_exists($this, 'get_' . $s))
-        {
-            return call_user_func(array($this, 'get_' . $s));
-        } 
 
         // Relation.
         // Will arrive here maximum once per relation because when a relation is
