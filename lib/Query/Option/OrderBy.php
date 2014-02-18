@@ -7,6 +7,8 @@ use \SimpleAR\Query\Condition\Attribute;
 
 use \SimpleAR\Exception\MalformedOption;
 
+use \SimpleAR\Database\Expression;
+
 class OrderBy extends Option
 {
     /**
@@ -23,12 +25,6 @@ class OrderBy extends Option
 
     const CLAUSE_STRING = 'ORDER BY ';
 
-    private static $_sqlFunctions = array(
-        'RAND',
-    );
-
-    private $_useSqlFunction = false;
-
     /**
      *
      * @return array
@@ -42,11 +38,9 @@ class OrderBy extends Option
      */
 	public function build()
 	{
-        // First we check that the user is not using a SQL function (Ex:
-        // RAND()).
-        if (is_string($this->_value) && in_array($this->_value, self::$_sqlFunctions))
+        if ($this->_value instanceof Expression)
         {
-            return $this->_buildSqlFunction($this->_value);
+            return;
         }
 
         // Merge order by arrays.
@@ -137,25 +131,15 @@ class OrderBy extends Option
 
     public function compile()
     {
-        if ($this->_useSqlFunction)
+        if ($this->_value instanceof Expression)
         {
-            return self::CLAUSE_STRING . $this->_value . '()';
+            return self::CLAUSE_STRING . $this->_value->val();
         }
 
         return $this->_orderBy
             ? self::CLAUSE_STRING . implode(',', $this->_orderBy)
             : ''
             ;
-    }
-
-    private function _buildSqlFunction($fn)
-    {
-        $this->_useSqlFunction = true;
-
-        return array(
-            'group_by' => array(),
-            'selects'  => array(),
-        );
     }
 
     /**

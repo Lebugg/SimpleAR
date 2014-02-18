@@ -536,8 +536,8 @@ abstract class Model
     {
         return isset($this->_attributes[$name])
             || isset(static::$_relations[$name])
-            || array_key_exists($this->_attributes[$name])
-            || array_key_exists(static::$_relations[$name])
+            || array_key_exists($name, $this->_attributes)
+            || array_key_exists($name, static::$_relations)
             ;
     }
 

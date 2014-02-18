@@ -66,8 +66,11 @@ class Select extends Where
     {
         $res = array();
 
-        $reverse_pK = $this->_context->rootTable->isSimplePrimaryKey ?  array('id' => 0) : array_flip((array) $this->_context->rootTable->primar_key);
-        $re_id      = null;
+        $reversedPK = $this->_context->rootTable->isSimplePrimaryKey
+            ? array('id' => 0)
+            : array_flip((array) $this->_context->rootTable->primaryKey);
+
+        $resId      = null;
 
         // We want one resulting object. But we may have to process several lines in case that eager
         // load of related models have been made with has_many or many_many relations.
@@ -89,7 +92,7 @@ class Select extends Where
             }
 
             // New main object, we are finished.
-            if ($res && $re_id !== array_intersect_key($parse_row, $reverse_pK)) // Compare IDs
+            if ($res && $resId !== array_intersect_key($parse_row, $reversedPK)) // Compare IDs
             {
                 $this->_pendingRow = $parse_row;
                 break;
@@ -114,7 +117,7 @@ class Select extends Where
                 $res   = $parse_row;
 
                 // Store result object ID for later use.
-                $re_id = array_intersect_key($res, $reverse_pK);
+                $resId = array_intersect_key($res, $reversedPK);
             }
         }
 
@@ -203,8 +206,8 @@ class Select extends Where
 	{
         $res = $option->build();
 
-        $this->_groupBys = array_merge($this->_groupBys, $res['group_by']);
-        $this->_selects  = array_merge($this->_selects,  $res['selects']);
+        $this->_groupBys = array_merge($this->_groupBys, (array) $res['group_by']);
+        $this->_selects  = array_merge($this->_selects,  (array) $res['selects']);
 
         $this->_optOrderBy = $option;
 	}

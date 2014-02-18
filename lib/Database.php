@@ -31,7 +31,7 @@ class Database
 
     public function expr($expression)
     {
-        return new Expression($expression);
+        return new Database\Expression($expression);
     }
 
     /**

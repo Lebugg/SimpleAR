@@ -1,6 +1,8 @@
 <?php
 date_default_timezone_set('Europe/Paris');
 
+use \SimpleAR\Facades\DB;
+
 class ModelTest extends PHPUnit_Extensions_Database_TestCase
 {
     private static $_sar;
@@ -116,7 +118,7 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
     public function testOrderByRand()
     {
-        $blogs = Blog::all(array('order_by' => 'RAND'));
+        $blogs = Blog::all(array('order_by' => DB::expr('RAND()')));
 
         $this->assertTrue(is_array($blogs));
     }
@@ -138,5 +140,13 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
         $stub->x;
         $stub->x;
+    }
+
+    public function testExpressionInOrderByOption()
+    {
+        $res = Blog::all(array('order_by' => DB::expr('RAND()')));
+
+        $this->assertTrue(is_array($res));
+        $this->assertEquals(count($res), $this->getConnection()->getRowCount('blog'));
     }
 }
