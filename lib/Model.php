@@ -1417,12 +1417,11 @@ abstract class Model
         }
         else
         {
-            $newValue = func_get_arg(1);
-            $oldValue = isset($this->_attributes[$name]) ? $this->_attributes[$name] : null;
-
-            if ($newValue !== $oldValue)
+            $value = func_get_arg(1);
+            if (! isset($this->_attributes[$name])
+                || $value !== $this->_attributes[$name])
             {
-                $this->_attributes[$name] = $newValue;
+                $this->_attributes[$name] = $value;
                 $this->_isDirty = true;
             }
         }
