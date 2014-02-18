@@ -13,6 +13,7 @@ require __DIR__ . '/Condition/Relation.php';
 require __DIR__ . '/Condition/Simple.php';
 
 use SimpleAR\Query\Condition\Attribute;
+use SimpleAR\Database\Expression;
 
 use SimpleAR\Exception;
 
@@ -108,6 +109,11 @@ abstract class Condition
         {
             $value = $attribute->value;
 
+            if ($value instanceof Expression)
+            {
+                continue;
+            }
+
             if ($value === null)
             {
                 $res[] = null;
@@ -166,12 +172,21 @@ abstract class Condition
      * @see Condition::flattenValues()
      *
      * @param mixed $value The value that will be bound to the condition. It
-     * can be an simple array, a two-dimensional array or a scalar.
+     * can be:
+     *  * a scalar
+     *  * an simple array;
+     *  * a two-dimensional array
+     *  * an Expression object.
      *
      * @return string A valid right hand side SQL condition.
      */
     public static function rightHandSide($value)
     {
+        if ($value instanceof Expression)
+        {
+            return $value->val();
+        }
+
         // First level count.
         $firstLevelCount = count($value);
 

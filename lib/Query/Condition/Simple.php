@@ -1,9 +1,10 @@
 <?php
 namespace SimpleAR\Query\Condition;
 
+use SimpleAR\Query\Condition;
 use SimpleAR\Query\Option;
 
-class SimpleCondition extends \SimpleAR\Query\Condition
+class SimpleCondition extends Condition
 {
     public function toSql($useAliases = true, $toColumn = true)
     {

@@ -149,4 +149,12 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $this->assertTrue(is_array($res));
         $this->assertEquals(count($res), $this->getConnection()->getRowCount('blog'));
     }
+
+    public function testExpressionInConditionsOption()
+    {
+        $a = Article::all(array('conditions' => array(array('date_expiration', '>=', date('Y-m-d'))))); 
+        $b = Article::all(array('conditions' => array(array('date_expiration', '>=', DB::expr('NOW()'))))); 
+
+        $this->assertEquals($a, $b);
+    }
 }

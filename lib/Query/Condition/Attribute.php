@@ -98,9 +98,11 @@ class Attribute
         // If $value is an array, it can contain: objects, scalar values or 1-dimension array.
 
         // Specific case: applying (array) on object would transform it, not wrap it.
-        if (is_object($value))
-        {
-            $value = $value->id;
+        if (is_object($value)) {
+            if ($value instanceof \SimpleAR\Model)
+            {
+                $value = $value->id;
+            }
         }
         else
         {
@@ -135,7 +137,6 @@ class Attribute
         $this->value    = $value;
         $this->operator = $operator;
         $this->logic    = $logic;
-
     }
 
     /**
@@ -222,6 +223,5 @@ class Attribute
         $rhs = Condition::rightHandSide($this->value);
 
         return $lhs . ' ' . $this->operator . ' ' . $rhs;
-
     }
 }
