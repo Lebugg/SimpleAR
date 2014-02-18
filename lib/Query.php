@@ -98,6 +98,13 @@ abstract class Query
     protected $_sth;
 
     /**
+     * Has the query been executed?
+     *
+     * @var bool
+     */
+    protected $_executed = false;
+
+    /**
      * Constructor.
      *
      * It just calls _initContext().
@@ -127,7 +134,7 @@ abstract class Query
      * @param array  $arguments Enumerated array containing the parameters
      * passed to the $name'ed method.
      *
-     * @return mixed
+     * @return $this
      */
     public function __call($name, $arguments)
     {
@@ -138,9 +145,11 @@ abstract class Query
 
             // There is an option handling function for each available option.
             // They are declared protected in order to Query class to access it.
-            $fn = '_' . $s;
+            $fn = '_' . $name;
             $this->$fn($option);
         }
+
+        return $this;
     }
 
     /**
@@ -206,7 +215,7 @@ abstract class Query
      *
      * @return Query\Count
      */
-	public static function count(array $options, $root)
+	public static function count($root, array $options = null)
 	{
         return self::_query('Count', $options, $root);
 	}
@@ -219,7 +228,7 @@ abstract class Query
      *
      * @return Query\Delete
      */
-	public static function delete(array $conditions, $root)
+	public static function delete($root, array $conditions = null)
 	{
         // Delete query only needs a condition array, but we do not want to
         // redefine _build() for this.
@@ -236,7 +245,7 @@ abstract class Query
      *
      * @return Query\Insert
      */
-	public static function insert(array $options, $root)
+	public static function insert($root, array $options = null)
 	{
         return self::_query('Insert', $options, $root);
 	}
@@ -250,6 +259,7 @@ abstract class Query
      */
     public function rowCount()
     {
+        $this->run();
         return $this->_sth->rowCount();
     }
 
@@ -261,23 +271,35 @@ abstract class Query
      * For queries that are "critical", there must be a WHERE clause in the
      * query string. Otherwise, an exception will be thrown.
      *
+     * @param  bool $redo If true, run it even if it already did.
      * @return $this
      */
-    public function run()
+    public function run($again = false)
     {
-        $this->_compile();
-
-        // No WHERE condition for critical query? Do not process.
-        if ($this->_context->isCriticalQuery)
+        if ($this->_executed && ! $again)
         {
-            if (strpos($this->_sql, ' WHERE ') === false)
+            return $this;
+        }
+
+        if (! $this->_executed)
+        {
+            $this->_compile();
+
+            // No WHERE condition for critical query? Do not process.
+            if ($this->_context->isCriticalQuery)
             {
-                throw new Exception('Cannot execute this query without a WHERE clause.');
+                if (strpos($this->_sql, ' WHERE ') === false)
+                {
+                    throw new Exception('Cannot execute this query without a WHERE clause.');
+                }
             }
         }
 
         // At last, execute the query.
         $this->_sth = DB::query($this->_sql, $this->_values);
+
+        // Remember!
+        $this->_executed = true;
 
         return $this;
     }
@@ -290,9 +312,9 @@ abstract class Query
      *
      * @return Query\Select
      */
-	public static function select(array $options, $root)
+	public static function select($root, array $options = null)
 	{
-        return self::_query('Select', $options, $root);
+        return self::_query('Select', (array) $options, $root);
 	}
 
     /**
@@ -303,7 +325,7 @@ abstract class Query
      *
      * @return Query\Update
      */
-	public static function update(array $options, $root)
+	public static function update($root, array $options = null)
 	{
         return self::_query('Update', $options, $root);
 	}

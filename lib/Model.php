@@ -634,11 +634,10 @@ abstract class Model
             $id = $what;
         }
 
-        Query::insert(array(
+        Query::insert($relation->jm->table, array(
                 'fields' => array($relation->jm->from, $relation->jm->to),
                 'values' => array($this->_id, $id),
-            ), $relation->jm->table)
-            ->run();
+            ))->run();
     }
 
     /**
@@ -829,9 +828,7 @@ abstract class Model
         // Any last words to say?
         $this->_onBeforeDelete();
 
-        $count = Query::delete(array('id' => $this->_id), get_called_class())
-                    ->run()
-                    ->rowCount();
+        $count = Query::delete(get_called_class(), array('id' => $this->_id))->rowCount();
 
         // Was not here? Weird. Tell user.
         if ($count === 0)
@@ -965,16 +962,16 @@ abstract class Model
         switch ($first)
         {
             case 'all':
-                $query = Query::select($options, get_called_class());
+                $query = Query::select(get_called_class(), $options);
                 $multiplicity = 'several';
                 break;
             case 'count':
-                $query = Query::count($options, get_called_class());
+                $query = Query::count(get_called_class(), $options);
                 $multiplicity = 'count';
                 break;
             case 'first':
 				$options['limit'] = 1;
-                $query = Query::select($options, get_called_class());
+                $query = Query::select(get_called_class(), $options);
                 $multiplicity = 'one';
                 break;
             case 'last':
@@ -991,7 +988,7 @@ abstract class Model
 				{
 					$options['order_by'] = array('id' => 'DESC');
 				}
-                $query = Query::select($options, get_called_class());
+                $query = Query::select(get_called_class(), $options);
                 $multiplicity = 'one';
                 break;
             default:
@@ -1027,7 +1024,7 @@ abstract class Model
             }
         }
 
-		$query = Query::select($options, get_called_class());
+		$query = Query::select(get_called_class(), $options);
         if (!$res = self::_processSqlQuery($query, $multiplicity, $options))
         {
             throw new RecordNotFound($id);
@@ -1217,10 +1214,7 @@ abstract class Model
      */
     public static function remove(array $conditions = null)
     {
-        return Query::delete($conditions, get_called_class())
-                ->run()
-                ->rowCount()
-                ;
+        return Query::delete(get_called_class(), $conditions)->rowCount();
     }
 
     /**
@@ -1258,13 +1252,12 @@ abstract class Model
 
         if ($id === null) { return; }
 
-        Query::delete(
+        Query::delete($relation->jm->table,
             array(
                 $relation->jm->from => $this->_id,
                 $relation->jm->to   => $what,
-            ),
-            $relation->jm->table)
-            ->run();
+            )
+        )->run();
     }
 
     /**
@@ -1342,6 +1335,14 @@ abstract class Model
         return self::arrayToArray($this->attributes());
     }
 
+    public static function createFromRow($row)
+    {
+        $instance = new static;
+        $instance->_load($row);
+
+        return $instance;
+    }
+
     /**
      * Initialize current model class.
      *
@@ -1397,6 +1398,37 @@ abstract class Model
 
             self::$_tables[$currentClass] = $table;
 		}
+    }
+
+    /**
+     * Handle dynamic static calls.
+     *
+     * This function transmits methods calls to a new Query.
+     * This allows code like:
+     *
+     *  ```php
+     *  Blog::with('articles')->one();
+     *
+     *  // or
+     *
+     *  Article::limit(12)->all();
+     *  ```
+     *
+     *  instead of:
+     *
+     *  ```php
+     *  Blog::one(array('with' => 'articles'));
+     *
+     *  // or
+     *
+     *  Article::all(array('limit' => 12));
+     *  ```
+     */
+    public static function __callStatic($method, $args)
+    {
+        $query = Query::select(get_called_class(), null);
+
+        return call_user_func_array(array($query, $method), $args);
     }
 
     /**
@@ -1747,10 +1779,10 @@ abstract class Model
 
         try
         {
-            $query = Query::insert(array(
+            $query = Query::insert(get_called_class(), array(
                 'fields' => array_keys($fields),
                 'values' => array_values($fields)
-            ), get_called_class());
+            ));
             $query->run();
 
             // We fetch the ID.
@@ -1814,10 +1846,10 @@ abstract class Model
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
-                        $query = Query::insert(array(
+                        $query = Query::insert($relation->jm->table, array(
                             'fields' => array($relation->jm->from, $relation->jm->to),
                             'values' => $values
-                        ), $relation->jm->table);
+                        ));
 
                         $query->run();
                     }
@@ -2074,18 +2106,20 @@ abstract class Model
                 return $res;
 
             case 'several':
-                $rows = $query->all();
-                $res  = array();
+                return $query->all();
 
-                foreach ($rows as $row)
-				{
-                    $model = new static(null, $options);
-                    $model->_load($row);
+                /* $rows = $query->all(); */
+                /* $res  = array(); */
 
-                    $res[] = $model;
-                }
+                /* foreach ($rows as $row) */
+				/* { */
+                /*     $model = new static(null, $options); */
+                /*     $model->_load($row); */
 
-                return $res;
+                /*     $res[] = $model; */
+                /* } */
+
+                /* return $res; */
 
             default:
                 throw new Exception('Unknown multiplicity: "' . $multiplicity . '".');
@@ -2177,11 +2211,12 @@ abstract class Model
 
         try
         {
-            $query = Query::update(array(
+            $query = Query::update(get_called_class(), array(
                 'fields' => array_keys($fields),
                 'values' => array_values($fields),
                 'conditions' => array('id' => $this->_id)
-            ), get_called_class());
+            ));
+
             $query->run();
 
             // I know code seems (is) redundant, but I am convinced that it is
@@ -2229,7 +2264,7 @@ abstract class Model
                     //      2) Insert new rows.
 
                     // Remove all rows from join table. (Easier this way.)
-					$query = Query::delete(array($relation->jm->from => $this->_id), $relation->jm->table);
+					$query = Query::delete($relation->jm->table, array($relation->jm->from => $this->_id));
                     $query->run();
 
                     $values = array();
@@ -2252,10 +2287,10 @@ abstract class Model
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
-                        $query = Query::insert(array(
+                        $query = Query::insert($relation->jm->table, array(
                             'fields' => array($relation->jm->from, $relation->jm->to),
                             'values' => $values
-                        ), $relation->jm->table);
+                        ));
 
                         $query->run();
                     }

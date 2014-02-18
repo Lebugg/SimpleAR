@@ -79,6 +79,14 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $this->assertEquals($expected, array_values(Blog::columns()));
     }
 
+    public function testCount()
+    {
+        $a = $this->getConnection()->getRowCount('blog');
+        $b = Blog::count();
+
+        $this->assertEquals($a, $b);
+    }
+
     /**
      * @expectedException SimpleAR\Exception
      */
@@ -147,7 +155,7 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $res = Blog::all(array('order_by' => DB::expr('RAND()')));
 
         $this->assertTrue(is_array($res));
-        $this->assertEquals(count($res), $this->getConnection()->getRowCount('blog'));
+        $this->assertEquals($this->getConnection()->getRowCount('blog'), count($res));
     }
 
     public function testExpressionInConditionsOption()
@@ -156,5 +164,18 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $b = Article::all(array('conditions' => array(array('date_expiration', '>=', DB::expr('NOW()'))))); 
 
         $this->assertEquals($a, $b);
+    }
+
+    public function testCallStaticToQuery()
+    {
+        $a = Article::one(array('conditions' => array(array('date_expiration', '>=', DB::expr('NOW()'))))); 
+        $b = Article::conditions(array(array('date_expiration', '>=', DB::expr('NOW()'))))->one(); 
+
+        $this->assertEquals($a, $b);
+
+        /* $a = Blog::all(array('filter' => array('name', 'description'))); */
+        /* $b = Blog::filter('name', 'description')->all(); */ 
+
+        /* $this->assertEquals($a, $b); */
     }
 }

@@ -16,18 +16,18 @@ class Select extends Where
      *
      * @var array
      */
-	private $_selects		= array();
+	protected $_selects		= array();
 
     /**
      * Contains attributes to GROUP BY on.
      *
      * @var array
      */
-	private $_groupBys = array();
-	private $_optOrderBy = array();
-    private $_havings  = array();
-    private $_limit;
-    private $_offset;
+	protected $_groupBys = array();
+	protected $_optOrderBy = array();
+    protected $_havings  = array();
+    protected $_limit;
+    protected $_offset;
 
     private $_pendingRow = false;
 
@@ -47,9 +47,10 @@ class Select extends Where
      */
     public function all()
     {
-        $res = array();
+        $this->run();
 
-        while ($one = $this->row())
+        $res = array();
+        while ($one = $this->one())
         {
             $res[] = $one;
         }
@@ -64,6 +65,8 @@ class Select extends Where
      */
     public function row()
     {
+        $this->run();
+
         $res = array();
 
         $reversedPK = $this->_context->rootTable->isSimplePrimaryKey
@@ -84,23 +87,23 @@ class Select extends Where
                 // Prevent infinite loop.
                 $this->_pendingRow = false;
                 // Pending row is already parsed.
-                $parse_row = $row;
+                $parsedRow = $row;
             }
             else
             {
-                $parse_row = $this->_parseRow($row);
+                $parsedRow = $this->_parseRow($row);
             }
 
             // New main object, we are finished.
-            if ($res && $resId !== array_intersect_key($parse_row, $reversedPK)) // Compare IDs
+            if ($res && $resId !== array_intersect_key($parsedRow, $reversedPK)) // Compare IDs
             {
-                $this->_pendingRow = $parse_row;
+                $this->_pendingRow = $parsedRow;
                 break;
             }
 
             // Same row but there is no linked model to fetch. Weird. Query must be not well
             // constructed. (Lack of GROUP BY).
-            if ($res && !isset($parse_row['_WITH_']))
+            if ($res && !isset($parsedRow['_WITH_']))
             {
                 continue;
             }
@@ -110,11 +113,11 @@ class Select extends Where
             if ($res)
             {
                 // Merge related models.
-                $res = \array_merge_recursive_distinct($res, $parse_row);
+                $res = \array_merge_recursive_distinct($res, $parsedRow);
             }
             else
             {
-                $res   = $parse_row;
+                $res   = $parsedRow;
 
                 // Store result object ID for later use.
                 $resId = array_intersect_key($res, $reversedPK);
@@ -122,6 +125,20 @@ class Select extends Where
         }
 
         return $res;
+    }
+
+    /**
+     * @return SimpleAR\Model
+     */
+    public function one()
+    {
+        if ($row = $this->row())
+        {
+            $class = $this->_context->rootModel;
+            return $class::createFromRow($row);
+        }
+
+        return null;
     }
 
     protected function _build(array $options)
