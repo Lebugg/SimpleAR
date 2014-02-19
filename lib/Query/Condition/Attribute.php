@@ -29,6 +29,7 @@ class Attribute
         '>'  => '> ANY',
         '<=' => '<= ANY',
         '>=' => '>= ANY',
+        'LIKE' => 'LIKE',
     );
 
     /**

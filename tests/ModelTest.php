@@ -150,6 +150,18 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $stub->x;
     }
 
+    public function testVirtualAttributeConditions()
+    {
+        $articles = Article::all(array('conditions' => array(
+            'relevant' => true,
+        )));
+
+        foreach ($articles as $article)
+        {
+            $this->assertContains('pokemon', $article->content);
+        }
+    }
+
     public function testExpressionInOrderByOption()
     {
         $res = Blog::all(array('order_by' => DB::expr('RAND()')));
@@ -166,16 +178,16 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $this->assertEquals($a, $b);
     }
 
-    public function testCallStaticToQuery()
+    public function testCallStaticModelToQuery()
     {
         $a = Article::one(array('conditions' => array(array('date_expiration', '>=', DB::expr('NOW()'))))); 
         $b = Article::conditions(array(array('date_expiration', '>=', DB::expr('NOW()'))))->one(); 
 
         $this->assertEquals($a, $b);
 
-        /* $a = Blog::all(array('filter' => array('name', 'description'))); */
-        /* $b = Blog::filter('name', 'description')->all(); */ 
+        $a = Blog::all(array('filter' => array('name', 'description')));
+        $b = Blog::filter('name', 'description')->all(); 
 
-        /* $this->assertEquals($a, $b); */
+        $this->assertEquals($a, $b);
     }
 }
