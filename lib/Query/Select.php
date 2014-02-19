@@ -194,9 +194,9 @@ class Select extends Where
             $this->_conditions = $res['conditions'];
         }
 
-        $this->_havings    = array_merge($this->_havings,    $res['havings']);
-        $this->_groupBys    = array_merge($this->_groupBys,  $res['groupBys']);
-        $this->_selects    = array_merge($this->_selects,    $res['selects']);
+        $this->_havings    = array_merge($this->_havings,   $res['havings']);
+        $this->_groupBys   = array_merge($this->_groupBys,  $res['groupBys']);
+        $this->_selects    = array_merge($this->_selects,   $res['selects']);
     }
 
     protected function _group_by(Option $option)

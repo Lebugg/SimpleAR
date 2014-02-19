@@ -403,7 +403,7 @@ abstract class Model
     {
         if (isset($options['filter']))
         {
-            $this->filter($options['filter']);
+            $this->setFilter($options['filter']);
         }
 
         $this->_setDefaultValues();
@@ -905,7 +905,7 @@ abstract class Model
      *
      * @return $this
      */
-    public function filter($filter)
+    public function setFilter($filter)
     {
         // It is an attribute array.
         if (is_array($filter))
@@ -1426,7 +1426,7 @@ abstract class Model
      */
     public static function __callStatic($method, $args)
     {
-        $query = Query::select(get_called_class(), null);
+        $query = Query::select(get_called_class());
 
         return call_user_func_array(array($query, $method), $args);
     }

@@ -48,7 +48,7 @@ abstract class Option
 
     public static function forge($optionName, $value, $context, $arborescence = null)
     {
-        if (!isset(self::$_optionToClass[$optionName]))
+        if (! isset(self::$_optionToClass[$optionName]))
         {
             throw new MalformedOptionException('Use of unknown option "' .  $optionName . '".');
         }
