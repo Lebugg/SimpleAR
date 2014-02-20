@@ -40,7 +40,7 @@ class ConditionGroup extends Condition
         {
             // We check to see if we can combine the condition to add with an
             // existing condition. We can combine conditions if they apply on same
-            // Relationship.
+            // Relation.
             foreach ($this->_elements as $element)
             {
                 // I don't think we want this.

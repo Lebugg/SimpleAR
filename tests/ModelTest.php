@@ -191,4 +191,15 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
         /* $this->assertEquals($a, $b); */
     }
+
+    public function testHasManyRelationFetch()
+    {
+        $blog     = Blog::find(1);
+        $articles = $blog->articles;
+
+        foreach ($articles as $article) {
+            $this->assertEquals('Article', get_class($article));
+            $this->assertEquals($article->blog_id, 1);
+        }
+    }
 }

@@ -7,11 +7,11 @@ use SimpleAR\Exception;
 class ExistsCondition extends Condition
 {
     /**
-     * A Relationship object used when condition is made through a Model relation.
+     * A Relation object used when condition is made through a Model relation.
      *
      * Optional
      *
-     * @var Relationship
+     * @var Relation
      */
     public $relation;
 

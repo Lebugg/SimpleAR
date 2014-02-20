@@ -236,13 +236,13 @@ abstract class Relation
      * Constructor.
      *
      * @param array  $a         The relation definition array define in the current model.
-     * @param string $cMClass  The Current Model (CM). This is the Model that defines the relation.
+     * @param string $cmClass  The Current Model (CM). This is the Model that defines the relation.
      */
-    protected function __construct($a, $cMClass)
+    protected function __construct($a, $cmClass)
     {
         $this->cm = new \StdClass();
-        $this->cm->class     = $cMClass;
-        $this->cm->t         = $cMClass::table();
+        $this->cm->class     = $cmClass;
+        $this->cm->t         = $cmClass::table();
         $this->cm->table     = $this->cm->t->name;
         $this->cm->alias     = $this->cm->t->alias;
 
@@ -265,14 +265,24 @@ abstract class Relation
         $query->run();
     }
 
-    public static function forge($name, $a, $cMClass)
+    /**
+     * Create a Relation instance.
+     *
+     * @param string $name The name of the relation.
+     * @param array  $config The relation config array defined in
+     * static::$_relations.
+     * @param string $cmClass The current model class.
+     *
+     * @return Relation
+     */
+    public static function forge($name, $config, $cmClass)
     {
-        $s = 'SimpleAR\\' . self::$_typeToClass[$a['type']];
+        $relationClass = 'SimpleAR\\Relation\\' . self::$_typeToClass[$config['type']];
 
-        $o = new $s($a, $cMClass);
-        $o->name = $name;
+        $relation = new $relationClass($config, $cmClass);
+        $relation->name = $name;
 
-        return $o;
+        return $relation;
     }
 
     public function joinLinkedModel($depth, $joinType)

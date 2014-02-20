@@ -15,6 +15,13 @@ class Blog extends SimpleAR\Model
         ),
     );
 
+    protected static $_relations = array(
+        'articles' => array(
+            'type'  => 'has_many',
+            'model' => 'Article',
+        ),
+    );
+
     public function get_x()
     {
         return 'x';

@@ -3,7 +3,7 @@ namespace SimpleAR\Query;
 
 use \SimpleAR\Query\Condition;
 use \SimpleAR\Table;
-use \SimpleAR\Relationship;
+use \SimpleAR\Relation;
 
 /**
  * This class modelizes an arborescence of nodes that represent a join between
@@ -41,7 +41,7 @@ class Arborescence
     /**
      * A relation object.
      *
-     * @var Relationship
+     * @var Relation
      */
     public $relation;
 
@@ -126,7 +126,7 @@ class Arborescence
      *
      * @param string        $model     The model class name.
      * @param Table         $table     The table object associated to the model.
-     * @param Relationship  $relation  An optional relation associated to the current node.
+     * @param Relation      $relation  An optional relation associated to the current node.
      * @param int           $joinType  The type of the join that should be performed.
      * @param int           $depth     The depth of the node.
      * @param Arborescence  $parent    The parent node.
@@ -135,7 +135,7 @@ class Arborescence
     public function __construct(
         $model,
         Table $table,
-        Relationship $relation = null,
+        Relation $relation     = null,
         $joinType              = self::JOIN_INNER,
         $depth                 = 0,
         Arborescence $parent   = null,
@@ -190,7 +190,7 @@ class Arborescence
         foreach ($relations as $i => $relation)
         {
             $nPrevious = $nCurrent;
-            // $relation is now a Relationship object.
+            // $relation is now a Relation object.
             $relation = $cm::relation($relation);
             $cm       = $relation->lm->class;
 
@@ -321,12 +321,12 @@ class Arborescence
     /**
      * Return a child that from a relation.
      *
-     * @param Relationship $r The relation through which retrieve the child
+     * @param Relation $r The relation through which retrieve the child
      * node.
      *
      * @return Arborescence
      */
-    public function getChild(Relationship $r)
+    public function getChild(Relation $r)
     {
         return $this->children[$r->name];
     }
@@ -334,11 +334,11 @@ class Arborescence
     /**
      * Does the node has a child associated to the given relation?
      *
-     * @param Relationship $r The relation to test on.
+     * @param Relation $r The relation to test on.
      *
      * @return bool True if there is a child, false otherwise.
      */
-    public function hasChild(Relationship $r)
+    public function hasChild(Relation $r)
     {
         return isset($this->children[$r->name]);
     }

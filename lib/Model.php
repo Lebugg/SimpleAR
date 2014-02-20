@@ -617,7 +617,7 @@ abstract class Model
     {
         $relation = static::relation($relation);
 
-        if (! $relation instanceof ManyMany)
+        if (! $relation instanceof Relation\ManyMany)
         {
             throw new Exception('addTo can only be used on ManyMany relations.');
         }
@@ -1134,7 +1134,7 @@ abstract class Model
      *
      * @return void
      */
-    public function load(Relationship $relation)
+    public function load(Relation $relation)
     {
         $this->_loadLinkedModel($relation);
     }
@@ -1176,10 +1176,10 @@ abstract class Model
      * @param $name     The name of the relation.
      * @param $relation The relation to set instead
      *
-     * @return object A Relationship object.
+     * @return object A Relation object.
      * @throw SimpleAR\Exception if used as getter and $relationName is unknown.
      */
-    public static function relation($name, Relationship $relation = null)
+    public static function relation($name, Relation $relation = null)
     {
 		if ($relation === null)
 		{
@@ -1192,12 +1192,12 @@ abstract class Model
             $val =& static::$_relations[$name];
 
 			// If relation is not yet initlialized, do it.
-			if (! $val instanceof Relationship)
+			if (! $val instanceof Relation)
 			{
-				$val = Relationship::forge($name, $val, get_called_class());
+				$val = Relation::forge($name, $val, get_called_class());
 			}
 
-			// Return the Relationship object.
+			// Return the Relation object.
 			return $val;
 		}
 		else
@@ -1241,7 +1241,7 @@ abstract class Model
     {
         $relation = static::relation($relation);
 
-        if (! $relation instanceof ManyMany)
+        if (! $relation instanceof Relation\ManyMany)
         {
             throw new Exception('removeFrom can only be used on ManyMany relations.');
         }
@@ -1598,11 +1598,11 @@ abstract class Model
 		$res     = 0;
 		$class = $relation->lm->class;
 
-        if ($relation instanceof BelongsTo)
+        if ($relation instanceof Relation\BelongsTo)
         {
             return $this->__get($relation->cm->attribute) === null ? 0 : 1;
         }
-        elseif ($relation instanceof HasOne || $relation instanceof HasMany)
+        elseif ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
         {
             $res = $class::count(array(
                 'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->__get($relation->cm->attribute))),
@@ -1641,7 +1641,7 @@ abstract class Model
     {
         $relation = static::relation($relationName);
 
-        if ($relation instanceof ManyMany)
+        if ($relation instanceof Relation\ManyMany)
         {
             $relation->deleteJoinModel($this->_id);
         }
@@ -1667,7 +1667,7 @@ abstract class Model
         {
             $relation = static::relation($name);
 
-            if ($relation instanceof ManyMany)
+            if ($relation instanceof Relation\ManyMany)
             {
                 $relation->deleteJoinModel($this->_id);
             }
@@ -1676,7 +1676,7 @@ abstract class Model
 			{
 				$relation->deleteLinkedModel($this->_id);
 
-				if ($relation instanceof HasOne)
+				if ($relation instanceof Relation\HasOne)
 				{
 					$this->_attributes[$name] = null;
 				}
@@ -1761,7 +1761,7 @@ abstract class Model
                 $relation = static::relation($key);
 
                 // If it is linked by a BelongsTo instance, update local field.
-                if ($relation instanceof BelongsTo)
+                if ($relation instanceof Relation\BelongsTo)
                 {
                     // Save in cascade.
                     $value->save();
@@ -1797,7 +1797,7 @@ abstract class Model
                 $object   = $a['object'];
 
                 // Ignore if not Model instance.
-                if ($relation instanceof HasOne)
+                if ($relation instanceof Relation\HasOne)
                 {
                     if($object instanceof Model)
                     {
@@ -1805,7 +1805,7 @@ abstract class Model
                         $object->save();
                     }
                 }
-                elseif ($relation instanceof HasMany)
+                elseif ($relation instanceof Relation\HasMany)
                 {
                     // Ignore if not Model instance.
                     // Array cast allows user not to bother to necessarily set an array.
@@ -1915,7 +1915,7 @@ abstract class Model
                 $relation = static::relation($relation);
                 $class  = $relation->lm->class;
 
-                if ($relation instanceof BelongsTo || $relation instanceof HasOne)
+                if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
                 {
                     // $value is an array of attributes. The attributes of the linked model 
                     // instance.
@@ -2016,7 +2016,7 @@ abstract class Model
         // have an ID, so we cannot retrieve linked models from Db.
         if ($this->_id === null)
         {
-            if ($relation instanceof BelongsTo || $relation instanceof HasOne)
+            if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
             {
                 return null;
             }
@@ -2031,7 +2031,7 @@ abstract class Model
         $res	  = null;
 		$class = $relation->lm->class;
 
-        if ($relation instanceof BelongsTo || $relation instanceof HasOne)
+        if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
         {
             $res = $class::first(array(
                 'conditions' => array_merge(
@@ -2042,7 +2042,7 @@ abstract class Model
                 'filter'     => $relation->filter,
             ));
         }
-        elseif ($relation instanceof HasMany)
+        elseif ($relation instanceof Relation\HasMany)
         {
             $res = $class::all(array(
                 'conditions' => array_merge(
@@ -2193,7 +2193,7 @@ abstract class Model
                 $relation = static::relation($key);
 
                 // If it is linked by a BelongsTo instance, update local field.
-                if ($relation instanceof BelongsTo)
+                if ($relation instanceof Relation\BelongsTo)
                 {
                     // Save in cascade.
                     $value->save();
@@ -2230,7 +2230,7 @@ abstract class Model
                 $object   = $a['object'];
 
                 // Ignore if not Model instance.
-                if ($relation instanceof HasOne)
+                if ($relation instanceof Relation\HasOne)
                 {
                     if($object instanceof Model)
                     {
@@ -2238,7 +2238,7 @@ abstract class Model
                         $object->save();
                     }
                 }
-                elseif ($relation instanceof HasMany)
+                elseif ($relation instanceof Relation\HasMany)
                 {
                     // Ignore if not Model instance.
                     // Array cast allows user not to bother to necessarily set an array.

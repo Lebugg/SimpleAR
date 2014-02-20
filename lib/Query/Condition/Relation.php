@@ -19,11 +19,11 @@ use SimpleAR\Exception;
 class RelationCondition extends \SimpleAR\Query\Condition
 {
     /**
-     * A Relationship object used when condition is made through a Model relation.
+     * A Relation object used when condition is made through a Model relation.
      *
      * Optional
      *
-     * @var Relationship
+     * @var Relation
      */
     public $relation;
 

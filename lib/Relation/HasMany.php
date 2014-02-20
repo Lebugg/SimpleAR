@@ -1,6 +1,7 @@
 <?php namespace SimpleAR\Relation;
 
 use \SimpleAR\Relation;
+use \SimpleAR\Facades\Cfg;
 
 class HasMany extends Relation
 {
