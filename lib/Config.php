@@ -261,9 +261,10 @@ class Config
     /**
      * Constructor.
      *
-     * Set default values for configuration items that cannot be initialized outside a function:
+     * Set default values for configuration items that cannot be initialized
+     * outside a method:
      *
-     * * buildForeignKey
+     *  * buildForeignKey
      *
      */
     public function __construct()
@@ -277,21 +278,21 @@ class Config
     /**
      * Allows developer to not write the underscore of attribute name.
      *
-     * @param string $s The option name (same as attribute name without
+     * @param string $option The option name (same as attribute name without
      * beginning "_").
      *
      * @return mixed The option value.
      */
-    public function __get($s)
+    public function __get($option)
     {
-        if (isset($this->{'_' . $s}))
+        if (isset($this->{'_' . $option}))
         {
-            return $this->{'_' . $s};
+            return $this->{'_' . $option};
         }
 
         $trace = debug_backtrace();
         trigger_error(
-            'Undefined property via __get(): ' . $s .
+            'Undefined property via __get(): ' . $option .
             ' in ' . $trace[0]['file'] .
             ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
@@ -304,27 +305,27 @@ class Config
      * Allows developer to write a special setter function for a specific
      * option.
      *
-     * @param string $s The option name (same as attribute name without
+     * @param string $option The option name (same as attribute name without
      * beginning "_").
-     * @param mixed $m The option value
+     * @param mixed $value The option value
      */
-    public function __set($s, $m)
+    public function __set($option, $value)
     {
-        if (method_exists($this, $s))
+        if (method_exists($this, $option))
         {
-            $this->$s($m);
+            $this->$option($value);
             return;
         }
 
-        if (isset($this->{'_' . $s}))
+        if (isset($this->{'_' . $option}))
         {
-            $this->{'_' . $s} = $m;
+            $this->{'_' . $option} = $value;
             return;
         }
 
         $trace = debug_backtrace();
         trigger_error(
-            'Undefined property via __set(): ' . $s .
+            'Undefined property via __set(): ' . $option .
             ' in ' . $trace[0]['file'] .
             ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
