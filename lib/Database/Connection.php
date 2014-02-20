@@ -1,6 +1,7 @@
 <?php namespace SimpleAR\Database;
 
 use \SimpleAR\Config;
+use \SimpleAR\Exception\Database as DatabaseEx;
 
 class Connection
 {
@@ -91,7 +92,7 @@ class Connection
         }
         catch (\PDOException $ex)
 		{
-            throw new DatabaseException($ex->getMessage(), null, $ex);
+            throw new DatabaseEx($ex->getMessage(), null, $ex);
         }
 
         $this->_database = $a['name'];

@@ -7,9 +7,9 @@ class ManyMany extends Relation
 {
     public $jm;
 
-    protected function __construct($a, $cMClass)
+    protected function __construct($a, $cmClass)
     {
-        parent::__construct($a, $cMClass);
+        parent::__construct($a, $cmClass);
 
         $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
@@ -23,7 +23,7 @@ class ManyMany extends Relation
 
         if (isset($a['join_model']))
         {
-            $this->jm->class = $s = $a['join_model'] . self::$_modelClassSuffix;
+            $this->jm->class = $s = $a['join_model'] . Cfg::get('modelClassSuffix');
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
             $this->jm->from  =

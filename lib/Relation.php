@@ -10,6 +10,8 @@ require __DIR__ . '/Relation/HasOne.php';
 require __DIR__ . '/Relation/HasMany.php';
 require __DIR__ . '/Relation/ManyMany.php';
 
+use \SimpleAR\Facades\Cfg;
+
 /**
  * This class modelizes a Relation between two Models.
  *
@@ -215,24 +217,6 @@ abstract class Relation
     );
 
     /**
-     * Stores the model class suffix defined by `Config::$_modelClassSuffix`
-     *
-     * @see Config::$_modelClassSuffix
-     *
-     * @var string
-     */
-    protected static $_modelClassSuffix;
-
-    /**
-     * Stores the model class suffix defined by `Config::$_foreignKeySuffix`
-     *
-     * @see Config::$_foreignKeySuffix
-     *
-     * @var string
-     */
-    protected static $_foreignKeySuffix;
-
-    /**
      * Constructor.
      *
      * @param array  $a         The relation definition array define in the current model.
@@ -247,7 +231,7 @@ abstract class Relation
         $this->cm->alias     = $this->cm->t->alias;
 
         $this->lm = new \StdClass();
-        $this->lm->class = $s = $a['model'] . self::$_modelClassSuffix;
+        $this->lm->class = $s = $a['model'] . Cfg::get('modelClassSuffix');
         $this->lm->t     = $s::table();
         $this->lm->table = $this->lm->t->name;
         $this->lm->alias = $this->lm->t->alias;

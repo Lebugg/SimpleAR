@@ -5,9 +5,9 @@ use \SimpleAR\Facades\Cfg;
 
 class BelongsTo extends Relation
 {
-    protected function __construct($a, $cMClass)
+    protected function __construct($a, $cmClass)
     {
-        parent::__construct($a, $cMClass);
+        parent::__construct($a, $cmClass);
 
         $this->cm->attribute = isset($a['key_from'])
             ? $a['key_from']

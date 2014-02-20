@@ -269,8 +269,11 @@ class Config
      */
     public function __construct()
     {
-        $suffix = $this->_foreignKeySuffix;
-        $this->_buildForeignKey = function($modelBaseName) use ($suffix) {
+        // Use reference; otherwise, $suffix would be equal to value at
+        // instanciation time that is, any value change of _foreignKeySuffix
+        // would not be taken into account.
+        $suffix = &$this->_foreignKeySuffix;
+        $this->_buildForeignKey = function($modelBaseName) use (&$suffix) {
             return strtolower($modelBaseName) . $suffix;
         };
     }
@@ -385,6 +388,11 @@ class Config
     public function get($option)
     {
         return $this->__get($option);
+    }
+
+    public function set($option, $value)
+    {
+        return $this->__set($option, $value);
     }
 
 }
