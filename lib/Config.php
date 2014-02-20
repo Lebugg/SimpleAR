@@ -196,7 +196,7 @@ class Config
      *
      * Default value: 'Id'
      */
-    private $_foreignKeySuffix = 'Id';
+    private $_foreignKeySuffix = '_id';
 
     /**
      * Abbreviation of language to use.
