@@ -187,10 +187,10 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
         $this->assertEquals($a, $b);
 
-        /* $a = Blog::all(array('filter' => array('name', 'description'))); */
-        /* $b = Blog::filter('name', 'description')->all(); */ 
+        $a = Blog::all(array('filter' => array('name', 'description')));
+        $b = Blog::filter('name', 'description')->all(); 
 
-        /* $this->assertEquals($a, $b); */
+        $this->assertEquals($a, $b);
     }
 
     public function testHasManyRelationFetch()
