@@ -3,6 +3,7 @@ date_default_timezone_set('Europe/Paris');
 error_reporting(E_ALL | E_STRICT);
 
 use \SimpleAR\Facades\DB;
+use \SimpleAR\Facades\Cfg;
 
 class ModelTest extends PHPUnit_Extensions_Database_TestCase
 {
@@ -201,5 +202,18 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
             $this->assertEquals('Article', get_class($article));
             $this->assertEquals($article->blog_id, 1);
         }
+    }
+
+    public function testDateToObjectConversion()
+    {
+        Cfg::set('convertDateToObject', true);
+        $article = Article::first();
+
+        $this->assertInstanceOf('DateTime', $article->date_expiration);
+
+        Cfg::set('convertDateToObject', false);
+        $article = Article::first();
+
+        $this->assertInternalType('string', $article->date_expiration);
     }
 }
