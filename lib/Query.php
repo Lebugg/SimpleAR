@@ -104,6 +104,8 @@ abstract class Query
      */
     protected $_executed = false;
 
+    protected $_givenOptions;
+
     /**
      * Constructor.
      *
@@ -351,6 +353,8 @@ abstract class Query
      */
 	protected function _build(array $options)
     {
+        $this->_givenOptions = $options;
+
         // Foreach given option, we check that query can handle it.
         // If it can, we build the option and give it to the query.
         foreach ($options as $name => $value)

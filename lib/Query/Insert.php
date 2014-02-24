@@ -60,7 +60,7 @@ class Insert extends \SimpleAR\Query
 
     protected function _compileTable()
     {
-        $this->sql = 'INSERT INTO ';
+        $this->_sql = 'INSERT INTO ';
 
         $c = $this->_context;
         $this->_sql .= $c->useAlias

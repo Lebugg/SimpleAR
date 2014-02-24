@@ -1335,9 +1335,9 @@ abstract class Model
         return self::arrayToArray($this->attributes());
     }
 
-    public static function createFromRow($row)
+    public static function createFromRow($row, array $options)
     {
-        $instance = new static;
+        $instance = new static(null, $options);
         $instance->_load($row);
 
         return $instance;

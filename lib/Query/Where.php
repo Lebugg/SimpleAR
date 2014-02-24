@@ -1,10 +1,11 @@
-<?php
+<?php namespace SimpleAR\Query;
 /**
  * This file contains the Where class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query;
+
+use \SimpleAR\Query;
 
 use SimpleAR\Query\Condition\ExistsCondition;
 use SimpleAR\Query\Condition\RelationCondition;
@@ -13,7 +14,7 @@ use SimpleAR\Query\Condition\SimpleCondition;
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).
  */
-abstract class Where extends \SimpleAR\Query
+abstract class Where extends Query
 {
     protected $_where;
 	protected $_groups = array();
@@ -29,19 +30,6 @@ abstract class Where extends \SimpleAR\Query
         switch (get_class($option))
         {
             case 'SimpleAR\Query\Option\Conditions':
-                if ($this->_where)
-                {
-                    $this->_where->combine($option->conditions);
-                }
-                else
-                {
-                    $this->_where = $option->conditions;
-                }
-
-                $this->_havings  = array_merge($this->_havings, $option->havings);
-                $this->_groups   = array_merge($this->_groups,  $option->groups);
-                $this->_columns  = array_merge($this->_columns, $option->columns);
-                break;
             case 'SimpleAR\Query\Option\Has':
                 if ($this->_where)
                 {
@@ -52,9 +40,20 @@ abstract class Where extends \SimpleAR\Query
                     $this->_where = $option->conditions;
                 }
 
-                $this->_havings  = array_merge($this->_havings, $option->havings);
-                $this->_groups   = array_merge($this->_groups,  $option->groups);
-                $this->_columns  = array_merge($this->_columns, $option->columns);
+                if ($option->havings)
+                {
+                    $this->_havings  = array_merge($this->_havings, $option->havings);
+                }
+
+                if ($option->groups)
+                {
+                    $this->_groups   = array_merge($this->_groups,  $option->groups);
+                }
+
+                if ($option->columns)
+                {
+                    $this->_columns  = array_merge($this->_columns, $option->columns);
+                }
                 break;
             default:
                 parent::_handleOption($option);

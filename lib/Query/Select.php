@@ -154,7 +154,7 @@ class Select extends Where
         if ($row = $this->row())
         {
             $class = $this->_context->rootModel;
-            return $class::createFromRow($row);
+            return $class::createFromRow($row, $this->_givenOptions);
         }
 
         return null;
@@ -163,12 +163,11 @@ class Select extends Where
     protected function _build(array $options)
     {
         // If user does not define any filter entry, we set a default one.
-        /*
         if (! isset($options['filter']))
         {
-            $this->_filter = Option::forge('filter', null, $this->_context);
+            $options['filter'] = null;
+            //$this->_filter = Option::forge('filter', null, $this->_context);
         }
-        */
 
         // We have to use result alias in order to distinguish root model from
         // its linked models. It will cost more operations to parse result.
@@ -185,11 +184,13 @@ class Select extends Where
     protected function _compile()
     {
         // Here we go? Let's check that we are selecting some columns.
+        /*
         if (! $this->_columns)
         {
             $option = Option::forge('filter', null, $this->_context);
             $this->_handleOption($option);
         }
+        */
 
         return parent::_compile();
     }
@@ -241,7 +242,7 @@ class Select extends Where
         switch (get_class($option))
         {
             case 'SimpleAR\Query\Option\Filter':
-                $this->_columns = $option->columns;
+                $this->_columns = array_merge($this->_columns, $option->columns);
                 break;
             case 'SimpleAR\Query\Option\Group':
                 $this->_groups = $option->groups;
@@ -258,7 +259,7 @@ class Select extends Where
                 $this->_columns = array_merge($this->_columns, $option->columns);
                 break;
             case 'SimpleAR\Query\Option\With':
-                $this->_columns = array_merge($this->columns, $option->columns);
+                $this->_columns = array_merge($this->_columns, $option->columns);
                 break;
             default:
                 parent::_handleOption($option);

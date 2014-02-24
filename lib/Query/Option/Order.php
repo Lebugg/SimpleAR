@@ -162,8 +162,8 @@ class Order extends Option
 
         switch (get_class($relation))
         {
-            case 'SimpleAR\HasMany':
-            case 'SimpleAR\HasOne':
+            case 'SimpleAR\Relation\HasMany':
+            case 'SimpleAR\Relation\HasOne':
                 if ($this->_context->useAlias)
                 {
                     $tableAlias = $relation->lm->alias . $depth;
@@ -172,7 +172,7 @@ class Order extends Option
                 $column = $relation->lm->column;
                 break;
 
-            case 'SimpleAR\ManyMany':
+            case 'SimpleAR\Relation\ManyMany':
                 if ($this->_context->useAlias)
                 {
                     $tableAlias = $relation->jm->alias . $depth;
@@ -181,7 +181,7 @@ class Order extends Option
                 $column = $relation->jm->from;
                 break;
 
-            case 'SimpleAR\BelongsTo':
+            case 'SimpleAR\Relation\BelongsTo':
                 // No need to order on the linked model attribute, we have it in
                 // the current model.
 
@@ -267,8 +267,8 @@ class Order extends Option
 
         switch (get_class($relation = $node->relation))
         {
-            case 'SimpleAR\HasMany':
-            case 'SimpleAR\HasOne':
+            case 'SimpleAR\Relation\HasMany':
+            case 'SimpleAR\Relation\HasOne':
                 // We have to include it even if we order on linked model ID. (The
                 // linked model ID field is not in the current model table.)
                 $node->force = true;
@@ -282,7 +282,7 @@ class Order extends Option
 
                 break;
 
-            case 'SimpleAR\ManyMany':
+            case 'SimpleAR\Relation\ManyMany':
                 if ($attribute->attribute === 'id')
                 {
                     if ($this->_context->useAlias)
@@ -304,7 +304,7 @@ class Order extends Option
 
                 break;
 
-            case 'SimpleAR\BelongsTo':
+            case 'SimpleAR\Relation\BelongsTo':
                 if ($attribute->attribute === 'id')
                 {
                     // No need to order on the linked model attribute, we have it in

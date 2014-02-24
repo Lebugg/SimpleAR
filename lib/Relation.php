@@ -245,7 +245,7 @@ abstract class Relation
 
     public function deleteLinkedModel($value)
     {
-        $query = Query::delete(array($this->lm->attribute => $value), $this->lm->class);
+        $query = Query::delete($this->lm->class, array($this->lm->attribute => $value));
         $query->run();
     }
 

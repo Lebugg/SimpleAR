@@ -38,7 +38,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
 
         switch (get_class($r))
         {
-            case 'SimpleAR\BelongsTo':
+            case 'SimpleAR\Relation\BelongsTo':
                 foreach ($this->attributes as $attribute)
                 {
                     // We check that condition makes sense.
@@ -66,7 +66,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
                 }
                 break;
 
-        case 'SimpleAR\HasOne':
+        case 'SimpleAR\Relation\HasOne':
             foreach ($this->attributes as $attribute)
             {
                 // We check that condition makes sense.
@@ -83,7 +83,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             }
             break;
 
-        case 'SimpleAR\HasMany':
+        case 'SimpleAR\Relation\HasMany':
             $depth         = (string) ($this->depth ?: '');
             $previousDepth = (string) ($this->depth - 1 ?: '');
 
@@ -161,7 +161,7 @@ class RelationCondition extends \SimpleAR\Query\Condition
             }
             break;
 
-        case 'SimpleAR\ManyMany':
+        case 'SimpleAR\Relation\ManyMany':
             $depth         = (string) ($this->depth ?: '');
             $previousDepth = (string) ($this->depth - 1 ?: '');
 
