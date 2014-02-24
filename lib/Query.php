@@ -142,8 +142,9 @@ abstract class Query
     {
         if (in_array($name, static::$_options))
         {
-            $option = Query\Option::forge($name, $args, $this->_context);
+            $this->_givenOptions[$name] = $args;
 
+            $option = Query\Option::forge($name, $args, $this->_context);
             $this->_handleOption($option);
 
             // There is an option handling function for each available option.

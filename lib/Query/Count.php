@@ -13,7 +13,7 @@ class Count extends Select
 {
     protected static $_options = array('conditions', 'has');
 
-    protected $_columns = 'COUNT(*)';
+    protected $_filter = array('COUNT(*)');
 
     /**
      * The components of the query.
@@ -30,12 +30,6 @@ class Count extends Select
         'groups',
         'havings',
     );
-
-    protected function _compileColumns()
-    {
-        $d = $this->_distinct ? 'DISTINCT ' : '';
-        $this->_sql .= 'SELECT ' . $d . $this->_columns;
-    }
 
     /**
      * Count result getter.

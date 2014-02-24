@@ -17,6 +17,7 @@ class Select extends Where
      * @var array
      */
     protected $_distinct = false;
+    protected $_filter;
     protected $_from;
 	protected $_orders = array();
     protected $_limit;
@@ -82,10 +83,8 @@ class Select extends Where
      *
      * @return Model
      */
-    public function row()
+    protected function row()
     {
-        $this->run();
-
         $res = array();
 
         $reversedPK = $this->_context->rootTable->isSimplePrimaryKey
@@ -151,6 +150,8 @@ class Select extends Where
      */
     public function one()
     {
+        $this->run();
+
         if ($row = $this->row())
         {
             $class = $this->_context->rootModel;
@@ -163,11 +164,13 @@ class Select extends Where
     protected function _build(array $options)
     {
         // If user does not define any filter entry, we set a default one.
+        /*
         if (! isset($options['filter']))
         {
             $options['filter'] = null;
             //$this->_filter = Option::forge('filter', null, $this->_context);
         }
+        */
 
         // We have to use result alias in order to distinguish root model from
         // its linked models. It will cost more operations to parse result.
@@ -184,13 +187,13 @@ class Select extends Where
     protected function _compile()
     {
         // Here we go? Let's check that we are selecting some columns.
-        /*
-        if (! $this->_columns)
+        if (! $this->_filter)
         {
             $option = Option::forge('filter', null, $this->_context);
             $this->_handleOption($option);
         }
-        */
+
+        $this->_columns = array_merge($this->_filter, $this->_columns);
 
         return parent::_compile();
     }
@@ -198,6 +201,7 @@ class Select extends Where
     protected function _compileColumns()
     {
         $d = $this->_distinct ? 'DISTINCT ' : '';
+
         $this->_sql .= 'SELECT ' . $d . implode(',', $this->_columns);
     }
 
@@ -242,7 +246,7 @@ class Select extends Where
         switch (get_class($option))
         {
             case 'SimpleAR\Query\Option\Filter':
-                $this->_columns = array_merge($this->_columns, $option->columns);
+                $this->_filter = $option->columns;
                 break;
             case 'SimpleAR\Query\Option\Group':
                 $this->_groups = $option->groups;

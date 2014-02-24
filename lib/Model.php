@@ -125,7 +125,7 @@ abstract class Model
      *
      * @var array
      */
-    protected static $_whitelist;
+    protected $_whitelist = array();
 
     /**
      * An array that allows another way to filter output.
@@ -2094,16 +2094,17 @@ abstract class Model
                 return $query->res();
 
             case 'one':
-                $row = $query->row();
-                $res = null;
+                return $query->one();
+                /* $row = $query->row(); */
+                /* $res = null; */
 
-                if ($row)
-				{
-                    $res = new static(null, $options);
-                    $res->_load($row);
-                }
+                /* if ($row) */
+				/* { */
+                /*     $res = new static(null, $options); */
+                /*     $res->_load($row); */
+                /* } */
 
-                return $res;
+                /* return $res; */
 
             case 'several':
                 return $query->all();
