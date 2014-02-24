@@ -50,14 +50,14 @@ abstract class Query
      */
 	protected $_sql;
 
+    protected $_columns = array();
+
     /**
      * The query values to bind.
      *
      * @var array.
      */
 	protected $_values = array();
-
-    protected $_columns = array();
 
     /**
      * Available options for this query class.
@@ -136,17 +136,18 @@ abstract class Query
      *
      * @return $this
      */
-    public function __call($name, $arguments)
+    public function __call($name, $args)
     {
         if (in_array($name, static::$_options))
         {
-            $arguments = isset($arguments[0]) ? $arguments[0] : null;
-            $option    = Query\Option::forge($name, $arguments, $this->_context);
+            $option = Query\Option::forge($name, $args, $this->_context);
+
+            $this->_handleOption($option);
 
             // There is an option handling function for each available option.
             // They are declared protected in order to Query class to access it.
-            $fn = '_' . $name;
-            $this->$fn($option);
+            //$fn = '_' . $name;
+            //$this->$fn($option);
         }
 
         return $this;
@@ -206,6 +207,15 @@ abstract class Query
         return $res;
     }
 
+    /**
+     * Getter. Return query context.
+     *
+     * @return StdClass;
+     */
+    public function context()
+    {
+        return $this->_context;
+    }
 
     /**
      * Construct a Count query.
@@ -341,14 +351,14 @@ abstract class Query
      */
 	protected function _build(array $options)
     {
+        // Foreach given option, we check that query can handle it.
+        // If it can, we build the option and give it to the query.
         foreach ($options as $name => $value)
         {
             if (in_array($name, static::$_options))
             {
                 $option = Query\Option::forge($name, $value, $this->_context);
-
-                $fn = '_' . $name;
-                $this->$fn($option);
+                $this->_handleOption($option);
             }
         }
 
@@ -364,7 +374,21 @@ abstract class Query
      *
      * @return void.
      */
-    protected abstract function _compile();
+    protected function _compile()
+    {
+        foreach (static::$_components as $name)
+        {
+            if ($this->{'_' . $name})
+            {
+                $fn = '_compile' . ucfirst($name);
+                $this->$fn();
+            }
+        }
+    }
+
+    protected function _handleOption(Query\Option $option)
+    {
+    }
 
     /**
      * Initialize the query build context.

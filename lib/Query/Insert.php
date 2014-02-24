@@ -1,10 +1,11 @@
-<?php
+<?php namespace SimpleAR\Query;
 /**
  * This file contains the Insert class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query;
+
+use \SimpleAR\Facades\DB;
 
 /**
  * This class handles INSERT statements.
@@ -12,6 +13,23 @@ namespace SimpleAR\Query;
 class Insert extends \SimpleAR\Query
 {
     protected static $_options = array('fields', 'values');
+
+    protected $_table;
+    protected $_columns;
+    protected $_values;
+
+    protected static $_components = array(
+        'table',
+        'columns',
+        'values',
+    );
+
+    public function __construct($root)
+    {
+        parent::__construct($root);
+
+        $this->_table = $root;
+    }
 
     /**
      * Last inserted ID getter.
@@ -22,36 +40,54 @@ class Insert extends \SimpleAR\Query
      */
     public function insertId()
     {
-        return self::$_db->lastInsertId();
+        return DB::lastInsertId();
     }
 
-	protected function _compile()
-	{
+    protected function _compile()
+    {
         // If user did not specified any column.
         // We could throw an exception, but the user may want to insert a kind
         // of "default row", that is a row with only database default values.
         if (! $this->_columns)
         {
             $this->_sql = 'INSERT INTO `' . $this->_context->rootTableName . '` VALUES()';
-            return;
         }
+        else
+        {
+            parent::_compile();
+        }
+    }
 
-        $this->_sql = $this->_context->useAlias
-            ? 'INSERT INTO `' . $this->_context->rootTableName . '` `' . $this->_context->rootTableAlias . '`'
-            : 'INSERT INTO `' . $this->_context->rootTableName . '`'
+    protected function _compileTable()
+    {
+        $this->sql = 'INSERT INTO ';
+
+        $c = $this->_context;
+        $this->_sql .= $c->useAlias
+            ? '`' . $c->rootTableName . '` `' . $c->rootTableAlias . '`'
+            : '`' . $c->rootTableName . '`'
             ;
+    }
 
-        $this->_sql .= '(' . implode(',', (array) $this->_columns) . ') VALUES';
-        $count       = count($this->_values);
+    protected function _compileColumns()
+    {
+        $this->_sql .= '(' . implode(',', $this->_columns) . ')';
+    }
 
-        // $this->_values is a multidimensional array. Actually, it is an array of
-        // tuples.
+    protected function _compileValues()
+    {
+        $this->_sql .= ' VALUES';
+
+        $count = count($this->_values);
+
+        // $this->_values is a multidimensional array. Actually, it is an array
+        // of tuples.
         if (is_array($this->_values[0]))
         {
             // Tuple cardinal.
             $tupleSize = count($this->_values[0]);
             
-            $tuple     = '(' . str_repeat('?,', $tupleSize - 1) . '?)';
+            $tuple       = '(' . str_repeat('?,', $tupleSize - 1) . '?)';
             $this->_sql .= str_repeat($tuple . ',', $count - 1) . $tuple;
 
             // We also need to flatten value array.
@@ -62,16 +98,21 @@ class Insert extends \SimpleAR\Query
         {
             $this->_sql .= '(' . str_repeat('?,', $count - 1) . '?)';
         }
-	}
-
-    protected function _values(Option $option)
-    {
-        $this->_values = array_merge($this->_values, $option->build());
     }
 
-    protected function _fields(Option $option)
+    protected function _handleOption(Option $option)
     {
-        $this->_columns = array_merge($this->_columns, $option->build());
+        switch (get_class($option))
+        {
+            case 'SimpleAR\Query\Option\Fields':
+                $this->_columns = $option->columns;
+                break;
+            case 'SimpleAR\Query\Option\Values':
+                $this->_values = $option->values;
+                break;
+            default:
+                parent::_handleOption($option);
+        }
     }
 
     protected function _initContext($root)

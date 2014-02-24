@@ -13,17 +13,26 @@ class Count extends Select
 {
     protected static $_options = array('conditions', 'has');
 
-    public function _compile()
-    {
-        $join = $this->_proces_arborescence();
+    /**
+     * The components of the query.
+     *
+     * They will be compiled in order of apparition in this array.
+     * The order is important!
+     *
+     * @var array
+     */
+    protected static $_components = array(
+        'columns',
+        'from',
+        'where',
+        'groups',
+        'havings',
+    );
 
-		$this->_sql  = 'SELECT COUNT(*)';
-        $this->_sql .= $this->_context->useAlias
-            ?' FROM `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
-            :' FROM `' . $this->_context->rootTableName . '`'
-            ;
-        $this->_sql .= $this->_join();
-		$this->_sql .= $this->_where();
+    protected function _compileColumns()
+    {
+        $d = $this->_distinct ? 'DISTINCT ' : '';
+        $this->_sql .= 'SELECT ' . $d . 'COUNT(*)';
     }
 
     /**

@@ -16,25 +16,44 @@ class Select extends Where
      *
      * @var array
      */
-	protected $_selects		= array();
-
-    /**
-     * Contains attributes to GROUP BY on.
-     *
-     * @var array
-     */
-	protected $_groupBys = array();
-	protected $_optOrderBy = array();
-    protected $_havings  = array();
+    protected $_distinct = false;
+    protected $_from;
+	protected $_orders = array();
     protected $_limit;
     protected $_offset;
 
     private $_pendingRow = false;
 
-    protected static $_options = array('conditions', 'filter', 'group_by',
-            'has', 'limit', 'offset', 'order_by', 'with');
+    protected static $_options = array('conditions', 'filter', 'group', 'group_by',
+            'has', 'limit', 'offset', 'order', 'order_by', 'with');
+
+    /**
+     * The components of the query.
+     *
+     * They will be compiled in order of apparition in this array.
+     * The order is important!
+     *
+     * @var array
+     */
+    protected static $_components = array(
+        'columns',
+        'from',
+        'where',
+        'groups',
+        'orders',
+        'havings',
+        'limit',
+        'offset',
+    );
 
     const DEFAULT_ROOT_RESULT_ALIAS = '_';
+
+    public function __construct($root)
+    {
+        parent::__construct($root);
+        
+        $this->_from = $this->_context->rootTableName;
+    }
 
     /**
      * Return all fetch Model instances.
@@ -143,12 +162,13 @@ class Select extends Where
 
     protected function _build(array $options)
     {
-        // If we don't set a filter entry, Select::filter() will never be
-        // called.
+        // If user does not define any filter entry, we set a default one.
+        /*
         if (! isset($options['filter']))
         {
-            $options['filter'] = null;
+            $this->_filter = Option::forge('filter', null, $this->_context);
         }
+        */
 
         // We have to use result alias in order to distinguish root model from
         // its linked models. It will cost more operations to parse result.
@@ -164,74 +184,85 @@ class Select extends Where
 
     protected function _compile()
     {
-		$this->_sql  = 'SELECT ' . implode(', ', $this->_selects);
+        // Here we go? Let's check that we are selecting some columns.
+        if (! $this->_columns)
+        {
+            $option = Option::forge('filter', null, $this->_context);
+            $this->_handleOption($option);
+        }
 
-        $this->_sql .= $this->_context->useAlias
-            ?' FROM `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
-            :' FROM `' . $this->_context->rootTableName . '`'
-            ;
+        return parent::_compile();
+    }
+
+    protected function _compileColumns()
+    {
+        $d = $this->_distinct ? 'DISTINCT ' : '';
+        $this->_sql .= 'SELECT ' . $d . implode(',', $this->_columns);
+    }
+
+    protected function _compileFrom()
+    {
+        $c = $this->_context;
+        $this->_sql .= ' FROM ' . ($c->useAlias
+            ?' `' . $c->rootTableName . '` `' .  $c->rootTableAlias . '`'
+            :' `' . $c->rootTableName . '`'
+            );
 
         $this->_sql .= ' ' . $this->_join();
-		$this->_sql .= $this->_where();
-		$this->_sql .= $this->_groupBys ? ' GROUP BY ' . implode(',', $this->_groupBys) : '';
-        $this->_sql .= $this->_optOrderBy ? $this->_optOrderBy->compile() : '';
-        $this->_sql .= $this->_havings  ? ' HAVING '   . implode(',', $this->_havings)  : '';
-        $this->_sql .= $this->_limit   ? ' LIMIT '    . $this->_limit                 : '';
-        $this->_sql .= $this->_offset  ? ' OFFSET '   . $this->_offset                : '';
     }
 
-    protected function _conditions(Option $option)
+    protected function _compileGroups()
     {
-        // @see Option\Conditions::build() to check returned array format.
-        $res = $option->build();
+        $this->_sql .= ' GROUP BY ' . implode(',', $this->_groups);
+    }
 
-        if ($this->_conditions)
+    protected function _compileOrders()
+    {
+        $this->_sql .= ' ORDER BY ' . implode(',', $this->_orders);
+    }
+
+    protected function _compileHavings()
+    {
+        $this->_sql .= ' HAVING ' . implode(',', $this->_havings);
+    }
+
+    protected function _compileLimit()
+    {
+        $this->_sql .= ' LIMIT ' . $this->_limit;
+    }
+
+    protected function _compileOffset()
+    {
+        $this->_sql .= ' OFFSET ' . $this->_offset;
+    }
+
+    protected function _handleOption(Option $option)
+    {
+        switch (get_class($option))
         {
-            $this->_conditions->combine($res['conditions']);
+            case 'SimpleAR\Query\Option\Filter':
+                $this->_columns = $option->columns;
+                break;
+            case 'SimpleAR\Query\Option\Group':
+                $this->_groups = $option->groups;
+                break;
+            case 'SimpleAR\Query\Option\Limit':
+                $this->_limit = $option->limit;
+                break;
+            case 'SimpleAR\Query\Option\Offset':
+                $this->_offset = $option->offset;
+                break;
+            case 'SimpleAR\Query\Option\Order':
+                $this->_orders  = $option->orders;
+                $this->_groups  = array_merge($this->_groups, $option->groups);
+                $this->_columns = array_merge($this->_columns, $option->columns);
+                break;
+            case 'SimpleAR\Query\Option\With':
+                $this->_columns = array_merge($this->columns, $option->columns);
+                break;
+            default:
+                parent::_handleOption($option);
         }
-        else
-        {
-            $this->_conditions = $res['conditions'];
-        }
-
-        $this->_havings    = array_merge($this->_havings,   $res['havings']);
-        $this->_groupBys   = array_merge($this->_groupBys,  $res['groupBys']);
-        $this->_selects    = array_merge($this->_selects,   $res['selects']);
-    }
-
-    protected function _group_by(Option $option)
-    {
-        $this->_groupBys = array_merge($this->_groupBys, $option->build());
-    }
-
-    protected function _filter(Option $option)
-    {
-		$this->_selects = array_merge($this->_selects, $option->build());
-    }
-
-    protected function _limit(Option $option)
-    {
-        $this->_limit = $option->build();
-    }
-
-    protected function _offset(Option $option)
-    {
-        $this->_offset = $option->build();
-    }
-
-	protected function _order_by(Option $option)
-	{
-        $res = $option->build();
-
-        $this->_groupBys = array_merge($this->_groupBys, (array) $res['group_by']);
-        $this->_selects  = array_merge($this->_selects,  (array) $res['selects']);
-
-        $this->_optOrderBy = $option;
-	}
-
-    protected function _with(Option $option)
-    {
-        $this->_selects = array_merge($this->_selects, $option->build());
     }
 
     protected function _initContext($root)

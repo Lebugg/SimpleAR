@@ -7,6 +7,8 @@ use \SimpleAR\Exception\MalformedOption;
 
 class Limit extends Option
 {
+    public $limit;
+
     public function build()
     {
         $this->_value = (int) $this->_value;
@@ -16,6 +18,6 @@ class Limit extends Option
             throw new MalformedOption('"limit" option value must be a natural integer. Negative integer given: ' . $this->_value . '.');
         }
 
-        return $this->_value;
+        $this->limit = $this->_value;
     }
 }

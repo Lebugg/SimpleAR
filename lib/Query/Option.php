@@ -1,19 +1,19 @@
-<?php
-namespace SimpleAR\Query;
+<?php namespace SimpleAR\Query;
 
 require __DIR__ . '/Option/Conditions.php';
 require __DIR__ . '/Option/Fields.php';
 require __DIR__ . '/Option/Filter.php';
-require __DIR__ . '/Option/GroupBy.php';
+require __DIR__ . '/Option/Group.php';
 require __DIR__ . '/Option/Has.php';
 require __DIR__ . '/Option/Limit.php';
 require __DIR__ . '/Option/Offset.php';
-require __DIR__ . '/Option/OrderBy.php';
+require __DIR__ . '/Option/Order.php';
 require __DIR__ . '/Option/Values.php';
 require __DIR__ . '/Option/With.php';
 
-use \SimpleAR\MalformedOptionException;
 use \SimpleAR\Query;
+
+use \SimpleAR\MalformedOptionException;
 
 abstract class Option
 {
@@ -25,11 +25,13 @@ abstract class Option
         'conditions' => 'Conditions',
         'fields'     => 'Fields',
         'filter'     => 'Filter',
-        'group_by'   => 'GroupBy',
+        'group'      => 'Group',
+        'group_by'     => 'Group', // @deprecated.
         'has'        => 'Has',
         'limit'      => 'Limit',
         'offset'     => 'Offset',
-        'order_by'   => 'OrderBy',
+        'order'      => 'Order',
+        'order_by'     => 'Order', // @deprecated.
         'values'     => 'Values',
         'with'       => 'With',
     );
@@ -37,7 +39,7 @@ abstract class Option
     const SYMBOL_COUNT = '#';
     const SYMBOL_NOT   = '!';
 
-    public function __construct($value, $context, $arborescence = null)
+    public function __construct($value, \StdClass $context = null, Arborescence $arborescence = null)
     {
         $this->_value        = $value;
         $this->_context      = $context;
@@ -46,7 +48,7 @@ abstract class Option
 
     public abstract function build();
 
-    public static function forge($optionName, $value, $context, $arborescence = null)
+    public static function forge($optionName, $value, \StdClass $context = null, Arborescence $arborescence = null)
     {
         if (! isset(self::$_optionToClass[$optionName]))
         {
@@ -55,6 +57,9 @@ abstract class Option
 
         $class = '\SimpleAR\Query\Option\\' .  self::$_optionToClass[$optionName];
 
-        return new $class($value, $context, $arborescence);
+        $option = new $class($value, $context, $arborescence);
+        $option->build();
+
+        return $option;
     }
 }

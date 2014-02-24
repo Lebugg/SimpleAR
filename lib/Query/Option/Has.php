@@ -1,5 +1,4 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Option\Conditions;
@@ -9,22 +8,16 @@ use \SimpleAR\Query\Condition\Attribute;
 use \SimpleAR\Query\Condition\ConditionGroup;
 use \SimpleAR\Query\Condition\ExistsCondition;
 
-use \SimpleAR\MalformedOption;
-
 use \SimpleAR\Query\Arborescence;
+
+use \SimpleAR\Exception\MalformedOption;
+
 
 class Has extends Conditions
 {
     public function build()
     {
-        $conditions = $this->_parseHas($this->_value, $this->_arborescence);
-
-        return array(
-            'conditions' => $conditions,
-            'havings'    => $this->_havings,
-            'groupBys'   => $this->_groupBys,
-            'selects'    => $this->_selects,
-        );
+        $this->conditions = $this->_parseHas($this->_value, $this->_arborescence);
     }
 
     /**

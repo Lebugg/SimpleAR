@@ -85,8 +85,39 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
     {
         $a = $this->getConnection()->getRowCount('blog');
         $b = Blog::count();
+        // Should not be taken into account.
+        $c = Blog::count(array('limit' => 1));
 
         $this->assertEquals($a, $b);
+        $this->assertEquals($a, $c);
+    }
+
+    public function testInsert()
+    {
+        $article = new Article(array('name' => 'Nice post'));
+        $this->assertSame($article, $article->save());
+    }
+
+    public function testUpdate()
+    {
+        $article = Article::find(1);
+        $article->description = 'New desc.';
+        $this->assertSame($article, $article->save());
+    }
+
+    public function testDelete()
+    {
+        $article = Article::find(1);
+        $article->delete();
+
+        $this->assertNull($article->id);
+
+        try
+        {
+            Article::find(1);
+            $this->fail('An expected exception has not been raised.');
+        }
+        catch(Exception $ex) {}
     }
 
     /**
@@ -128,7 +159,7 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
     public function testOrderByRand()
     {
-        $blogs = Blog::all(array('order_by' => DB::expr('RAND()')));
+        $blogs = Blog::all(array('order' => DB::expr('RAND()')));
 
         $this->assertTrue(is_array($blogs));
     }
@@ -164,9 +195,25 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         }
     }
 
+    public function testAllOptions()
+    {
+        $res = Blog::all(array(
+            'filter' => null,
+            'conditions' => array(
+                array('description', 'LIKE', 'Super %'),
+            ),
+            'order'  => 'name',
+            'limit'  => 2,
+            'offset' => 1,
+        ));
+
+        $this->assertTrue(is_array($res));
+        $this->assertEquals(2, count($res));
+    }
+
     public function testExpressionInOrderByOption()
     {
-        $res = Blog::all(array('order_by' => DB::expr('RAND()')));
+        $res = Blog::all(array('order' => DB::expr('RAND()')));
 
         $this->assertTrue(is_array($res));
         $this->assertEquals($this->getConnection()->getRowCount('blog'), count($res));

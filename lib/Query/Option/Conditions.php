@@ -1,5 +1,4 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 
@@ -96,20 +95,14 @@ use \SimpleAR\Exception;
  */
 class Conditions extends Option
 {
-    protected $_havings  = array();
-    protected $_groupBys = array();
-    protected $_selects  = array();
+    public $conditions;
+    public $havings  = array();
+    public $groups = array();
+    public $columns  = array();
 
     public function build()
     {
-        $conditions = $this->_parse($this->_value, $this->_arborescence);
-
-        return array(
-            'conditions' => $conditions,
-            'havings'    => $this->_havings,
-            'groupBys'   => $this->_groupBys,
-            'selects'    => $this->_selects,
-        );
+        $this->conditions = $this->_parse($this->_value, $this->_arborescence);
     }
 
     /**
@@ -239,7 +232,7 @@ class Conditions extends Option
             ;
 
         // Count alias: `<result alias>.#<relation name>`;
-        $this->_selects[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
+        $this->columns[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
 
         // No need to handle ($previousDepth == -1) case. We would not be in
         // this function: there is at least one relation specified in attribute.
@@ -252,12 +245,12 @@ class Conditions extends Option
         $tableAlias     = $this->_context->useAlias ? '`' . $tableToGroupOn->alias . $previousDepth . '`.' : '';
         foreach ((array) $tableToGroupOn->primaryKeyColumns as $column)
         {
-            $this->_groupBy[] = $tableAlias . '`' . $column . '`';
+            $this->groups[] = $tableAlias . '`' . $column . '`';
         }
 
         // I don't think it is dangerous to directly write value in HAVING
         // clause => need proof.
-        $this->_having[]  = $countAttribute . $operator . ' ' . $value;
+        $this->havings[]  = $countAttribute . $operator . ' ' . $value;
     }
 
     /**

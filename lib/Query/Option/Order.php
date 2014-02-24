@@ -1,15 +1,14 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
 use \SimpleAR\Query\Condition\Attribute;
 
-use \SimpleAR\Exception\MalformedOption;
-
 use \SimpleAR\Database\Expression;
 
-class OrderBy extends Option
+use \SimpleAR\Exception\MalformedOption;
+
+class Order extends Option
 {
     /**
      * We use class members because an "order by" option can cause "order by",
@@ -17,9 +16,9 @@ class OrderBy extends Option
      * can produce these two clauses above. Class members make it easy to handle
      * this case.
      */
-    private $_orderBy = array();
-    private $_groupBy = array();
-    private $_selects = array();
+    public $orders = array();
+    public $groups = array();
+    public $columns = array();
 
     const DEFAULT_DIRECTION = 'ASC';
 
@@ -40,6 +39,7 @@ class OrderBy extends Option
 	{
         if ($this->_value instanceof Expression)
         {
+            $this->orders[] = $this->_value->val();
             return;
         }
 
@@ -119,28 +119,10 @@ class OrderBy extends Option
 
             foreach ($columns as $column)
             {
-                $this->_orderBy[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
+                $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
             }
         }
-
-        return array(
-            'group_by' => $this->_groupBy,
-            'selects'  => $this->_selects,
-        );
 	}
-
-    public function compile()
-    {
-        if ($this->_value instanceof Expression)
-        {
-            return self::CLAUSE_STRING . $this->_value->val();
-        }
-
-        return $this->_orderBy
-            ? self::CLAUSE_STRING . implode(',', $this->_orderBy)
-            : ''
-            ;
-    }
 
     /**
      * Handle "order by" option on linked model row count.
@@ -239,7 +221,7 @@ class OrderBy extends Option
             ;
 
         // Count alias: `<result alias>.#<relation name>`;
-        $this->_selects[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
+        $this->columns[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
 
         // We have to group rows on something if we want the COUNT to make
         // sense.
@@ -247,11 +229,11 @@ class OrderBy extends Option
         $tableAlias     = $this->_context->useAlias ? '`' . $tableToGroupOn->alias . $previousDepth . '`.' : '';
         foreach ((array) $tableToGroupOn->primaryKeyColumns as $column)
         {
-            $this->_groupBy[] = $tableAlias . '`' . $column . '`';
+            $this->groups[] = $tableAlias . '`' . $column . '`';
         }
 
         // Order by the COUNT, that the point of all that.
-        $this->_orderBy[] = $resultAttribute . ' ' . $direction;
+        $this->orders[] = $resultAttribute . ' ' . $direction;
     }
 
     /**
@@ -360,7 +342,7 @@ class OrderBy extends Option
 
         foreach ($columns as $column)
         {
-            $this->_orderBy[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
+            $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
         }
     }
 }

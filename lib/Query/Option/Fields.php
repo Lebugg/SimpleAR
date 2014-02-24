@@ -6,6 +6,8 @@ use \SimpleAR\Query\Option;
 
 class Fields extends Option
 {
+    public $columns;
+
     public function build()
     {
         $fields = (array) $this->_value;
@@ -25,6 +27,6 @@ class Fields extends Option
 
         $fields = Query::columnAliasing($fields, $tableAlias);
 
-        return $fields;
+        $this->columns = $fields;
     }
 }

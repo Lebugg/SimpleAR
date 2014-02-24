@@ -9,6 +9,8 @@ use \SimpleAR\Exception\MalformedOption;
 
 class With extends Option
 {
+    public $columns;
+
     public function build()
     {
         if (! $this->_context->useModel)
@@ -35,6 +37,6 @@ class With extends Option
             $res = array_merge($res, $columns);
         }
 
-        return $res;
+        $this->columns = $res;
     }
 }

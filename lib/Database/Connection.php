@@ -186,7 +186,7 @@ class Connection
         }
         catch (\PDOException $ex)
         {
-            throw new DatabaseException($ex->getMessage(), $query, $ex);
+            throw new DatabaseEx($ex->getMessage(), $query, $ex);
         }
 
         return $sth;

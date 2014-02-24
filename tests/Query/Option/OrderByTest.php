@@ -3,9 +3,9 @@ date_default_timezone_set('Europe/Paris');
 
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Query\Option;
-use \SimpleAR\Query\Option\OrderBy;
+use \SimpleAR\Query\Option\Order;
 
-class OrderByTest extends PHPUnit_Framework_TestCase
+class OrderTest extends PHPUnit_Framework_TestCase
 {
     private static $_sar;
 
@@ -29,10 +29,8 @@ class OrderByTest extends PHPUnit_Framework_TestCase
     public function testExpressionValue()
     {
         $expr = new Expression('RAND()');
-        $orderBy = Option::forge('order_by', $expr, null);
-        $orderBy->build();
-        $sql = $orderBy->compile();
+        $orderBy = Option::forge('order', $expr, null);
 
-        $this->assertEquals(OrderBy::CLAUSE_STRING . $expr->val(), $sql);
+        $this->assertEquals(array('RAND()'), $orderBy->orders);
     }
 }

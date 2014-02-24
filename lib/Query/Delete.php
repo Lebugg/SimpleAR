@@ -20,17 +20,39 @@ class Delete extends \SimpleAR\Query\Where
 
     protected static $_options = array('conditions');
 
-    protected function _compile()
+    protected $_from;
+
+    protected static $_components = array(
+        'from',
+        'where'
+    );
+
+    public function __construct($root)
     {
-		$this->_sql = $this->_context->useAlias
-            ? 'DELETE `' . $this->_context->rootTableAlias . '` FROM `' .  $this->_context->rootTableName . '` AS `' .  $this->_context->rootTableAlias . '`'
-            : 'DELETE FROM `' . $this->_context->rootTableName . '`'
+        parent::__construct($root);
+        
+        $this->_from = $this->_context->rootTableName;
+    }
+
+    protected function _compileFrom()
+    {
+        $this->_sql = 'DELETE ';
+
+        $c = $this->_context;
+		$this->_sql .= $c->useAlias
+            ? '`' . $c->rootTableAlias . '` FROM `' .  $c->rootTableName . '` AS `' .  $c->rootTableAlias . '`'
+            : 'FROM `' . $c->rootTableName . '`'
             ;
 
+        // Equivalent JOIN clause for DELETE queries.
         $join = $this->_join();
-
-        // Equivalent FROM clause for DELETE queries.
         $this->_sql .= $join ? ' USING ' . $join : '';
-        $this->_sql .= $this->_where();
-	}
+    }
+
+    protected function _initContext($root)
+    {
+        parent::_initContext($root);
+
+        $this->_context->useAlias = false;
+    }
 }

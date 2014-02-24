@@ -15,23 +15,52 @@ use SimpleAR\Query\Condition\SimpleCondition;
  */
 abstract class Where extends \SimpleAR\Query
 {
-	protected $_conditions = array();
+    protected $_where;
+	protected $_groups = array();
+    protected $_havings = array();
 
-    protected function _conditions(Option $option)
+    protected function _compileWhere()
     {
-        // @see Option\Conditions::build() to check returned array format.
-        $res = $option->build();
+		$this->_sql .= $this->_where();
+    }
 
-        if ($this->_conditions)
+    protected function _handleOption(Option $option)
+    {
+        switch (get_class($option))
         {
-            $this->_conditions->combine($res['conditions']);
-        }
-        else
-        {
-            $this->_conditions = $res['conditions'];
+            case 'SimpleAR\Query\Option\Conditions':
+                if ($this->_where)
+                {
+                    $this->_where->combine($option->conditions);
+                }
+                else
+                {
+                    $this->_where = $option->conditions;
+                }
+
+                $this->_havings  = array_merge($this->_havings, $option->havings);
+                $this->_groups   = array_merge($this->_groups,  $option->groups);
+                $this->_columns  = array_merge($this->_columns, $option->columns);
+                break;
+            case 'SimpleAR\Query\Option\Has':
+                if ($this->_where)
+                {
+                    $this->_where->combine($option->conditions);
+                }
+                else
+                {
+                    $this->_where = $option->conditions;
+                }
+
+                $this->_havings  = array_merge($this->_havings, $option->havings);
+                $this->_groups   = array_merge($this->_groups,  $option->groups);
+                $this->_columns  = array_merge($this->_columns, $option->columns);
+                break;
+            default:
+                parent::_handleOption($option);
         }
     }
-    
+
     /**
      * Initialize query context from within Where scope.
      *
@@ -50,21 +79,6 @@ abstract class Where extends \SimpleAR\Query
                 $this->_context->rootModel,
                 $this->_context->rootTable
             );
-        }
-    }
-
-    protected function _has(Option $option)
-    {
-        // @see Option\Has::build() to check returned array format.
-        $res = $option->build();
-
-        if ($this->_conditions)
-        {
-            $this->_conditions->combine($res['conditions']);
-        }
-        else
-        {
-            $this->_conditions = $res['conditions'];
         }
     }
 
@@ -98,10 +112,11 @@ abstract class Where extends \SimpleAR\Query
      */
     protected function _where()
     {
-        if ($this->_conditions && ! $this->_conditions->isEmpty())
+        if ($this->_where && ! $this->_where->isEmpty())
         {
             // We made all wanted treatments; get SQL out of Condition array.
-            list($sql, $values) = $this->_conditions->toSql();
+            $c = $this->_context;
+            list($sql, $values) = $this->_where->toSql($c->useAlias, $c->useModel);
 
             // Add condition values. $values is a flatten array.
             // @see Condition::flatte_values()

@@ -1,10 +1,9 @@
-<?php
+<?php namespace SimpleAR\Query;
 /**
  * This file contains the Update class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query;
 
 /**
  * This class handles UPDATE statements.
@@ -20,29 +19,50 @@ class Update extends \SimpleAR\Query\Where
 
     protected static $_options = array('conditions', 'fields', 'values');
 
-    protected function _compile()
+    protected $_table;
+    protected $_set;
+
+    protected static $_components = array(
+        'table',
+        'set',
+        'where',
+    );
+
+    public function __construct($root)
     {
-		$this->_sql = $this->_context->useAlias
-            ? 'UPDATE `' . $this->_context->rootTableName . '` `' .  $this->_context->rootTableAlias . '`'
-            : 'UPDATE `' . $this->_context->rootTableName . '`'
+        parent::__construct($root);
+
+        $this->_table = $root;
+    }
+
+    protected function _compileTable()
+    {
+        $this->_sql = 'UPDATE ';
+
+        $c = $this->_context;
+		$this->_sql .= $c->useAlias
+            ? '`' . $c->rootTableName . '` `' .  $c->rootTableAlias . '`'
+            : '`' . $c->rootTableName . '`'
             ;
-
-        $this->_sql .= ' SET ' . implode(' = ?, ', (array) $this->_columns) . ' = ?';
-		$this->_sql .= $this->_where();
     }
 
-    protected function _values(Option $option)
+    protected function _compileSet()
     {
-        $this->_values = array_merge($this->_values, $option->build());
+        $this->_sql .= ' SET ' . implode(' = ?, ', $this->_set) . ' = ?';
     }
 
-    protected function _fields(Option $option)
+    protected function _handleOption(Option $option)
     {
-        $this->_columns = array_merge($this->_columns, $option->build());
-    }
-
-    protected function _initContext($root)
-    {
-        parent::_initContext($root);
+        switch (get_class($option))
+        {
+            case 'SimpleAR\Query\Option\Fields':
+                $this->_set = $option->columns;
+                break;
+            case 'SimpleAR\Query\Option\Values':
+                $this->_values = $option->values;
+                break;
+            default:
+                parent::_handleOption($option);
+        }
     }
 }

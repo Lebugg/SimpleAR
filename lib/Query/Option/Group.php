@@ -1,5 +1,4 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
@@ -11,8 +10,11 @@ use \SimpleAR\Query\Condition\Attribute;
  * - useAlias
  *
  */
-class GroupBy extends Option
+class Group extends Option
 {
+
+    public $groups = array();
+
     public function build()
     {
         $res = array();
@@ -47,6 +49,6 @@ class GroupBy extends Option
             }
         }
 
-        return $res;
+        $this->groups = $res;
     }
 }
