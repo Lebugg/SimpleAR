@@ -156,8 +156,8 @@ class Arborescence
     /**
      * Add a relation array into the arborescence.
      *
-     * @param array $relations Array containing relations ordered by depth to
-     * add to arborescence.
+     * @param array|string $relations Array containing relations ordered by depth to
+     * add to arborescence. Can be a string (<=> one relation array shortcut).
      * @param int $joinType The type of join to use to join this relation.
      * Default: inner join.
      * @param bool $forceJoin Does relation *must* be joined?
@@ -165,13 +165,16 @@ class Arborescence
      * @return the last added or accessed node. It allows calling function to
      * get more information about its context.
      */
-    public function add(array $relations, $joinType = self::JOIN_INNER, $forceJoin = false)
+    public function add($relations, $joinType = self::JOIN_INNER, $forceJoin = false)
     {
         // If no relation to add, return 
         if (! $relations)
         {
             return $this;
         }
+
+        // Allow string for first parameter.
+        $relations = (array) $relations;
 
         // NOTE: "n" prefix in variable names means stands for "node", that is
         // an Arborescence instance.

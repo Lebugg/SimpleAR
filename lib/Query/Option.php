@@ -62,4 +62,30 @@ abstract class Option
 
         return $option;
     }
+
+    public function parseRelationString($string)
+    {
+        $relations    = explode('/', $string);
+        $lastRelation = array_pop($relations);
+
+        // (ctype_alpha tests if charachter is alphabetical ([a-z][A-Z]).)
+        $specialChar = ctype_alpha($lastRelation[0]) ? null : $lastRelation[0];
+
+        // There is a special char before attribute name; we want the
+        // attribute's real name.
+        if ($specialChar)
+        {
+            $lastRelation = substr($lastRelation, 1);
+        }
+
+        $allRelations = $relations;
+        $allRelations[] = $lastRelation;
+
+        return (object) array(
+            'relations'    => $relations,
+            'lastRelation' => $lastRelation,
+            'allRelations' => $allRelations,
+            'specialChar'  => $specialChar,
+        );
+    }
 }

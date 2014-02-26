@@ -264,6 +264,10 @@ class Select extends Where
                 break;
             case 'SimpleAR\Query\Option\With':
                 $this->_columns = array_merge($this->_columns, $option->columns);
+                if ($option->groups)
+                {
+                    $this->_groups  = array_merge($this->_groups, $option->groups);
+                }
                 break;
             default:
                 parent::_handleOption($option);
