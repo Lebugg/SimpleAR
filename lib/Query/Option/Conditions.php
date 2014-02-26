@@ -278,8 +278,7 @@ class Conditions extends Option
      */
     protected function _parse(array $conditions, Arborescence $arborescence = null)
     {
-        $orGroup  = new ConditionGroup(ConditionGroup::T_OR);
-        $andGroup = new ConditionGroup(ConditionGroup::T_AND);
+        $root = $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
 
         foreach ($conditions as $key => $value)
         {
@@ -293,7 +292,7 @@ class Conditions extends Option
                 // In these cases, _condition() returns nothing.
                 if ($conditionOrParsedArray)
                 {
-                    $andGroup->add($conditionOrParsedArray);
+                    $currentAndGroup->add($conditionOrParsedArray);
                 }
             }
 
@@ -304,14 +303,20 @@ class Conditions extends Option
                 // another group of conditions.
                 if ($value === Condition::LOGICAL_OP_OR)
                 {
-                    // Add current group.
-                    if (! $andGroup->isEmpty())
+                    // Should happen only once.
+                    if ($root === $currentAndGroup)
                     {
-                        $orGroup->add($andGroup);
+                        $root = new ConditionGroup(ConditionGroup::T_OR);
+                    }
+
+                    // Add current group.
+                    if (! $currentAndGroup->isEmpty())
+                    {
+                        $root->add($andGroup);
                     }
 
                     // And initialize a new one.
-                    $andGroup = new ConditionGroup(ConditionGroup::T_AND);
+                    $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
                     continue;
                 }
                 // It means that the AND logical operator is useless to write in
@@ -334,7 +339,7 @@ class Conditions extends Option
                         // In these cases, _condition() returns nothing.
                         if ($conditionOrParsedArray)
                         {
-                            $andGroup->add($conditionOrParsedArray);
+                            $currentAndGroup->add($conditionOrParsedArray);
                         }
                     }
 
@@ -343,25 +348,25 @@ class Conditions extends Option
                     {
                         $res = $this->_parse($value, $arborescence);
 
-                        if ($andGroup->isEmpty() && $orGroup->isEmpty())
+                        if ($currentAndGroup->isEmpty())
                         {
-                            $orGroup = $res;
+                            $currentAndGroup = $res;
                         }
                         else
                         {
-                            $andGroup->add($res);
+                            $currentAndGroup->add($res);
                         }
                     }
                 }
             }
         }
 
-        // Add last values.
-        if (! $andGroup->isEmpty())
+        if ($root !== $currentAndGroup
+            && ! $currentAndGroup->isEmpty())
         {
-            $orGroup->add($andGroup);
+            $root->add($currentAndGroup);
         }
 
-        return $orGroup;
+        return $root;
     }
 }

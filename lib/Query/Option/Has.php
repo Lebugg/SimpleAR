@@ -55,22 +55,27 @@ class Has extends Conditions
 
     public function _parseHas($has, $arborescence)
     {
-        $orGroup  = new ConditionGroup(ConditionGroup::T_OR);
-        $andGroup = new ConditionGroup(ConditionGroup::T_AND);
+        $root = $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
 
         foreach ($has as $key => $value)
         {
             // It is a logical operator.
             if ($value === Condition::LOGICAL_OP_OR)
             {
-                // Add current group.
-                if (! $andGroup->isEmpty())
+                // Should happen only once.
+                if ($root === $currentAndGroup)
                 {
-                    $orGroup->add($andGroup);
+                    $root = new ConditionGroup(ConditionGroup::T_OR);
+                }
+
+                // Add current group.
+                if (! $currentAndGroup->isEmpty())
+                {
+                    $root->add($currentAndGroup);
                 }
 
                 // And initialize a new one.
-                $andGroup = new ConditionGroup(ConditionGroup::T_AND);
+                $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
                 continue;
             }
             elseif($value === Condition::LOGICAL_OP_AND)
@@ -86,12 +91,12 @@ class Has extends Conditions
                 }
 
                 $condition = $this->_has($key, $arborescence, $value);
-                $andGroup->add($condition);
+                $currentAndGroup->add($condition);
             }
             elseif (is_string($value))
             {
                 $condition = $this->_has($value, $arborescence);
-                $andGroup->add($condition);
+                $currentAndGroup->add($condition);
             }
             else
             {
@@ -99,12 +104,12 @@ class Has extends Conditions
             }
         }
 
-        // Add last values.
-        if (! $andGroup->isEmpty())
+        if ($root !== $currentAndGroup
+            && ! $currentAndGroup->isEmpty())
         {
-            $orGroup->add($andGroup);
+            $root->add($currentAndGroup);
         }
 
-        return $orGroup;
+        return $root;
     }
 }

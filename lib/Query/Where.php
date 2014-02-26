@@ -7,10 +7,6 @@
 
 use \SimpleAR\Query;
 
-use SimpleAR\Query\Condition\ExistsCondition;
-use SimpleAR\Query\Condition\RelationCondition;
-use SimpleAR\Query\Condition\SimpleCondition;
-
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).
  */
@@ -33,7 +29,7 @@ abstract class Where extends Query
             case 'SimpleAR\Query\Option\Has':
                 if ($this->_where)
                 {
-                    $this->_where->combine($option->conditions);
+                    $this->_where->merge($option->conditions);
                 }
                 else
                 {

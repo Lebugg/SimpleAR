@@ -74,7 +74,7 @@ abstract class Condition
     public function canMergeWith(Condition $c)
     {
         return $this->relation === $c->relation
-                && get_class() === get_class($c);
+               && get_class()  === get_class($c);
     }
 
     public function merge(Condition $c)

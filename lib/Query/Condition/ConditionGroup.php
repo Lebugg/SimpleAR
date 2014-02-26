@@ -34,6 +34,17 @@ class ConditionGroup extends Condition
         $this->_type = $type;
     }
 
+    /**
+     * Add a condition or a condition group to the current group.
+     *
+     * @param  Condition $c The condition to add.
+     * @return void
+     */
+    public function add(Condition $c)
+    {
+        $this->_elements[] = $c;
+    }
+    /*
     public function add(Condition $c)
     {
         if (! $c instanceof \SimpleAR\Query\Condition\ConditionGroup)
@@ -61,6 +72,7 @@ class ConditionGroup extends Condition
         // But, basically, we just want to add an item to the element array.
         $this->_elements[] = $c;
     }
+    */
 
     /**
      * Merge two condition groups or add a condition to the condition group
@@ -89,6 +101,16 @@ class ConditionGroup extends Condition
     public function isEmpty()
     {
         return ! $this->_elements;
+    }
+
+    public function elements()
+    {
+        return $this->_elements;
+    }
+
+    public function type()
+    {
+        return $this->_type;
     }
 
     public function toSql($useAliases = true, $toColumn = true)
