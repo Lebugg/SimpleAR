@@ -2014,9 +2014,12 @@ abstract class Model
 
         // Current object is not saved in database yet. It does not
         // have an ID, so we cannot retrieve linked models from Db.
-        if ($this->_id === null)
+        //
+        // However, it is ok for BelongsTo since it does not rest on current
+        // instance's ID.
+        if ($this->_id === null && ! $relation instanceof Relation\BelongsTo)
         {
-            if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
+            if ($relation instanceof Relation\HasOne)
             {
                 return null;
             }
