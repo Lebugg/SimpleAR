@@ -90,12 +90,16 @@ class SimpleAR
                 {
                     include $file;
 
-                    /**
-                     * Loaded class might not be a subclass of Model. It can just be a
-                     * independant model class located in same directory and loaded by this
-                     * autoload function.
-                     */
-                    if (is_subclass_of($class, 'SimpleAR\Model'))
+                    // We check to things:
+                    //
+                    //  1) Class is a subclass of SimpleAR's Model base class:
+                    //  it might be an independant class located in the model
+                    //  folder.
+                    //  2) Class is not abstract: wake up has no sense on
+                    //  abstract class.
+                    $reflection = new ReflectionClass($class);
+                    if ($reflection->isSubclassOf('SimpleAR\Model')
+                        && ! $reflection->isAbstract())
                     {
                         $class::wakeup();
                     }
