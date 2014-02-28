@@ -1369,7 +1369,7 @@ abstract class Model
 		if ($currentClass != 'Model')
 		{
             $suffix        = Cfg::get('modelClassSuffix');
-            $modelBaseName = $suffix ? strstr($currentClass, Cfg::get('modelClassSuffix'), true) : $currentClass;
+            $modelBaseName = $suffix ? strstr($currentClass, $suffix, true) : $currentClass;
 
             $tableName  = static::$_tableName  ?: call_user_func(Cfg::get('classToTable'), $modelBaseName);
             $primaryKey = static::$_primaryKey ?: Cfg::get('primaryKey');
@@ -1382,7 +1382,7 @@ abstract class Model
 			// They are not, fetch them from database.
             else
             {
-				$columns = DB::query('SHOW COLUMNS FROM ' . $tableName)->fetchAll(\PDO::FETCH_COLUMN);
+				$columns = DB::query('SHOW COLUMNS FROM `' . $tableName . '`')->fetchAll(\PDO::FETCH_COLUMN);
 
                 // We do not want to insert primary key in
                 // static::$_columns unless it is a compound key.
