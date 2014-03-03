@@ -1,14 +1,14 @@
 <?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
-
 use \SimpleAR\Query\Arborescence;
-
 use \SimpleAR\Query\Condition;
 use \SimpleAR\Query\Condition\Attribute;
 use \SimpleAR\Query\Condition\ConditionGroup;
 use \SimpleAR\Query\Condition\SimpleCondition;
 use \SimpleAR\Query\Condition\RelationCondition;
+
+use \SimpleAR\Database\Expression;
 
 use \SimpleAR\Exception;
 
@@ -117,6 +117,14 @@ class Conditions extends Option
      */
     protected function _condition($attribute, $operator, $value, Arborescence $arborescence = null)
     {
+        if ($value instanceof Expression && $attribute == null)
+        {
+            $condition = new SimpleCondition();
+            $condition->addExpression($value);
+
+            return $condition;
+        }
+
         // If we are not using model, treatment is much more simple.
         if (! $this->_context->useModel)
         {
@@ -319,11 +327,25 @@ class Conditions extends Option
                     $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
                     continue;
                 }
+
                 // It means that the AND logical operator is useless to write in
                 // a condition array. It is used by default.
                 elseif($value === Condition::LOGICAL_OP_AND)
                 {
                     continue;
+                }
+
+                elseif ($value instanceof Expression)
+                {
+                    $conditionOrParsedArray = $this->_condition($key, null, $value, $arborescence);
+
+                    // The condition may have been transformed into a HAVING clause.
+                    //
+                    // In these cases, _condition() returns nothing.
+                    if ($conditionOrParsedArray)
+                    {
+                        $currentAndGroup->add($conditionOrParsedArray);
+                    }
                 }
 
                 // Condition or condition group.

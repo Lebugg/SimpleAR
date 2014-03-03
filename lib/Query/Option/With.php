@@ -8,7 +8,7 @@ use \SimpleAR\Exception\MalformedOption;
 
 class With extends Option
 {
-    public $columns;
+    public $columns = array();
     public $groups;
 
     public function build()

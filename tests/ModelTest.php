@@ -130,6 +130,14 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         $blog->delete();
     }
 
+    public function testSelectWithOption()
+    {
+        $a = Blog::one(array(
+            'with' => 'articles',
+        ));
+        $this->assertTrue(isset($a->articles));
+    }
+
     public function testSelectWithRelationCount()
     {
         $a = Blog::one(array(

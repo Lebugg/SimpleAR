@@ -1,10 +1,9 @@
-<?php
-namespace SimpleAR\Query\Condition;
+<?php namespace SimpleAR\Query\Condition;
 
-use SimpleAR\Query\Condition;
+use \SimpleAR\Query\Condition;
 
-use SimpleAR\Exception;
-use SimpleAR\Table;
+use \SimpleAR\Exception;
+use \SimpleAR\Table;
 
 /**
  * This class modelizes a condtion attribue.
@@ -104,6 +103,9 @@ class Attribute
             {
                 $value = $value->id;
             }
+
+            // If $value is an Expression object. Leave as it is until the SQL
+            // generation.
         }
         else
         {

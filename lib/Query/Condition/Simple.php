@@ -18,6 +18,11 @@ class SimpleCondition extends Condition
             $res[] = $attribute->toSql($tableAlias, $table);
         }
 
+        foreach ($this->expressions as $expression)
+        {
+            $res[] = $expression->val();
+        }
+
         return array(
             implode(' ' . self::LOGICAL_OP_AND . ' ', $res), // SQL
             $this->flattenValues(), // Values to bind (flattened).

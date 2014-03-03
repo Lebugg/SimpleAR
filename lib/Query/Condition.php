@@ -36,7 +36,8 @@ abstract class Condition
 
     const DEFAULT_LOGICAL_OP = self::LOGICAL_OP_AND;
 
-    public $attributes = array();
+    public $attributes  = array();
+    public $expressions = array();
 
     /**
      * A Table object corresponding to the attribute's Model.
@@ -52,16 +53,18 @@ abstract class Condition
     /**
      * Add an attribute to the condition.
      *
-     * @param string|array $attribute Attribute(s) of condition.
-     * @param string       $operator  Operator to use.
-     * @param mixed        $value     Value(s) to test attribute(s) against.
-     * @param string       $logic     The logic of the condition.
+     * @param Attribute $attribute The attribute object to add.
      *
      * @throws Exception if operator, value, or logic is invalid.
      */
     public function addAttribute(Attribute $attribute)
     {
         $this->attributes[] = $attribute;
+    }
+
+    public function addExpression(Expression $e)
+    {
+        $this->expressions[] = $e;
     }
 
     /**

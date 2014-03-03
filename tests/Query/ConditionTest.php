@@ -3,9 +3,28 @@
 use \SimpleAR\Query\Condition\SimpleCondition;
 use \SimpleAR\Query\Condition\ConditionGroup;
 use \SimpleAR\Query\Condition\Attribute;
+use \SimpleAR\Facades\DB;
 
 class ConditionTest extends PHPUnit_Framework_TestCase
 {
+    private static $_sar;
+
+    private static function _initializeSimpleAR()
+    {
+        $cfg = new SimpleAR\Config();
+        $cfg->dsn              = json_decode(file_get_contents(__DIR__ . '/../db.json'), true);
+        $cfg->doForeignKeyWork = true;
+        $cfg->debug            = true;
+        $cfg->modelDirectory   = __DIR__ . '/../models/';
+        $cfg->dateFormat       = 'd/m/Y';
+
+        self::$_sar = new SimpleAR($cfg);
+    }
+
+    public static function setUpBeforeClass()
+    {
+        self::_initializeSimpleAR();
+    }
     public function testConditionAddAttribute()
     {
         $cond = new SimpleCondition();
@@ -84,5 +103,22 @@ class ConditionTest extends PHPUnit_Framework_TestCase
         $g->merge($gg);
 
         $this->assertCount(5, $g->elements());
+    }
+
+    public function testConditionwithExpression()
+    {
+        $c = new SimpleCondition();
+        $c->addExpression(DB::expr('my condition = true'));
+        $toSql = $c->toSql(false, false);
+        $this->assertEquals('my condition = true', $toSql[0]);
+
+        $c->addExpression(DB::expr('second'));
+        $toSql = $c->toSql(false, false);
+        $this->assertEquals('my condition = true AND second', $toSql[0]);
+
+        $c->addAttribute(new Attribute('a', 1, '='));
+        $toSql = $c->toSql(false, false);
+        $this->assertEquals('`a` = ? AND my condition = true AND second', $toSql[0]);
+        $this->assertEquals(array(1), $toSql[1]);
     }
 }
