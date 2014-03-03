@@ -312,7 +312,7 @@ class Conditions extends Option
                     // Add current group.
                     if (! $currentAndGroup->isEmpty())
                     {
-                        $root->add($andGroup);
+                        $root->add($currentAndGroup);
                     }
 
                     // And initialize a new one.
