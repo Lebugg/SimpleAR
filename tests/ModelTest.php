@@ -288,4 +288,10 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
 
         $this->assertInternalType('string', $article->date_expiration);
     }
+
+    public function testConditionsWithExpression()
+    {
+        $a = Blog::conditions(array(DB::expr('_blog.name = \'Blog 1\'')))->one();
+        $this->assertEquals('Blog 1', $a->name);
+    }
 }
