@@ -35,17 +35,31 @@ class Filter extends Option
         // It is an array of attributes.
         if (is_array($this->_value))
         {
-            $columns = $this->_value;
+            $columns = array();
 
-            // Let's assure that primary key is in the columns to select.
-            // (We cannot do that without a model class.)
             if ($this->_context->useModel)
             {
                 $rootTable = $this->_context->rootTable;
 
-                $columns = array_merge($columns, (array) $rootTable->primaryKey);
-                // There might be duplicates.
-                $columns = array_unique($columns);
+                foreach ($this->_value as $attribute)
+                {
+                    // Let's assure that primary key is in the columns to select.
+                    // (We cannot do that without a model class.)
+                    $columns[$attribute] = $rootTable->columnRealName($attribute);
+                }
+
+                if ($rootTable->isSimplePrimaryKey)
+                {
+                    $columns['id'] = $rootTable->primaryKey;
+                }
+                else
+                {
+                    $columns += array_combine($rootTable->primaryKey, $rootTable->primaryKeyColumns);
+                }
+            }
+            else
+            {
+                $columns = $this->_value;
             }
         }
 

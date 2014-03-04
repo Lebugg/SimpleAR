@@ -337,7 +337,7 @@ class Conditions extends Option
 
                 elseif ($value instanceof Expression)
                 {
-                    $conditionOrParsedArray = $this->_condition($key, null, $value, $arborescence);
+                    $conditionOrParsedArray = $this->_condition(null, null, $value, $arborescence);
 
                     // The condition may have been transformed into a HAVING clause.
                     //
