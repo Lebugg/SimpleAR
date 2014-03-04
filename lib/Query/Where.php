@@ -16,6 +16,21 @@ abstract class Where extends Query
 	protected $_groups = array();
     protected $_havings = array();
 
+    /**
+     * Join a relation to the arborescence.
+     *
+     * @param string|array $relation The relation to join
+     */
+    public function join($relation)
+    {
+        if ($this->_context->useModel)
+        {
+            $this->_arborescence->add($relation, Arborescence::JOIN_INNER, true);
+        }
+
+        throw new Exception('Model classes must be used in order to use "join()".');
+    }
+
     protected function _compileWhere()
     {
 		$this->_sql .= $this->_where();

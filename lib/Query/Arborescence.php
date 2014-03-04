@@ -174,7 +174,10 @@ class Arborescence
         }
 
         // Allow string for first parameter.
-        $relations = (array) $relations;
+        if (is_string($relations))
+        {
+            $relations = explode('/', $relations);
+        }
 
         // NOTE: "n" prefix in variable names means stands for "node", that is
         // an Arborescence instance.
