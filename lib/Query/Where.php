@@ -6,6 +6,7 @@
  */
 
 use \SimpleAR\Query;
+use \SimpleAR\Exception;
 
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).
@@ -19,13 +20,16 @@ abstract class Where extends Query
     /**
      * Join a relation to the arborescence.
      *
-     * @param string|array $relation The relation to join
+     * @param  string|array $relation The relation to join
+     * @return $this
      */
     public function join($relation)
     {
         if ($this->_context->useModel)
         {
-            $this->_arborescence->add($relation, Arborescence::JOIN_INNER, true);
+            $this->_context->arborescence->add($relation, Arborescence::JOIN_INNER, true);
+
+            return $this;
         }
 
         throw new Exception('Model classes must be used in order to use "join()".');

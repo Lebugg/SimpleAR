@@ -85,7 +85,7 @@ class Has extends Conditions
 
             if (is_string($key))
             {
-                if (!is_array($value))
+                if (! is_array($value))
                 {
                     throw new MalformedOption('"has" option "' . $key . '" is malformed.  Expected format: "\'' . $key . '\' => array(<conditions>)".');
                 }
@@ -100,7 +100,7 @@ class Has extends Conditions
             }
             else
             {
-                throw new MalformedOption('A "has" option is malformed. Expected format: "<relation name> => array(<conditions>)" or "<relation name>".');
+                throw new MalformedOption('A "has" option is malformed. Expected format: "relation name => array(conditions)" or "relation name".');
             }
         }
 

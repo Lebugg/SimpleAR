@@ -140,6 +140,11 @@ abstract class Query
      */
     public function __call($name, $args)
     {
+        if (! isset($args[1]) && is_array($args[0]))
+        {
+            $args = $args[0];
+        }
+
         if (in_array($name, static::$_options))
         {
             $this->_givenOptions[$name] = $args;
