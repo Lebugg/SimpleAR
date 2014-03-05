@@ -219,6 +219,9 @@ class RelationCondition extends \SimpleAR\Query\Condition
             }
             break;
 
+            default:
+                throw new Exception('Unknown relation type: "' . get_class($r) .  '".');
+
         } // end switch.
 
         return array(
