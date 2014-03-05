@@ -1,6 +1,7 @@
 <?php
 namespace SimpleAR\Query\Condition;
 
+use SimpleAR\Relation\ManyMany;
 use SimpleAR\Query\Condition;
 use SimpleAR\Exception;
 
@@ -43,16 +44,18 @@ class ExistsCondition extends Condition
         $previousDepth = (string) ($this->depth - 1 ?: '');
 
         $cmColumn = self::leftHandSide($r->cm->column, $r->cm->alias .  $previousDepth);
+        $join     = '';
 
         // Not the same for ManyMany, we use join table.
         if ($r instanceof ManyMany)
         {
             // If there are subconditions, we use linked table.
-            if ($this->attributes)
+            if ($this->attributes || $this->subconditions)
             {
                 $tableAlias = $r->lm->alias . $depth;
                 $tableName  = $r->lm->table;
-                $lmColumn   = self::leftHandSide($r->lm->column, $tableAlias);
+                $join       = 'INNER JOIN `' . $r->jm->table . '` `' . $r->jm->alias . '` ON `' .  $tableAlias . '`.`' . $r->lm->column . '` = `' . $r->jm->alias .  '`.`' . $r->jm->to . '`';
+                $lmColumn   = '`' . $r->jm->alias . '`.`' . $r->jm->from . '`';
             }
             // Otherwise, the middle table suffises.
             else
@@ -98,7 +101,7 @@ class ExistsCondition extends Condition
         // $b contains '' or 'NOT'. It relies on $this->exists value.
         $sql = " $b EXISTS (
                     SELECT NULL
-                    FROM `{$tableName}` `{$tableAlias}`
+                    FROM `{$tableName}` `{$tableAlias}` {$join}
                     WHERE {$lmColumn} = {$cmColumn}
                     {$subconditions}
                 )";
