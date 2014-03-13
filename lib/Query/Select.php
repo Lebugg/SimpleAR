@@ -359,4 +359,10 @@ class Select extends Where
         return $res;
     }
 
+    public function sum($column)
+    {
+        $this->_filter = array('SUM(' . $column . ')');
+        $this->run();
+        return $this->_sth->fetch(\PDO::FETCH_COLUMN);
+    }
 }

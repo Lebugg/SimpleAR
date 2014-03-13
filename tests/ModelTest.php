@@ -36,6 +36,12 @@ class ModelTest extends PHPUnit_Extensions_Database_TestCase
         return $this->createXMLDataSet(__DIR__ . '/fixtures/ModelTest.xml');
     }
 
+    public function testCountOnColumn()
+    {
+        $a = Blog::sum('id');
+        $this->assertEquals(6, $a);
+    }
+
     public function testAttributeManipulation()
     {
         $stub = $this->getMockForAbstractClass('SimpleAR\Model');
