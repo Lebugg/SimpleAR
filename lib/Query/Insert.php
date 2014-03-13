@@ -12,9 +12,9 @@ use \SimpleAR\Facades\DB;
  */
 class Insert extends \SimpleAR\Query
 {
-    protected static $_options = array('fields', 'values');
+    protected static $_availableOptions = array('fields', 'values');
 
-    protected $_table;
+    protected $_table = true;
     protected $_columns;
     protected $_values;
 
@@ -23,13 +23,6 @@ class Insert extends \SimpleAR\Query
         'columns',
         'values',
     );
-
-    public function __construct($root)
-    {
-        parent::__construct($root);
-
-        $this->_table = $root;
-    }
 
     /**
      * Last inserted ID getter.
@@ -43,6 +36,16 @@ class Insert extends \SimpleAR\Query
         return DB::lastInsertId();
     }
 
+    protected function _buildFields(Option\Fields $o)
+    {
+        $this->_columns = $o->columns;
+    }
+
+    protected function _buildValues(Option\Values $o)
+    {
+        $this->_values = $o->values;
+    }
+
     protected function _compile()
     {
         // If user did not specified any column.
@@ -50,7 +53,7 @@ class Insert extends \SimpleAR\Query
         // of "default row", that is a row with only database default values.
         if (! $this->_columns)
         {
-            $this->_sql = 'INSERT INTO `' . $this->_context->rootTableName . '` VALUES()';
+            $this->_sql = 'INSERT INTO `' . $this->_tableName . '` VALUES()';
         }
         else
         {
@@ -62,16 +65,21 @@ class Insert extends \SimpleAR\Query
     {
         $this->_sql = 'INSERT INTO ';
 
-        $c = $this->_context;
-        $this->_sql .= $c->useAlias
-            ? '`' . $c->rootTableName . '` `' . $c->rootTableAlias . '`'
-            : '`' . $c->rootTableName . '`'
+        $this->_sql .= $this->_useAlias
+            ? DB::quote($this->_tableName) . ' ' . DB::quote($this->_rootAlias)
+            : DB::quote($this->_tableName)
             ;
     }
 
     protected function _compileColumns()
     {
-        $this->_sql .= '(' . implode(',', $this->_columns) . ')';
+        $columns = $this->_useModel ? $this->_table->columnRealName($this->_columns) : $this->_columns;
+        $columns = $this->columnAliasing(
+            (array) $columns,
+            $this->_useAlias ? $this->_rootAlias : ''
+        );
+
+        $this->_sql .= '(' . implode(',', $columns) . ')';
     }
 
     protected function _compileValues()
@@ -99,27 +107,4 @@ class Insert extends \SimpleAR\Query
             $this->_sql .= '(' . str_repeat('?,', $count - 1) . '?)';
         }
     }
-
-    protected function _handleOption(Option $option)
-    {
-        switch (get_class($option))
-        {
-            case 'SimpleAR\Query\Option\Fields':
-                $this->_columns = $option->columns;
-                break;
-            case 'SimpleAR\Query\Option\Values':
-                $this->_values = $option->values;
-                break;
-            default:
-                parent::_handleOption($option);
-        }
-    }
-
-    protected function _initContext($root)
-    {
-        parent::_initContext($root);
-
-        $this->_context->useAlias = false;
-    }
-
 }

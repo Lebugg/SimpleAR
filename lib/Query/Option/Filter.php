@@ -1,15 +1,18 @@
 <?php namespace SimpleAR\Query\Option;
 
+use \SimpleAR\Model;
 use \SimpleAR\Query;
 use \SimpleAR\Query\Option;
 
 use \SimpleAR\Database\Expression;
-
 use \SimpleAR\Exception\MalformedOption;
 
 class Filter extends Option
 {
-    public $columns;
+    protected static $_name = 'filter';
+
+    public $attributes;
+    public $toColumn;
 
     /**
      * Handle "filter" option.
@@ -30,37 +33,29 @@ class Filter extends Option
      * @see Query::attributeAliasing()
      * @see Query\Select::$_selects
      */
-    public function build()
+    public function build($useModel, $model = null)
     {
         // It is an array of attributes.
         if (is_array($this->_value))
         {
-            $columns = array();
+            $columns = $this->_value;
 
-            if ($this->_context->useModel)
-            {
-                $rootTable = $this->_context->rootTable;
+            /* if ($useModel) */
+            /* { */
+            /*     $table = $model::table(); */
 
-                foreach ($this->_value as $attribute)
-                {
-                    // Let's assure that primary key is in the columns to select.
-                    // (We cannot do that without a model class.)
-                    $columns[$attribute] = $rootTable->columnRealName($attribute);
-                }
+            /*     if ($table->isSimplePrimaryKey) */
+            /*     { */
+            /*         $columns[] = 'id'; */
+            /*     } */
+            /*     else */
+            /*     { */
+            /*         $columns = array_unique(array_merge($columns, $table->primaryKey)); */
+            /*     } */
+            /* } */
 
-                if ($rootTable->isSimplePrimaryKey)
-                {
-                    $columns['id'] = $rootTable->primaryKey;
-                }
-                else
-                {
-                    $columns += array_combine($rootTable->primaryKey, $rootTable->primaryKeyColumns);
-                }
-            }
-            else
-            {
-                $columns = $this->_value;
-            }
+            $this->attributes = $columns;
+            $this->toColumn   = $useModel;
         }
 
         // It is a filter or there is no filter (all columns are to be
@@ -68,13 +63,14 @@ class Filter extends Option
         elseif ($this->_value === null || is_string($this->_value))
         {
             // We need to use models.
-            if (! $this->_context->useModel)
+            if (! $useModel)
             {
-                throw new MalformedOption('"filter" option cannot be used without using model.');
+                throw new MalformedOption('"filter" option cannot be used this
+                        way without using models.');
             }
 
-            $rootModel = $this->_context->rootModel;
-            $columns   = $rootModel::columnsToSelect($this->_value);
+            $this->attributes = $model::columnsToSelect($this->_value);
+            $this->toColumn   = false;
         }
 
         // It is an raw expression.
@@ -86,7 +82,7 @@ class Filter extends Option
         //
         elseif ($this->_value instanceof Expression)
         {
-            $value = $this->value->val();
+            $value = $this->_value->val();
             
             $columns = is_string($value)
                 ? array_map(function($el) {
@@ -94,17 +90,15 @@ class Filter extends Option
                     }, explode(',', $value))
                 : $value
                 ;
+
+            $this->attributes = $columns;
+            $this->toColumn   = false;
         }
 
         else
         {
-            throw new MalformedOption('Bad value for filter option: ' .  var_export($this->_value, true). '.');
+            throw new MalformedOption('Bad value for filter option: ' .
+                    var_export($this->_value, true). '.');
         }
-
-        // Shortcuts.
-		$rootAlias   = $this->_context->useAlias       ? $this->_context->rootTableAlias  : '';
-        $resultAlias = $this->_context->useResultAlias ? $this->_context->rootResultAlias : '';
-
-        $this->columns = Query::columnAliasing($columns, $rootAlias, $resultAlias);
     }
 }

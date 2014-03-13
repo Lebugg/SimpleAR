@@ -50,7 +50,6 @@ abstract class Query
      */
 	protected $_sql;
 
-    protected $_columns = array();
 
     /**
      * The query values to bind.
@@ -64,31 +63,36 @@ abstract class Query
      *
      * @var array
      */
-    protected static $_options = array();
+    protected static $_availableOptions = array();
 
     /**
-     * Holds information used to properly construct queries. It allows
-     * flexibility while keeping code clear.
+     * Are we using model?
      *
-     * Description of its members:
-     * ---------------------------
+     * Indicate whether we use table aliases. If true, every table field use in
+     * query will be prefix by the corresponding table alias.
      *
-     * - useAlias (bool): Tells if we use table aliases. If true, every table field use
-     * in query will be prefix by the corresponding table alias.
-     *
-     * - useModel (bool): Indicate if we are using models to build query. If false, we
-     * only use the raw table name given in constructor. In this case, we would
-     * be enable to use many features like process query on linked models.
-     *
-     * - useResultAlias (bool)
-     * - rootModel (string)
-     * - rootTable (Table)
-     * - rootTableName (string)
-     * - isCriticalQuery (bool)
-     *
-     * @var object
+     * @var bool
      */
-    protected $_context;
+    protected $_useModel = false;
+
+    /**
+     * Do we need to use table alias in query?
+     *
+     * Indicate whether we are using models to build query. If false, we only use the
+     * raw table name given in constructor. In this case, we would be enable to
+     * use many features like process query on linked models.
+     *
+     * @var bool
+     */
+    protected $_useAlias = false;
+
+    protected $_table;
+    protected $_tableName;
+    protected $_model;
+
+    const DEFAULT_ROOT_ALIAS = '_';
+
+    protected $_rootAlias = self::DEFAULT_ROOT_ALIAS;
 
     /**
      * Statement object of the last executed query.
@@ -104,20 +108,143 @@ abstract class Query
      */
     protected $_executed = false;
 
-    protected $_givenOptions;
+    /**
+     * Is the query compiled?
+     */
+    protected $_compiled = false;
 
     /**
-     * Constructor.
+     * The list of options to build.
      *
-     * It just calls _initContext().
+     * It contains a list of Option instances that will be built during query
+     * build step.
      *
-     * @param string $root The root model class name or the table name.
-     *
-     * @see SimpleAR\Query::_initContext()
+     * @var array
      */
-	public function __construct($root)
-	{
-        $this->_initContext($root);
+    protected $_options = array();
+
+
+    public function __construct($root = null)
+    {
+        if ($root !== null)
+        {
+            $this->root($root);
+        }
+    }
+
+    /**
+     * Set the "root" of the query.
+     *
+     * It can be:
+     *  
+     *  * A valid model class name.
+     *  * A table name.
+     *
+     * @param  string $root The query root.
+     * @return $this
+     */
+    public function root($root)
+    {
+        if (\SimpleAR\is_valid_model_class($root))
+        {
+            $this->rootModel($root);
+        }
+        else
+        {
+            $this->rootTable($root);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set the model on which to build the query.
+     *
+     * The function checks that the given class is a subclass of SimpleAR\Model.
+     * If not, an Exception will be thrown.
+     *
+     * @param  string $class The model class.
+     * @return $this
+     *
+     * @throws \SimpleAR\Exception if the class is not a subclass of
+     * SimpleAR\Model.
+     */
+    public function rootModel($class)
+    {
+        $this->_useModel = true;
+        $this->_useAlias = false;
+
+        $this->_model = $class;
+        $this->_table = $t = $class::table();
+        $this->_tableName = $t->name;
+
+        return $this;
+    }
+
+    /**
+     * Set the table on which to execute the query.
+     *
+     * @param  string $tableName The table name.
+     * @return $this
+     */
+    public function rootTable($tableName)
+    {
+        $this->_useModel = false;
+        $this->_useAlias = true;
+        $this->_tableName = $tableName;
+
+        return $this;
+    }
+
+    /**
+     * Set a bunch of options to the query.
+     *
+     * This function is merely a wrapper around Query::option() function.
+     *
+     * @param  array $options An array of options.
+     * @return $this
+     */
+    public function options(array $options)
+    {
+        foreach ($options as $name => $value)
+        {
+            $this->option($name, $value);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Generic option handler.
+     *
+     * It instanciate an new option according to a name and a value.
+     *
+     * @param  string $name  The option name.
+     * @param  mixed  $value The option value.
+     *
+     * @return $this
+     */
+    public function option($name, $value, $buildNow = false)
+    {
+        if (in_array($name, static::$_availableOptions))
+        {
+            $class = '\SimpleAR\Query\Option\\' . ucfirst($name);
+            if (! class_exists($class))
+            {
+                throw new Exception('Unknown option: "' . $name .  '".');
+            }
+
+            $option = new $class($value);
+
+            if ($buildNow)
+            {
+                return $this->buildOption($option);
+            }
+
+            $this->_options[] = $option;
+        }
+
+        return $this;
     }
 
     /**
@@ -127,7 +254,7 @@ abstract class Query
      * this, we would have to write a method for each available option per query
      * class...
      *
-     * This is the matching of Query::_build() method. But _build() is used for
+     * This is the matching of Query::build() method. But build() is used for
      * automatical query build; __call() is here to open query manipulation to
      * user.
      *
@@ -140,26 +267,131 @@ abstract class Query
      */
     public function __call($name, $args)
     {
-        if (! isset($args[1]) && is_array($args[0]))
+        if (! isset($args[1]) && isset($args[0]))
         {
             $args = $args[0];
         }
 
-        if (in_array($name, static::$_options))
+        $this->option($name, $args);
+
+        return $this;
+    }
+
+    /**
+     * Returns the number of rows affected by the last DELETE, INSERT, or UPDATE statement executed.
+     *
+     * @see http://php.net/manual/en/pdostatement.rowcount.php
+     *
+     * @return int
+     */
+    public function rowCount()
+    {
+        $this->run();
+        return $this->_sth->rowCount();
+    }
+
+    /**
+     * Execute the Query.
+     *
+     * @see http://www.php.net/manual/en/pdostatement.execute.php
+     *
+     * For queries that are "critical", there must be a WHERE clause in the
+     * query string. Otherwise, an exception will be thrown.
+     *
+     * @param  bool $redo If true, run it even if it already did.
+     * @return $this
+     */
+    public function run($again = false)
+    {
+        if (! $this->_compiled || $again)
         {
-            $this->_givenOptions[$name] = $args;
+            $this->build($this->_options);
+            $this->compile(static::$_components);
+        }
 
-            $option = Query\Option::forge($name, $args, $this->_context);
-            $this->_handleOption($option);
-
-            // There is an option handling function for each available option.
-            // They are declared protected in order to Query class to access it.
-            //$fn = '_' . $name;
-            //$this->$fn($option);
+        if (! $this->_executed || $again)
+        {
+            $this->execute($this->_sql, $this->_values);
         }
 
         return $this;
     }
+
+    public function execute($sql, array $values)
+    {
+        // No WHERE condition for critical query? Do not process.
+        if (static::$_isCriticalQuery)
+        {
+            if (strpos($this->_sql, ' WHERE ') === false)
+            {
+                throw new Exception('Cannot execute this query without a WHERE clause.');
+            }
+        }
+
+        // At last, execute the query.
+        $this->_sth = DB::query($sql, $values);
+
+        // Remember!
+        $this->_executed = true;
+
+        return $this;
+    }
+
+    /**
+     * This function builds the query.
+     *
+     * Actually, it builds all the given options.
+     *
+     * @param  array $options The option array.
+     * @return $this
+     */
+	public function build(array $options)
+    {
+        foreach ($this->_options as $option)
+        {
+            $this->buildOption($option);
+        }
+
+        return $this;
+    }
+
+    public function buildOption(Query\Option $option)
+    {
+        $fn = '_build' . ucfirst($option->name());
+
+        $option->build($this->_useModel, $this->_model);
+        $this->$fn($option);
+
+        return $this;
+    }
+
+    /**
+     * This function compile all pieces of the query into a well-formated SQL
+     * string.
+     *
+     * In the same time, $_values has to contains every value in correct order
+     * so that run() can safely be called.
+     *
+     * @return void.
+     */
+    protected function compile($components)
+    {
+        foreach ($components as $name)
+        {
+            if ($this->{'_' . $name})
+            {
+                $fn = '_compile' . ucfirst($name);
+                $this->$fn();
+            }
+        }
+
+        $this->_compiled = true;
+    }
+
+    protected function _handleOption(Query\Option $option)
+    {
+    }
+
 
     /**
      * Apply aliases to columns.
@@ -181,7 +413,7 @@ abstract class Query
      *
      * @return array
      */
-    public static function columnAliasing(array $columns, $tableAlias = '', $resultAlias = '')
+    public function columnAliasing(array $columns, $tableAlias = '', $resultAlias = '')
     {
         $res = array();
 
@@ -215,258 +447,14 @@ abstract class Query
         return $res;
     }
 
-    /**
-     * Getter. Return query context.
-     *
-     * @return StdClass;
-     */
-    public function context()
+    public function getSql()
     {
-        return $this->_context;
+        return $this->_sql;
     }
 
-    /**
-     * Construct a Count query.
-     *
-     * @param array $options The option array.
-     * @param string $root The root model class name or the table name.
-     *
-     * @return Query\Count
-     */
-	public static function count($root, array $options = null)
-	{
-        return self::_query('Count', $options, $root);
-	}
-
-    /**
-     * Construct a Delete query.
-     *
-     * @param array $options The option array.
-     * @param string $root The root model class name or the table name.
-     *
-     * @return Query\Delete
-     */
-	public static function delete($root, array $conditions = null)
-	{
-        // Delete query only needs a condition array, but we do not want to
-        // redefine _build() for this.
-        $options = array('conditions' => $conditions);
-
-        return self::_query('Delete', $options, $root);
-	}
-
-    /**
-     * Construct a Insert query.
-     *
-     * @param array $options The option array.
-     * @param string $root The root model class name or the table name.
-     *
-     * @return Query\Insert
-     */
-	public static function insert($root, array $options = null)
-	{
-        return self::_query('Insert', $options, $root);
-	}
-
-    /**
-     * Returns the number of rows affected by the last DELETE, INSERT, or UPDATE statement executed.
-     *
-     * @see http://php.net/manual/en/pdostatement.rowcount.php
-     *
-     * @return int
-     */
-    public function rowCount()
+    public function getValues()
     {
-        $this->run();
-        return $this->_sth->rowCount();
-    }
-
-    /**
-     * Execute the Query.
-     *
-     * @see http://www.php.net/manual/en/pdostatement.execute.php
-     *
-     * For queries that are "critical", there must be a WHERE clause in the
-     * query string. Otherwise, an exception will be thrown.
-     *
-     * @param  bool $redo If true, run it even if it already did.
-     * @return $this
-     */
-    public function run($again = false)
-    {
-        if ($this->_executed && ! $again)
-        {
-            return $this;
-        }
-
-        if (! $this->_executed)
-        {
-            $this->_compile();
-
-            // No WHERE condition for critical query? Do not process.
-            if ($this->_context->isCriticalQuery)
-            {
-                if (strpos($this->_sql, ' WHERE ') === false)
-                {
-                    throw new Exception('Cannot execute this query without a WHERE clause.');
-                }
-            }
-        }
-
-        // At last, execute the query.
-        $this->_sth = DB::query($this->_sql, $this->_values);
-
-        // Remember!
-        $this->_executed = true;
-
-        return $this;
-    }
-
-    /**
-     * Construct a Select query.
-     *
-     * @param array $options The option array.
-     * @param string $root The root model class name or the table name.
-     *
-     * @return Query\Select
-     */
-	public static function select($root, array $options = null)
-	{
-        return self::_query('Select', (array) $options, $root);
-	}
-
-    /**
-     * Construct a Update query.
-     *
-     * @param array $options The option array.
-     * @param string $root The root model class name or the table name.
-     *
-     * @return Query\Update
-     */
-	public static function update($root, array $options = null)
-	{
-        return self::_query('Update', $options, $root);
-	}
-
-    /**
-     * This function builds the query.
-     *
-     * Actually, it 
-     *
-     * @param array $options The option array.
-     *
-     * @return $this
-     */
-	protected function _build(array $options)
-    {
-        $this->_givenOptions = $options;
-
-        // Foreach given option, we check that query can handle it.
-        // If it can, we build the option and give it to the query.
-        foreach ($options as $name => $value)
-        {
-            if (in_array($name, static::$_options))
-            {
-                $option = Query\Option::forge($name, $value, $this->_context);
-                $this->_handleOption($option);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * This function compile all pieces of the query into a well-formated SQL
-     * string.
-     *
-     * In the same time, $_values has to contains every value in correct order
-     * so that run() can safely be called.
-     *
-     * @return void.
-     */
-    protected function _compile()
-    {
-        foreach (static::$_components as $name)
-        {
-            if ($this->{'_' . $name})
-            {
-                $fn = '_compile' . ucfirst($name);
-                $this->$fn();
-            }
-        }
-    }
-
-    protected function _handleOption(Query\Option $option)
-    {
-    }
-
-    /**
-     * Initialize the query build context.
-     *
-     * The context will be used at almost every step of the query.
-     *
-     * @param string $root The name of the class that called the query or the
-     * name of the table on which to execute the query.
-     *
-     * @see SimpleAR\Query::$_context for more information on query build
-     * context.
-     *
-     * @return void
-     */
-    protected function _initContext($root)
-    {
-        $context = new \StdClass();
-
-        // A Model class name is given.
-		if (class_exists($root))
-		{
-            // Oh, you made a mistake.
-            if (! is_subclass_of($root, '\SimpleAR\Model'))
-            {
-                throw new Exception('Given class "' . $root . '" is not a subclass of Model.');
-            }
-
-            $context->useModel = true;
-            $context->useAlias = true;
-
-            $context->rootModel       = $root;
-            $context->rootTable       = $t = $root::table();
-            $context->rootTableName   = $t->name;
-            $context->rootTableAlias  = $t->alias;
-		}
-
-        // A table name is given.
-		else
-		{
-            // We cannot use models if we only have a table name.
-            $context->useModel = false;
-            $context->useAlias = true;
-
-            $context->rootTableName   = $root;
-            $context->rootTableAlias  = '_' . strtolower($root);
-		}
-
-        // Careful!
-        $context->isCriticalQuery = self::$_isCriticalQuery;
-
-        $this->_context = $context;
-	}
-
-    /**
-     * Instanciate the actual query.
-     *
-     * @param string $class     A valid query class name.
-     * @param array  $options   The option array.
-     * @param string $root      The root Model or table name.
-     *
-     * @return Query
-     */
-    private static function _query($class, array $options, $root)
-    {
-        $class = "\SimpleAR\Query\\$class";
-        $query = new $class($root);
-
-        return $query->_build($options);
+        return $this->_values;
     }
 
 }

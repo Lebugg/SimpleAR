@@ -7,14 +7,15 @@
 namespace SimpleAR\Query;
 
 require __DIR__ . '/Condition/Attribute.php';
-require __DIR__ . '/Condition/ConditionGroup.php';
+require __DIR__ . '/Condition/Group.php';
 require __DIR__ . '/Condition/Exists.php';
 require __DIR__ . '/Condition/Relation.php';
 require __DIR__ . '/Condition/Simple.php';
 
 use SimpleAR\Query\Condition\Attribute;
 use SimpleAR\Database\Expression;
-
+use SimpleAR\Facades\DB;
+use SimpleAR\Table;
 use SimpleAR\Exception;
 
 /**
@@ -22,50 +23,27 @@ use SimpleAR\Exception;
  */
 abstract class Condition
 {
-    /**
-     * List of available operators.
-     *
-     * The keys are the available operators; The values are the corresponding operators when
-     * condition is made on multiple values.
-     *
-     * @var array
-     */
-
     const LOGICAL_OP_AND = 'AND';
     const LOGICAL_OP_OR  = 'OR';
 
     const DEFAULT_LOGICAL_OP = self::LOGICAL_OP_AND;
 
-    public $attributes  = array();
-    public $expressions = array();
+    /**
+     * The arborescence node on which the node is applied.
+     *
+     * @var \SimpleAR\Arborescence
+     */
+    public $node;
+
+    public $subconditions;
 
     /**
-     * A Table object corresponding to the attribute's Model.
+     * Negative form?
      *
-     * @var Table
+     * @var bool
      */
-    public $table;
-    public $tableAlias = '';
-    public $depth      = 0;
+    public $not = false;
 
-    public $relation;
-
-    /**
-     * Add an attribute to the condition.
-     *
-     * @param Attribute $attribute The attribute object to add.
-     *
-     * @throws Exception if operator, value, or logic is invalid.
-     */
-    public function addAttribute(Attribute $attribute)
-    {
-        $this->attributes[] = $attribute;
-    }
-
-    public function addExpression(Expression $e)
-    {
-        $this->expressions[] = $e;
-    }
 
     /**
      * Check that a Condition can safely merged with another.
@@ -78,6 +56,20 @@ abstract class Condition
     {
         return $this->relation === $c->relation
                && get_class()  === get_class($c);
+    }
+
+    /**
+     * Return the relation on which this condition is built.
+     *
+     * We retrieve it through the Arborescence node instance.
+     *
+     * @param string $cm The current model class' name.
+     *
+     * @return \SimpleAR\Relation
+     */
+    public function getRelation($cm)
+    {
+        return $cm::relation($this->node->relationName);
     }
 
     public function merge(Condition $c)
@@ -108,34 +100,34 @@ abstract class Condition
     {
         $res = array();
 
-        foreach ($this->attributes as $attribute)
+        $value = $this->value;
+
+        if ($value instanceof Expression)
         {
-            $value = $attribute->value;
-
-            if ($value instanceof Expression)
+        }
+        elseif ($value === null)
+        {
+            $res[] = null;
+        }
+        elseif (is_array($value))
+        {
+            if (is_array($value[0]))
             {
-                continue;
-            }
-
-            if ($value === null)
-            {
-                $res[] = null;
-            }
-            elseif (is_array($value))
-            {
-                if (is_array($value[0]))
-                {
-                    $res = array_merge($res, call_user_func_array('array_merge', $value));
-                }
-                else
-                {
-                    $res = array_merge($res, $value);
-                }
+                $res = array_merge($res, call_user_func_array('array_merge', $value));
             }
             else
             {
-                $res[] = $value;
+                $res = array_merge($res, $value);
             }
+        }
+        else
+        {
+            $res[] = $value;
+        }
+
+        if ($this->subconditions)
+        {
+            $res = array_merge($res, $this->subconditions->flattenValues());
         }
 
         return $res;
@@ -149,18 +141,18 @@ abstract class Condition
      *
      * @return string A valid left hand side SQL condition.
      */
-    public static function leftHandSide($columns, $tableAlias = '')
+    public function leftHandSide($columns, $tableAlias = '')
     {
         // Add dot to alias to prevent additional concatenations in foreach.
         if ($tableAlias !== '')
         {
-            $tableAlias = '`' . $tableAlias . '`.';
+            $tableAlias = DB::quote($tableAlias) . '.';
         }
 
         $a = array();
         foreach ((array) $columns as $column)
         {
-            $a[] = $tableAlias . '`' . $column . '`';
+            $a[] = $tableAlias . DB::quote($column);
         }
 
         // If several conditions, we have to wrap them with brackets in order to assure about
@@ -183,7 +175,7 @@ abstract class Condition
      *
      * @return string A valid right hand side SQL condition.
      */
-    public static function rightHandSide($value)
+    public function rightHandSide($value)
     {
         if ($value instanceof Expression)
         {
@@ -222,10 +214,32 @@ abstract class Condition
     /**
      * This function transforms the Condition object into SQL.
      *
-     * @param bool $useAliases Should table aliases be used?
-     * @param bool $toColumn   Should attributes be transformed to columns?
-     *
-     * @retutn string A valid SQL condition string.
      */
-    public abstract function toSql($useAliases = true, $toColumn = true);
+    public abstract function compile(Arborescence $node, $useAlias = false, $toColumn = false);
+
+    protected function _attributeToSql($attribute, $tableAlias, Table $table = null)
+    {
+        if ($attribute instanceof Expression)
+        {
+            return $attribute->val();
+        }
+
+        $columns = $table ? $table->columnRealName($attribute) : $attribute;
+        return $this->leftHandSide($columns, $tableAlias);
+    }
+
+    protected function _operatorToSql($operator)
+    {
+        return (string) $operator;
+    }
+
+    protected function _valueToSql($value)
+    {
+        if ($value instanceof Expression)
+        {
+            return $value->val();
+        }
+
+        return $this->rightHandSide($value);
+    }
 }

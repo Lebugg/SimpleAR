@@ -1,4 +1,10 @@
-<?php
+<?php namespace SimpleAR;
+/**
+ * This file contains the array_merge_recursive_distinct function.
+ *
+ * @author Lebugg
+ */
+
 /**
  * array_merge_recursive does indeed merge arrays, but it converts values with duplicate
  * keys to arrays rather than overwriting the value in the first array with the duplicate

@@ -66,17 +66,17 @@ class ManyMany extends Relation
         DB::query($query, $value);
     }
 
-    public function joinLinkedModel($depth, $joinType)
+    public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
     {
-        return $this->_joinJM($depth, $joinType) . ' ' .  $this->_joinLM($depth, $joinType);
+        return $this->_joinJM($cmAlias, $lmAlias, $joinType) . ' ' . $this->_joinLM($cmAlias, $lmAlias, $joinType);
     }
 
-    public function joinAsLast($conditions, $depth, $joinType)
+    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
     {
         $res = '';
 
        // We always want to join the middle table.
-        $res .= $this->_joinJM($depth, $joinType);
+        $res .= $this->_joinJM($cmAlias, $lmAlias, $joinType);
 
 		foreach ($conditions as $condition)
 		{
@@ -85,7 +85,7 @@ class ManyMany extends Relation
                 // And, under certain conditions, the linked table.
                 if ($a->logic !== 'or' || $a->name !== 'id')
                 {
-                    $res .= $this->_joinLM($depth, $joinType);
+                    $res .= $this->_joinLM($cmAlias, $lmAlias, $joinType);
                     break 2;
                 }
             }
@@ -110,17 +110,18 @@ class ManyMany extends Relation
         return $relation;
 	}
 
-    private function _joinJM($depth, $joinType)
+    private function _joinJM($cmAlias, $lmAlias, $joinType)
     {
-        $previousDepth = $depth <= 1 ? '' : $depth - 1;
-        $depth         = $depth ?: '';
+        $jmAlias = $lmAlias . '_middle';
 
-		return " $joinType JOIN `{$this->jm->table}` {$this->jm->alias}$depth ON {$this->cm->alias}$previousDepth.{$this->cm->column} = {$this->jm->alias}$depth.{$this->jm->from}";
+		return $this->_buildJoin($joinType, $cmAlias, $this->jm->table, $jmAlias, $this->cm->column, $this->jm->from);
     }
 
-    private function _joinLM($depth, $joinType)
+    private function _joinLM($cmAlias, $lmAlias, $joinType)
     {
-		return " $joinType JOIN `{$this->lm->table}` {$this->lm->alias}$depth ON {$this->jm->alias}$depth.{$this->jm->to} = {$this->lm->alias}$depth.{$this->lm->pk}";
+        $jmAlias = $lmAlias . '_middle';
+
+		return $this->_buildJoin($joinType, $jmAlias, $this->lm->table, $lmAlias, $this->jm->to, $this->lm->pk);
     }
 
 }

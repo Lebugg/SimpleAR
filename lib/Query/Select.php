@@ -1,32 +1,38 @@
-<?php
+<?php namespace SimpleAR\Query;
 /**
  * This file contains the Select class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query;
+
+use \SimpleAR\Facades\DB;
+use \SimpleAR\Query\Arborescence as Arbo;
 
 /**
  * This class handles SELECT statements.
  */
 class Select extends Where
 {
+    protected $_useResultAlias  = false;
+
     /**
      * Contains all attributes to fetch.
      *
      * @var array
      */
     protected $_distinct = false;
+    protected $_columns  = array();
+    protected $_aggregates;
     protected $_filter;
-    protected $_from;
+    protected $_from = true;
 	protected $_orders = array();
     protected $_limit;
     protected $_offset;
 
     private $_pendingRow = false;
 
-    protected static $_options = array('conditions', 'filter', 'group', 'group_by',
-            'has', 'limit', 'offset', 'order', 'order_by', 'with');
+    protected static $_availableOptions = array('conditions', 'filter', 'group',
+            'has', 'limit', 'offset', 'order', 'with');
 
     /**
      * The components of the query.
@@ -38,6 +44,7 @@ class Select extends Where
      */
     protected static $_components = array(
         'columns',
+        'aggregates',
         'from',
         'where',
         'groups',
@@ -46,15 +53,6 @@ class Select extends Where
         'limit',
         'offset',
     );
-
-    const DEFAULT_ROOT_RESULT_ALIAS = '_';
-
-    public function __construct($root)
-    {
-        parent::__construct($root);
-        
-        $this->_from = $this->_context->rootTableName;
-    }
 
     /**
      * Return all fetch Model instances.
@@ -87,9 +85,9 @@ class Select extends Where
     {
         $res = array();
 
-        $reversedPK = $this->_context->rootTable->isSimplePrimaryKey
+        $reversedPK = $this->_table->isSimplePrimaryKey
             ? array('id' => 0)
-            : array_flip((array) $this->_context->rootTable->primaryKey);
+            : array_flip((array) $this->_table->primaryKey);
 
         $resId      = null;
 
@@ -131,7 +129,7 @@ class Select extends Where
             if ($res)
             {
                 // Merge related models.
-                $res = \array_merge_recursive_distinct($res, $parsedRow);
+                $res = \SimpleAR\array_merge_recursive_distinct($res, $parsedRow);
             }
             else
             {
@@ -154,71 +152,230 @@ class Select extends Where
 
         if ($row = $this->row())
         {
-            $class = $this->_context->rootModel;
-            return $class::createFromRow($row, $this->_givenOptions);
+            $class = $this->_model;
+            return $class::createFromRow($row, $this->_options);
         }
 
         return null;
     }
 
-    protected function _build(array $options)
+    protected function _buildAggregate($aggregate)
     {
-        // If user does not define any filter entry, we set a default one.
-        /*
-        if (! isset($options['filter']))
+        if ($aggregate['relations'])
         {
-            $options['filter'] = null;
-            //$this->_filter = Option::forge('filter', null, $this->_context);
+            $this->_useAlias = true;
         }
-        */
-
-        // We have to use result alias in order to distinguish root model from
-        // its linked models. It will cost more operations to parse result.
-        //
-        // @see Select::_parseRow().
-        if (! empty($options['with']))
+        if ($aggregate['asRelations'])
         {
-            $this->_context->useResultAlias = true;
+            $this->_useResultAlias = true;
         }
 
-        return parent::_build($options);
+        $node  = $this->_join($aggregate['relations'], Arbo::JOIN_LEFT);
+
+        $model = $node->model;
+        $table = $model::table();
+
+        $column = (array) $table->columnRealName($aggregate['attribute']);
+        $column = $column[0];
+
+        $qInside = DB::quote($node->alias) . '.' . DB::quote($column);
+        $alias = $aggregate['asRelations'] ? implode('.', $aggregate['asRelations']) . '.' : '';
+        $qAlias  = DB::quote($alias . $aggregate['asAttribute']);
+
+        $this->_aggregates[] = $aggregate['fn'] . '(' . $qInside . ') AS ' . $qAlias;
     }
 
-    protected function _compile()
+    protected function _buildFilter(Option\Filter $o)
     {
-        // Here we go? Let's check that we are selecting some columns.
+        $attributes = $o->attributes;
+
+        $columns = $o->toColumn
+            ? $this->_table->columnRealName($attributes)
+            : $attributes;
+
+        $this->_filter[] = array(
+            'node'    => $this->_arborescence,
+            'columns' => $o->toColumn ? array_combine($attributes, $columns) : $columns
+        );
+    }
+
+    protected function _buildGroup(Option\Group $o)
+    {
+        foreach ($o->groups as $group)
+        {
+            $this->_buildGroupOption($group);
+        }
+    }
+
+    protected function _buildGroupOption($groupArray)
+    {
+        $node = $this->_join($groupArray['relations']);
+
+        if ($groupArray['toColumn'])
+        {
+            $table   = $node->isRoot() ? $this->_table : $node->relation->cm->t;
+            $columns = (array) $table->columnRealName($groupArray['attribute']);
+        }
+        else
+        {
+            $columns = (array) $groupArray['attribute'];
+        }
+
+        $this->_groups[] = array(
+            'node'    => $node,
+            'columns' => $columns,
+        );
+    }
+
+    protected function _buildHaving($having)
+    {
+        if ($rels = $having['asRelations'])
+        {
+            $this->_useResultAlias = true;
+        }
+
+        $this->_havings[] = array(
+            'relations' => $having['asRelations'],
+            'attribute' => $having['asAttribute'],
+            'operator'  => $having['operator'],
+            'value'     => $having['value'],
+        );
+    }
+
+    protected function _buildLimit(Option\Limit $o)
+    {
+        $this->_limit = $o->limit;
+    }
+
+    protected function _buildOffset(Option\Offset $o)
+    {
+        $this->_offset = $o->offset;
+    }
+
+    protected function _buildOrder(Option\Order $o)
+    {
+        foreach ($o->groups as $group)
+        {
+            $this->_buildGroupOption($group);
+        }
+
+        foreach ($o->aggregates as $aggregate)
+        {
+            $this->_buildAggregate($aggregate);
+        }
+
+        foreach ($o->orders as $order)
+        {
+            $this->_buildOrderOption($order);
+        }
+    }
+
+    protected function _buildOrderOption($order)
+    {
+        $node = $this->_join($order['relations']);
+
+        $qAlias  = DB::quote($node->alias);
+        $qColumn = DB::quote($order['attribute']);
+
+        $this->_orders[] = $qAlias . '.' . $qColumn . ' ' . $order['direction'];
+    }
+
+    protected function _buildWith(Option\With $o)
+    {
+        foreach ($o->groups as $group)
+        {
+            $this->_buildGroupOption($group);
+        }
+
+        foreach ($o->aggregates as $aggregate)
+        {
+            $this->_buildAggregate($aggregate);
+        }
+
+        foreach ($o->withs as $with)
+        {
+            $node  = $this->_join($with['relations'], Arbo::JOIN_LEFT);
+            $model = $node->model;
+            $table = $model::table();
+
+            $this->_columns[] = array(
+                'node' => $node,
+                'columns' => $table->columns,
+            );
+        }
+    }
+
+    public function compile($components)
+    {
         if (! $this->_filter)
         {
-            $option = Option::forge('filter', null, $this->_context);
-            $this->_handleOption($option);
+            $this->option('filter', null, true);
         }
 
         $this->_columns = array_merge($this->_filter, $this->_columns);
 
-        return parent::_compile();
+        return parent::compile($components);
     }
 
     protected function _compileColumns()
     {
         $d = $this->_distinct ? 'DISTINCT ' : '';
 
-        $this->_sql .= 'SELECT ' . $d . implode(',', $this->_columns);
+        $columns = array();
+        foreach ($this->_columns as $group)
+        {
+            $node = $group['node'];
+
+            $columns = array_merge($columns, $this->columnAliasing(
+                $group['columns'],
+                $this->_useAlias       ? $node->alias : '',
+                $this->_useResultAlias ? $node->alias : ''
+            ));
+        }
+
+        $this->_sql .= 'SELECT ' . $d . implode(',', $columns);
+    }
+
+    protected function _compileAggregates()
+    {
+        if ($this->_aggregates)
+        {
+            $this->_sql .= ',' . implode(',', $this->_aggregates);
+        }
     }
 
     protected function _compileFrom()
     {
-        $c = $this->_context;
-        $this->_sql .= ' FROM ' . ($c->useAlias
-            ?' `' . $c->rootTableName . '` `' .  $c->rootTableAlias . '`'
-            :' `' . $c->rootTableName . '`'
+        $tName  = $this->_table->name;
+        $tAlias = $this->_rootAlias;
+
+        $this->_sql .= ' FROM ' . ($this->_useAlias
+            ?' `' . $tName . '` `' .  $tAlias . '`'
+            :' `' . $tName . '`'
             );
 
-        $this->_sql .= ' ' . $this->_join();
+        if ($this->_arborescence
+            && $join = $this->_arborescence->toSql())
+        {
+            $this->_sql .= $join;
+        }
     }
 
     protected function _compileGroups()
     {
-        $this->_sql .= ' GROUP BY ' . implode(',', $this->_groups);
+        $groups = array();
+        foreach ($this->_groups as $group)
+        {
+            $qAlias = $this->_useAlias ? DB::quote($group['node']->alias) . '.' : '';
+
+            foreach ($group['columns'] as $column)
+            {
+                $groups[] = $qAlias . DB::quote($column);
+            }
+
+        }
+
+        $this->_sql .= ' GROUP BY ' . implode(',', $groups);
     }
 
     protected function _compileOrders()
@@ -228,7 +385,17 @@ class Select extends Where
 
     protected function _compileHavings()
     {
-        $this->_sql .= ' HAVING ' . implode(',', $this->_havings);
+        $havings = array();
+        foreach ($this->_havings as $h)
+        {
+            $alias = $this->_useResultAlias
+                ? implode('.', array_merge(array($this->_rootAlias), $h['relations'])) . '.'
+                : '';
+
+            $havings[] = DB::quote($alias . $h['attribute']) . ' ' .  $h['operator'] . ' ' . $h['value'];
+        }
+
+        $this->_sql .= ' HAVING ' . implode(',', $havings);
     }
 
     protected function _compileLimit()
@@ -239,52 +406,6 @@ class Select extends Where
     protected function _compileOffset()
     {
         $this->_sql .= ' OFFSET ' . $this->_offset;
-    }
-
-    protected function _handleOption(Option $option)
-    {
-        switch (get_class($option))
-        {
-            case 'SimpleAR\Query\Option\Filter':
-                $this->_filter = $option->columns;
-                break;
-            case 'SimpleAR\Query\Option\Group':
-                $this->_groups = $option->groups;
-                break;
-            case 'SimpleAR\Query\Option\Limit':
-                $this->_limit = $option->limit;
-                break;
-            case 'SimpleAR\Query\Option\Offset':
-                $this->_offset = $option->offset;
-                break;
-            case 'SimpleAR\Query\Option\Order':
-                $this->_orders  = $option->orders;
-                $this->_groups  = array_merge($this->_groups, $option->groups);
-                $this->_columns = array_merge($this->_columns, $option->columns);
-                break;
-            case 'SimpleAR\Query\Option\With':
-                $this->_columns = array_merge($this->_columns, $option->columns);
-                if ($option->groups)
-                {
-                    $this->_groups  = array_merge($this->_groups, $option->groups);
-                }
-                break;
-            default:
-                parent::_handleOption($option);
-        }
-    }
-
-    protected function _initContext($root)
-    {
-        parent::_initContext($root);
-
-        // False by default. It will be set true if we have to fetch
-        // attributes from other tables. This is checked in
-        // Select::_build().
-        $this->_context->useResultAlias = false;
-        
-        // Contain the result alias we will use if we use result aliases.
-        $this->_context->rootResultAlias = self::DEFAULT_ROOT_RESULT_ALIAS;
     }
 
     /**
@@ -330,11 +451,11 @@ class Select extends Where
             // Keys are prefixed with an alias corresponding:
             // - either to the root model;
             // - either to a linked model (thanks to the relation name).
-            if ($this->_context->useResultAlias)
+            if ($this->_useResultAlias)
             {
                 $a = explode('.', $key);
 
-                if ($a[0] === $this->_context->rootResultAlias)
+                if ($a[0] === $this->_rootAlias)
                 {
                     // $a[1]: table column name.
 

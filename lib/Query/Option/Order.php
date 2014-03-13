@@ -1,56 +1,39 @@
 <?php namespace SimpleAR\Query\Option;
 
-use \SimpleAR\Query\Option;
-use \SimpleAR\Query\Arborescence;
-use \SimpleAR\Query\Condition\Attribute;
-
 use \SimpleAR\Database\Expression;
-
 use \SimpleAR\Exception\MalformedOption;
+use \SimpleAR\Query\Option;
 
 class Order extends Option
 {
+    protected static $_name = 'order';
+
     /**
      * We use class members because an "order by" option can cause "order by",
      * "group by", and "select" clauses. Moreover, this class uses several functions that
      * can produce these two clauses above. Class members make it easy to handle
      * this case.
      */
-    public $orders = array();
-    public $groups = array();
-    public $columns = array();
+    public $orders     = array();
+    public $groups     = array();
+    public $aggregates = array();
+
 
     const DEFAULT_DIRECTION = 'ASC';
 
-    const CLAUSE_STRING = 'ORDER BY ';
-
-    /**
-     *
-     * @return array
-     *
-     *  array(
-     *      'order_by' => <array>,
-     *      'group_by' => <array>,
-     *      'selects'  => <array>,
-     *  );
-     *
-     */
-	public function build()
+    public function build($useModel, $model = null)
 	{
-        if ($this->_value instanceof Expression)
+        // Array-fy the option value.
+        if (! is_array($this->_value))
         {
-            $this->orders[] = $this->_value->val();
-            return;
+            $this->_value = array($this->_value);
         }
 
-        // Merge order by arrays.
-        //
-        // _context->rootTable->orderBy corresponds to static::$_orderBy.
-        // @see Model::wakeup()
-        //
-        // If there are common keys between static::$_order and $order,
-        // entries of static::$_order will be overwritten.
-        $orderBy = array_merge($this->_context->rootTable->orderBy, (array) $this->_value);
+        // Fetch order clauses from model.
+        $orders = $useModel
+            ? $this->mergeWithModelOrders($this->_value, $model)
+            : $this->_value;
+
 
         // Two array entry format possibilities:
         //
@@ -59,13 +42,12 @@ class Order extends Option
         //     <attribute>, // <direction> will be the one specified in
         //                  // self::DEFAULT_DIRECTION.
         //  ),
-        foreach ($orderBy as $attribute => $direction)
+        foreach ($orders as $attribute => $direction)
         {
-            // Allows for a without-ASC/DESC syntax.
+            // Allows for a direction-less syntax.
             if (is_int($attribute))
             {
-                $attribute = $direction;
-                $direction = self::DEFAULT_DIRECTION;
+                list($attribute, $direction) = array($direction, self::DEFAULT_DIRECTION);
             }
 
             // It may happen. So tell user he made a mistake.
@@ -74,55 +56,64 @@ class Order extends Option
                 throw new MalformedOption('"order_by" option malformed: attribute is empty.');
             }
 
-            // Now, $attribute is an object.
-            $attribute = Attribute::parse($attribute);
-
-            // Handle special "order by" clauses.
-            if ($attribute->specialChar)
+            if ($attribute instanceof Expression)
             {
-                switch ($attribute->specialChar)
+                $this->buildOrderByExpression($attribute);
+            }
+            else
+            {
+                $relations = explode('/', $attribute);
+                $attribute = array_pop($relations);
+
+                switch ($attribute[0])
                 {
                     // Order by a count.
                     // Example: order schools by number of students.
                     case self::SYMBOL_COUNT:
-                        $this->_count($attribute, $direction);
-                        break;
-                    default:
-                        throw new MalformedOption('"order_by" option malformed: unknown special character: "' .  $attribute->specialChar . '".');
+                        $this->buildOrderByCount(substr($attribute, 1), $direction, $relations);
+
+                        // For "continue", switch is a loop.
+                        // http://www.php.net/manual/en/control-structures.continue.php
+                        continue 2;
                 }
 
-                // Next!
-                continue;
+                $this->orders[] = array(
+                    'relations' => $relations,
+                    'attribute' => $attribute,
+                    'toColumn'  => $useModel,
+                    'direction' => $direction,
+                );
             }
+        }
+    }
 
-            // Add related model(s) in join arborescence.
-            $node = $this->_arborescence->add($attribute->relations);
+            /* $node = $this->_arborescence->add($attribute->relations); */
 
-            // Order by is made on related model's attribute.
-            if ($node->relation)
-            {
-                $this->_relation($attribute, $direction, $node);
-                continue;
-            }
+            /* // Order by is made on related model's attribute. */
+            /* if ($node->relation) */
+            /* { */
+            /*     $this->_relation($attribute, $direction, $node); */
+            /*     continue; */
+            /* } */
 
             // Classic order by. It is made on root model's attribute.
 
             // We always assume there are several columns for simplicity.
-            $columns = (array) ($this->_context->useModel
-                ? $this->_context->rootTable->columnRealName($attribute->attribute)
-                : $attribute->attribute)
-                ;
+            /* $columns = (array) ($this->_context->useModel */
+            /*     ? $this->_context->rootTable->columnRealName($attribute->attribute) */
+            /*     : $attribute->attribute) */
+            /*     ; */
 
-            $tableAlias = $this->_context->useAlias
-                ? $this->_context->rootTableAlias . ($node->depth ?: '')
-                : '';
+            /* $tableAlias = $this->_context->useAlias */
+            /*     ? $this->_context->rootTableAlias . ($node->depth ?: '') */
+            /*     : ''; */
 
-            foreach ($columns as $column)
-            {
-                $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
-            }
-        }
-	}
+            /* foreach ($columns as $column) */
+            /* { */
+            /*     $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction; */
+            /* } */
+        /* } */
+	//}
 
     /**
      * Handle "order by" option on linked model row count.
@@ -133,107 +124,61 @@ class Order extends Option
      *
      * @return void
      */
-    private function _count($attribute, $direction)
+    private function buildOrderByCount($attribute, $direction, $relations)
     {
-        // Add related model(s) in join arborescence.
-        //
-        // We couldn't use second parameter of Attribute::parse() in
-        // build() to specify that there must be relations only in the raw
-        // attribute because we weren't able to know if it was an "order by
-        // count" case.
-        $attribute->relations[] = $attribute->attribute;
+        $this->aggregates[] = array(
+            'relations' => array_merge($relations, array($attribute)),
+            'attribute' => 'id',
+            'toColumn'  => true,
+            'fn'        => 'COUNT',
+            'asRelations' => $relations,
+            'asAttribute' => self::SYMBOL_COUNT . $attribute,
+        );
 
-        $node     = $this->_arborescence->add($attribute->relations, Arborescence::JOIN_LEFT, true);
-        // Note: $node->relation cannot be null (because $attribute->relations
-        // is never empty).
-        $relation = $node->relation;
+        $this->groups[] = array(
+            'relations' => $relations,
+            'attribute' => 'id',
+            'toColumn'  => true,
+        );
 
-        // Depth string to suffix table alias if used.
-        $depth = (string) ($node->depth ?: '');
+        $this->orders[] = array(
+            'relations' => $relations,
+            'attribute' => self::SYMBOL_COUNT . $attribute,
+            'toColumn'  => false,
+            'direction' => $direction,
+        );
 
-        // Will be used:
-        // - in BelongsTo case;
-        // - to group rows.
-        //
-        // No need to handle ($previousDepth == -1) case. We would not be in
-        // this function: there is at least one relation specified in attribute.
-        // And first relation has a depth of 1. So $previousDepth minimum is 0.
-        $previousDepth = (string) ($node->depth - 1 ?: '');
+/*         // We assure that column is a string because it might be an array (in */
+/*         // case of relationship over several attributes) and we need only one */
+/*         // field for the COUNT(). */
+/*         $column = is_string($column) ? $column : $column[0]; */
 
-        switch (get_class($relation))
-        {
-            case 'SimpleAR\Relation\HasMany':
-            case 'SimpleAR\Relation\HasOne':
-                if ($this->_context->useAlias)
-                {
-                    $tableAlias = $relation->lm->alias . $depth;
-                }
+/*         // What we put inside the COUNT. */
+/*         $countAttribute = $this->_context->useAlias */
+/*             ? '`' . $tableAlias . '`.`' . $column . '`' */
+/*             : '`' . $column . '`' */
+/*             ; */
 
-                $column = $relation->lm->column;
-                break;
+/*         // What will be returned by Select query. */
+/*         $resultAttribute = $this->_context->useResultAlias */
+/*             ? '`' . ($attribute->lastRelation ?: $this->_context->rootResultAlias) . '.' . self::SYMBOL_COUNT . $attribute->attribute . '`' */
+/*             : '`' . self::SYMBOL_COUNT . $attribute->attribute . '`' */
+/*             ; */
 
-            case 'SimpleAR\Relation\ManyMany':
-                if ($this->_context->useAlias)
-                {
-                    $tableAlias = $relation->jm->alias . $depth;
-                }
+/*         // Count alias: `<result alias>.#<relation name>`; */
+/*         $this->columns[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute; */
 
-                $column = $relation->jm->from;
-                break;
+/*         // We have to group rows on something if we want the COUNT to make */
+/*         // sense. */
+/*         $tableToGroupOn = $relation->cm->t; */
+/*         $tableAlias     = $this->_context->useAlias ? '`' . $tableToGroupOn->alias . $previousDepth . '`.' : ''; */
+/*         foreach ((array) $tableToGroupOn->primaryKeyColumns as $column) */
+/*         { */
+/*             $this->groups[] = $tableAlias . '`' . $column . '`'; */
+/*         } */
 
-            case 'SimpleAR\Relation\BelongsTo':
-                // No need to order on the linked model attribute, we have it in
-                // the current model.
-
-                if ($this->_context->useAlias)
-                {
-                    $tableAlias = $relation->cm->alias . $previousDepth;
-                }
-
-                $column = $relation->cm->column;
-
-                // We do not *need* to join this relation since we have a corresponding
-                // attribute in current model.
-                //
-                // Moreover, this is stupid to COUNT on a BelongsTo relationship
-                // since it would return 0 or 1. But what! we are not here to
-                // judge.
-                $node->__force = false;
-
-                break;
-        }
-
-        // We assure that column is a string because it might be an array (in
-        // case of relationship over several attributes) and we need only one
-        // field for the COUNT().
-        $column = is_string($column) ? $column : $column[0];
-
-        // What we put inside the COUNT.
-        $countAttribute = $this->_context->useAlias
-            ? '`' . $tableAlias . '`.`' . $column . '`'
-            : '`' . $column . '`'
-            ;
-
-        // What will be returned by Select query.
-        $resultAttribute = $this->_context->useResultAlias
-            ? '`' . ($attribute->lastRelation ?: $this->_context->rootResultAlias) . '.' . self::SYMBOL_COUNT . $attribute->attribute . '`'
-            : '`' . self::SYMBOL_COUNT . $attribute->attribute . '`'
-            ;
-
-        // Count alias: `<result alias>.#<relation name>`;
-        $this->columns[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
-
-        // We have to group rows on something if we want the COUNT to make
-        // sense.
-        $tableToGroupOn = $relation->cm->t;
-        $tableAlias     = $this->_context->useAlias ? '`' . $tableToGroupOn->alias . $previousDepth . '`.' : '';
-        foreach ((array) $tableToGroupOn->primaryKeyColumns as $column)
-        {
-            $this->groups[] = $tableAlias . '`' . $column . '`';
-        }
-
-        // Order by the COUNT, that the point of all that.
-        $this->orders[] = $resultAttribute . ' ' . $direction;
+/*         // Order by the COUNT, that the point of all that. */
+/*         $this->orders[] = $resultAttribute . ' ' . $direction; */
     }
 
     /**
@@ -248,101 +193,124 @@ class Order extends Option
      *
      * @throws MalformedOption if context->useModel is false.
      */
-    private function _relation($attribute, $direction, $node)
+    /* private function _relation($attribute, $direction, $node) */
+    /* { */
+    /*     if (! $this->_context->useModel) */
+    /*     { */
+    /*         throw new MalformedOption('Cannot use relations when not using models. "order_by" option: "' . $attribute->original . '".'); */
+    /*     } */
+
+    /*     // We *have to* include relation if we have to order on one of its */
+    /*     // fields. */
+    /*     if ($attribute->attribute !== 'id') */
+    /*     { */
+    /*         $node->force = true; */
+    /*     } */
+
+    /*     // Depth string to suffix table alias if used. */
+    /*     $depth = (string) ($node->depth ?: ''); */
+
+    /*     switch (get_class($relation = $node->relation)) */
+    /*     { */
+    /*         case 'SimpleAR\Relation\HasMany': */
+    /*         case 'SimpleAR\Relation\HasOne': */
+    /*             // We have to include it even if we order on linked model ID. (The */
+    /*             // linked model ID field is not in the current model table.) */
+    /*             $node->force = true; */
+
+    /*             if ($this->_context->useAlias) */
+    /*             { */
+    /*                 $tableAlias = $relation->lm->alias . $depth; */
+    /*             } */
+
+    /*             $columns = (array) $relation->lm->t->columnRealName($attribute->attribute); */
+
+    /*             break; */
+
+    /*         case 'SimpleAR\Relation\ManyMany': */
+    /*             if ($attribute->attribute === 'id') */
+    /*             { */
+    /*                 if ($this->_context->useAlias) */
+    /*                 { */
+    /*                     $tableAlias = $relation->jm->alias . $depth; */
+    /*                 } */
+
+    /*                 $columns = (array) $relation->jm->to; */
+    /*             } */
+    /*             else */
+    /*             { */
+    /*                 if ($this->_context->useAlias) */
+    /*                 { */
+    /*                     $tableAlias = $relation->lm->alias . $depth; */
+    /*                 } */
+
+    /*                 $columns = (array) $relation->lm->t->columnRealName($attribute->attribute); */
+    /*             } */
+
+    /*             break; */
+
+    /*         case 'SimpleAR\Relation\BelongsTo': */
+    /*             if ($attribute->attribute === 'id') */
+    /*             { */
+    /*                 // No need to order on the linked model attribute, we have it in */
+    /*                 // the current model. */
+
+    /*                 // No need to handle ($previousDepth == -1) case. We would not be in */
+    /*                 // this function: there is at least one relation specified in attribute. */
+    /*                 // And first relation has a depth of 1. So $previousDepth minimum is 0. */
+    /*                 $previousDepth = (string) ($node->depth - 1 ?: ''); */
+
+    /*                 if ($this->_context->useAlias) */
+    /*                 { */
+    /*                     $tableAlias = $relation->cm->alias . $previousDepth; */
+    /*                 } */
+
+    /*                 $columns = (array) $relation->cm->column; */
+    /*             } */
+    /*             else */
+    /*             { */
+    /*                 if ($this->_context->useAlias) */
+    /*                 { */
+    /*                     $tableAlias = $relation->lm->alias . $depth; */
+    /*                 } */
+
+    /*                 $columns = (array) $relation->lm->t->columnRealName($attribute->attribute); */
+    /*             } */
+
+    /*             break; */
+    /*     } */
+
+    /*     if (! isset($tableAlias)) */
+    /*     { */
+    /*         $tableAlias = ''; */
+    /*     } */
+
+    /*     foreach ($columns as $column) */
+    /*     { */
+    /*         $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction; */
+    /*     } */
+    /* } */
+
+    public function buildOrderByExpression(Expression $expr)
     {
-        if (! $this->_context->useModel)
-        {
-            throw new MalformedOption('Cannot use relations when not using models. "order_by" option: "' . $attribute->original . '".');
-        }
+        $this->orders[] = array(
+            'relations' => array(),
+            'attribute' => $expr->val(),
+            'toColumn'  => false,
+        );
+    }
 
-        // We *have to* include relation if we have to order on one of its
-        // fields.
-        if ($attribute->attribute !== 'id')
-        {
-            $node->force = true;
-        }
-
-        // Depth string to suffix table alias if used.
-        $depth = (string) ($node->depth ?: '');
-
-        switch (get_class($relation = $node->relation))
-        {
-            case 'SimpleAR\Relation\HasMany':
-            case 'SimpleAR\Relation\HasOne':
-                // We have to include it even if we order on linked model ID. (The
-                // linked model ID field is not in the current model table.)
-                $node->force = true;
-
-                if ($this->_context->useAlias)
-                {
-                    $tableAlias = $relation->lm->alias . $depth;
-                }
-
-                $columns = (array) $relation->lm->t->columnRealName($attribute->attribute);
-
-                break;
-
-            case 'SimpleAR\Relation\ManyMany':
-                if ($attribute->attribute === 'id')
-                {
-                    if ($this->_context->useAlias)
-                    {
-                        $tableAlias = $relation->jm->alias . $depth;
-                    }
-
-                    $columns = (array) $relation->jm->to;
-                }
-                else
-                {
-                    if ($this->_context->useAlias)
-                    {
-                        $tableAlias = $relation->lm->alias . $depth;
-                    }
-
-                    $columns = (array) $relation->lm->t->columnRealName($attribute->attribute);
-                }
-
-                break;
-
-            case 'SimpleAR\Relation\BelongsTo':
-                if ($attribute->attribute === 'id')
-                {
-                    // No need to order on the linked model attribute, we have it in
-                    // the current model.
-
-                    // No need to handle ($previousDepth == -1) case. We would not be in
-                    // this function: there is at least one relation specified in attribute.
-                    // And first relation has a depth of 1. So $previousDepth minimum is 0.
-                    $previousDepth = (string) ($node->depth - 1 ?: '');
-
-                    if ($this->_context->useAlias)
-                    {
-                        $tableAlias = $relation->cm->alias . $previousDepth;
-                    }
-
-                    $columns = (array) $relation->cm->column;
-                }
-                else
-                {
-                    if ($this->_context->useAlias)
-                    {
-                        $tableAlias = $relation->lm->alias . $depth;
-                    }
-
-                    $columns = (array) $relation->lm->t->columnRealName($attribute->attribute);
-                }
-
-                break;
-        }
-
-        if (! isset($tableAlias))
-        {
-            $tableAlias = '';
-        }
-
-        foreach ($columns as $column)
-        {
-            $this->orders[] = '`' . $tableAlias . '`.`' .  $column . '` ' . $direction;
-        }
+    /**
+     * Merge order arrays.
+     *
+     * $table->orderBy corresponds to static::$_orderBy.
+     * @see Model::wakeup()
+     *
+     * If there are common keys between static::$_order and $this->_value,
+     * entries of static::$_order will be overwritten.
+     */
+    public function mergeWithModelOrders($value, $model)
+    {
+        return array_merge($model::table()->order, $value);
     }
 }

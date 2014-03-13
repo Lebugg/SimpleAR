@@ -6,9 +6,11 @@ use \SimpleAR\Exception\MalformedOption;
 
 class Offset extends Option
 {
+    protected static $_name = 'offset';
+
     public $offset;
 
-    public function build()
+    public function build($useModel, $model = null)
     {
         $this->_value = (int) $this->_value;
 

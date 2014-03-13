@@ -1,32 +1,35 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query;
 use \SimpleAR\Query\Option;
 
 class Fields extends Option
 {
+    protected static $_name = 'fields';
+
     public $columns;
 
-    public function build()
+    public function build($useModel, $model = null)
     {
-        $fields = (array) $this->_value;
+        $this->columns = $this->_value;
 
-        // We have to translate attribute to columns.
-        if ($this->_context->useModel)
-        {
-            // We cast into array because columnRealName can return a string
-            // even if we gave it an array.
-            $fields = (array) $this->_context->rootTable->columnRealName($fields);
-        }
+        /* $fields = (array) $this->_value; */
 
-        // Use table alias?
-        $tableAlias = $this->_context->useAlias
-            ? $this->_context->rootTableAlias
-            : '';
+        /* // We have to translate attribute to columns. */
+        /* if ($this->_context->useModel) */
+        /* { */
+        /*     // We cast into array because columnRealName can return a string */
+        /*     // even if we gave it an array. */
+        /*     $fields = (array) $this->_context->rootTable->columnRealName($fields); */
+        /* } */
 
-        $fields = Query::columnAliasing($fields, $tableAlias);
+        /* // Use table alias? */
+        /* $tableAlias = $this->_context->useAlias */
+        /*     ? $this->_context->rootTableAlias */
+        /*     : ''; */
 
-        $this->columns = $fields;
+        /* $fields = Query::columnAliasing($fields, $tableAlias); */
+
+        /* $this->columns = $fields; */
     }
 }

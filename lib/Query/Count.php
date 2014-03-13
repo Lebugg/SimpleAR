@@ -11,7 +11,7 @@ namespace SimpleAR\Query;
  */
 class Count extends Select
 {
-    protected static $_options = array('conditions', 'has');
+    protected static $_availableOptions = array('conditions', 'has');
 
     protected $_filter = array('COUNT(*)');
 
@@ -41,5 +41,10 @@ class Count extends Select
     public function res()
     {
         return $this->_sth->fetch(\PDO::FETCH_COLUMN);
+    }
+
+    protected function _compileColumns()
+    {
+        $this->_sql .= 'SELECT COUNT(*)';
     }
 }

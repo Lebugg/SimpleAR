@@ -1,17 +1,15 @@
-<?php
+<?php namespace SimpleAR\Query\Condition;
 /**
  * This file contains the ConditionGroup class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query\Condition;
 
 use SimpleAR\Query\Condition;
-
+use SimpleAR\Query\Arborescence;
 use \SimpleAR\Exception;
 
-
-class ConditionGroup extends Condition
+class Group extends Condition
 {
     const T_AND = 0;
     const T_OR  = 1;
@@ -44,6 +42,7 @@ class ConditionGroup extends Condition
     {
         $this->_elements[] = $c;
     }
+
     /*
     public function add(Condition $c)
     {
@@ -113,7 +112,7 @@ class ConditionGroup extends Condition
         return $this->_type;
     }
 
-    public function toSql($useAliases = true, $toColumn = true)
+    public function compile(Arborescence $node, $useAlias = false, $toColumn = false)
     {
         $sql = array();
         $val = array();
@@ -125,7 +124,7 @@ class ConditionGroup extends Condition
 
         foreach ($this->_elements as $element)
         {
-            $res = $element->toSql($useAliases, $toColumn);
+            $res = $element->compile($node, $useAlias, $toColumn);
 
             $sql[] = $res[0];
             $val   = array_merge($val, $res[1]);

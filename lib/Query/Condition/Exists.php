@@ -1,31 +1,88 @@
 <?php
 namespace SimpleAR\Query\Condition;
 
-use SimpleAR\Relation\ManyMany;
-use SimpleAR\Query\Condition;
 use SimpleAR\Exception;
+use SimpleAR\Facades\DB;
+use SimpleAR\Query\Condition;
+use SimpleAR\Query\Arborescence;
+use SimpleAR\Relation\ManyMany as ManyMany;
 
-class ExistsCondition extends Condition
+class Exists extends Condition
 {
-    /**
-     * A Relation object used when condition is made through a Model relation.
-     *
-     * Optional
-     *
-     * @var Relation
-     */
-    public $relation;
+    public function compile(Arborescence $nCurrent, $useAlias = false, $toColumn = false)
+    {
+        // First we need to construct the join between the current model and the
+        // linked model that we need for the EXISTS subquery: subquery has to be
+        // attached to the main one in order to make sense.
+        //
+        // First, get the relation that links CM and LM.
+        $nNext    = $nCurrent->find($this->relations);
+        $relation = $nNext->relation;
+
+        // Then, CM column.
+        $cmColumn = $this->_attributeToSql($relation->cm->column, $useAlias ?  $nCurrent->alias : '');
+
+        // Finally LM column. This is a little bit complex for ManyMany
+        // relations: sometimes we just need the middle table, sometimes we also
+        // need the LM table. Actually, we need it when there are
+        // subconditions to the EXISTS.
+
+
+        $qLmTable      = DB::quote($relation->lm->table);
+        $lmTableAlias = $nNext->alias;
+        $qLmTableAlias = DB::quote($lmTableAlias);
+        $join         = '';
+
+        if ($relation instanceof ManyMany)
+        {
+            // Suconditions? If yes, join LM table *and* middle table. If no,
+            // only join middle table.
+
+            if ($this->subconditions)
+            {
+                $join = 'INNER JOIN ' . DB::quote($relation->jm->table) . '_middle ON '
+                    . $lmTableAlias . '.' . $relation->lm->column . ' = _middle.' . $relation->jm->to;
+
+                $lmColumn = '`' . $relation->jm->alias . '`.`' . $relation->jm->from . '`';
+            }
+            else
+            {
+                $lmTableAlias = '_middle';
+                $lmTable      = $relation->jm->table;
+                $lmColumn     = $this->_attributeToSql($relation->jm->from, $lmTableAlias);
+            }
+        }
+        else
+        {
+            $lmColumn = $this->_attributeToSql($relation->lm->column, $lmTableAlias);
+        }
+
+        // True for EXISTS, false for NOT EXISTS.
+        $not  = $this->not ? 'NOT' : '';
+
+        // Construct subconditions SQL if any.
+        $subSql = '';
+        $subVal = array();
+        if ($this->subconditions)
+        {
+            list($subSql, $subVal) = $this->subconditions->compile($nCurrent, $useAlias, $toColumn);
+            $subSql = 'AND ' . $subSql;
+        }
+
+        // Easy subquery.
+        // $not contains '' or 'NOT'. It relies on $this->not value.
+        $sql = ' ' . $not . ' EXISTS ( SELECT NULL FROM ' . $qLmTable . ' ' .  $qLmTableAlias . ' ' . $join
+                    . ' WHERE ' . $lmColumn . ' = ' . $cmColumn . ' '
+                    . $subSql . ')';
+
+        return array(
+            $sql,
+            array_merge($this->flattenValues(), $subVal),
+        );
+    }
 
     /**
-     * EXISTS or NOT EXISTS? That is what this variable is aimed for.
      *
-     * @var bool
-     */
-    public $exists;
-
-    public $subconditions;
-
-    /**
      * @override.
      */
     public function canMergeWith(Condition $c)
@@ -33,83 +90,17 @@ class ExistsCondition extends Condition
         return parent::canMergeWith($c)
                 && $this->exists === $c->exists;
     }
-    public function toSql($useAliases = true, $toColumn = true)
+
+    public function flattenValues()
     {
-        if (($r = $this->relation) === null)
-        {
-            throw new Exception('Cannot transform Condition to SQL because “relation” is not set.');
-        }
-
-        $depth         = (string) ($this->depth ?: '');
-        $previousDepth = (string) ($this->depth - 1 ?: '');
-
-        $cmColumn = self::leftHandSide($r->cm->column, $r->cm->alias .  $previousDepth);
-        $join     = '';
-
-        // Not the same for ManyMany, we use join table.
-        if ($r instanceof ManyMany)
-        {
-            // If there are subconditions, we use linked table.
-            if ($this->attributes || $this->subconditions)
-            {
-                $tableAlias = $r->lm->alias . $depth;
-                $tableName  = $r->lm->table;
-                $join       = 'INNER JOIN `' . $r->jm->table . '` `' . $r->jm->alias . '` ON `' .  $tableAlias . '`.`' . $r->lm->column . '` = `' . $r->jm->alias .  '`.`' . $r->jm->to . '`';
-                $lmColumn   = '`' . $r->jm->alias . '`.`' . $r->jm->from . '`';
-            }
-            // Otherwise, the middle table suffises.
-            else
-            {
-                $tableAlias = $r->jm->alias . $depth;
-                $tableName  = $r->jm->table;
-                $lmColumn   = self::leftHandSide($r->jm->from, $tableAlias);
-            }
-        }
-        // For all other Relation type, we use linked table.
-        else
-        {
-            $tableAlias = $r->lm->alias . $depth;
-            $tableName  = $r->lm->table;
-            $lmColumn   = self::leftHandSide($r->lm->column, $tableAlias);
-        }
-
-        // True for EXISTS, false for NOT EXISTS.
-        $b = $this->exists ? '' : 'NOT';
-
-        $subconditions = array();
-        foreach ($this->attributes as $attribute)
-        {
-            $subconditions[] = $attribute->toSql($r->lm->t, $tableAlias);
-        }
-
-        $subconditionValues = array();
+        $res = array();
         if ($this->subconditions)
         {
-            $tmp = $this->subconditions->toSql();
-
-            $subconditions[]    = $tmp[0];
-            $subconditionValues = $tmp[1];
+            $res = array_merge($res, $this->subconditions->flattenValues());
         }
 
-        $subconditions = implode(' AND ', $subconditions);
-        if ($subconditions)
-        {
-            $subconditions = ' AND ' . $subconditions;
-        }
-
-        // Easy subquery.
-        // $b contains '' or 'NOT'. It relies on $this->exists value.
-        $sql = " $b EXISTS (
-                    SELECT NULL
-                    FROM `{$tableName}` `{$tableAlias}` {$join}
-                    WHERE {$lmColumn} = {$cmColumn}
-                    {$subconditions}
-                )";
-
-        return array(
-            $sql,
-            array_merge($this->flattenValues(), $subconditionValues),
-        );
+        return $res;
     }
+
 }
 

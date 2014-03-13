@@ -6,13 +6,17 @@
  */
 
 use \SimpleAR\Query;
+use \SimpleAR\Query\Arborescence as Arbo;
 use \SimpleAR\Exception;
+use \SimpleAR\Facades\DB;
 
 /**
  * This class is the super classe for queries that handle conditions (WHERE statements).
  */
 abstract class Where extends Query
 {
+    protected $_arborescence = null;
+
     protected $_where;
 	protected $_groups = array();
     protected $_havings = array();
@@ -23,16 +27,23 @@ abstract class Where extends Query
      * @param  string|array $relation The relation to join
      * @return $this
      */
-    public function join($relation)
+    public function _join($relation, $type = Arbo::JOIN_INNER, $force = true)
     {
-        if ($this->_context->useModel)
-        {
-            $this->_context->arborescence->add($relation, Arborescence::JOIN_INNER, true);
+        $this->_useAlias = true;
 
-            return $this;
+        if ($this->_useModel)
+        {
+            return $this->_arborescence->add($relation, $type, true);
         }
 
         throw new Exception('Model classes must be used in order to use "join()".');
+    }
+
+    public function join($relation, $type = Arbo::JOIN_INNER, $force = true)
+    {
+        $this->_join($relation, $type, $force);
+
+        return $this;
     }
 
     protected function _compileWhere()
@@ -40,82 +51,59 @@ abstract class Where extends Query
 		$this->_sql .= $this->_where();
     }
 
-    protected function _handleOption(Option $option)
+    protected function _buildConditions(Option\Conditions $o)
     {
-        switch (get_class($option))
+        foreach ($o->groups as $group)
         {
-            case 'SimpleAR\Query\Option\Conditions':
-            case 'SimpleAR\Query\Option\Has':
-                if ($this->_where)
-                {
-                    $this->_where->merge($option->conditions);
-                }
-                else
-                {
-                    $this->_where = $option->conditions;
-                }
-
-                if ($option->havings)
-                {
-                    $this->_havings  = array_merge($this->_havings, $option->havings);
-                }
-
-                if ($option->groups)
-                {
-                    $this->_groups   = array_merge($this->_groups,  $option->groups);
-                }
-
-                if ($option->columns)
-                {
-                    $this->_columns  = array_merge($this->_columns, $option->columns);
-                }
-                break;
-            default:
-                parent::_handleOption($option);
+            $this->_buildGroupOption($group); 
         }
+
+        foreach ($o->aggregates as $aggregate)
+        {
+            $this->_buildAggregate($aggregate); 
+        }
+
+        foreach ($o->havings as $having)
+        {
+            $this->_buildHaving($having);
+        }
+
+        foreach ($o->joins as $join)
+        {
+            $this->_join($join);
+        }
+
+        if ($this->_where)
+        {
+            $this->_where->merge($o->where);
+        }
+        else
+        {
+            $this->_where = $o->where;
+        }
+    }
+
+    protected function _buildHas(Option\Has $o)
+    {
+        return $this->_buildConditions($o);
     }
 
     /**
      * Initialize query context from within Where scope.
      *
-     * It initializes an Arborescence if _context->useModel is true.
+     * It initializes an Arborescence if _useModel is true.
      *
      * @override
      */
-    protected function _initContext($root)
+    public function rootModel($root)
     {
-        parent::_initContext($root);
+        parent::rootModel($root);
 
-        // Arborescence can be used only when we are using models.
-        if ($this->_context->useModel)
-        {
-            $this->_context->arborescence = new Arborescence(
-                $this->_context->rootModel,
-                $this->_context->rootTable
-            );
-        }
+        $this->_arborescence = new Arborescence($this->_model);
+        $this->_arborescence->alias = $this->_rootAlias;
+
+        return $this;
     }
-
-    /**
-     * Fire arborescence processing.
-     *
-     * If _context->useModel is false, _context->arborescence does not exist, and this 
-     * function will *always* return the empty string ('').
-     *
-     * @return string
-     *
-     * @see Arborescence::toSql()
-     */
-    protected function _join()
-    {
-        if (! isset($this->_context->arborescence))
-        {
-            return '';
-        }
-
-        return $this->_context->arborescence->toSql();
-    }
-
 
     /**
      * Compute WHERE clause.
@@ -129,8 +117,7 @@ abstract class Where extends Query
         if ($this->_where && ! $this->_where->isEmpty())
         {
             // We made all wanted treatments; get SQL out of Condition array.
-            $c = $this->_context;
-            list($sql, $values) = $this->_where->toSql($c->useAlias, $c->useModel);
+            list($sql, $values) = $this->_where->compile($this->_arborescence, $this->_useAlias, $this->_useModel);
 
             // Add condition values. $values is a flatten array.
             // @see Condition::flatte_values()

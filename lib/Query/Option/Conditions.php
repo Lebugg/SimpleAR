@@ -2,12 +2,7 @@
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Query\Arborescence;
-use \SimpleAR\Query\Condition;
-use \SimpleAR\Query\Condition\Attribute;
-use \SimpleAR\Query\Condition\ConditionGroup;
-use \SimpleAR\Query\Condition\SimpleCondition;
-use \SimpleAR\Query\Condition\RelationCondition;
-
+use \SimpleAR\Query\Condition as Condition;
 use \SimpleAR\Database\Expression;
 
 use \SimpleAR\Exception;
@@ -95,14 +90,17 @@ use \SimpleAR\Exception;
  */
 class Conditions extends Option
 {
-    public $conditions;
-    public $havings  = array();
-    public $groups = array();
-    public $columns  = array();
+    protected static $_name = 'conditions';
 
-    public function build()
+    public $where;
+    public $aggregates = array();
+    public $groups     = array();
+    public $havings    = array();
+    public $joins      = array();
+
+    public function build($useModel, $model = null)
     {
-        $this->conditions = $this->_parse($this->_value, $this->_arborescence);
+        $this->where = $this->_parseConditionArray($this->_value);
     }
 
     /**
@@ -115,150 +113,66 @@ class Conditions extends Option
      *
      * @see _attribute()
      */
-    protected function _condition($attribute, $operator, $value, Arborescence $arborescence = null)
+    protected function _buildCondition($attribute, $operator, $value)
     {
-        if ($value instanceof Expression && $attribute == null)
-        {
-            $condition = new SimpleCondition();
-            $condition->addExpression($value);
+        $relations = explode('/', $attribute);
+        $attribute = array_pop($relations);
 
-            return $condition;
+        switch ($attribute[0])
+        {
+            case Option::SYMBOL_COUNT:
+                $attribute = substr($attribute, 1);
+                $this->aggregates[] = array(
+                    'relations' => array_merge($relations, array($attribute)),
+                    'attribute' => 'id',
+                    'toColumn'  => true,
+                    'fn'        => 'COUNT',
+
+                    'asRelations' => $relations,
+                    'asAttribute' => self::SYMBOL_COUNT . $attribute,
+                );
+
+                $this->havings[] = array(
+                    'asRelations' => $relations,
+                    'asAttribute' => self::SYMBOL_COUNT . $attribute,
+                    'operator'    => $operator ?: '=',
+                    'value'       => $value,
+                );
+
+                $this->groups[] = array(
+                    'relations' => $relations,
+                    'attribute' => 'id',
+                    'toColumn'  => true,
+                );
+                return;
         }
 
-        // If we are not using model, treatment is much more simple.
-        if (! $this->_context->useModel)
-        {
-            $condition = new SimpleCondition();
-            $condition->addAttribute(new Attribute($attribute, $value, $operator));
-            $condition->tableAlias = $this->_context->rootTableAlias;
+        // Ok, classic condition.
 
-            return $condition;
-        }
+        $condition = new Condition\Simple($attribute, $value, $operator);
+        $condition->relations = $relations;
 
-        $attribute = Attribute::parse($attribute);
-
-        // Special attributes check.
-        if ($c = $attribute->specialChar)
-        {
-            switch ($c)
-            {
-                case Option::SYMBOL_COUNT:
-                    //$this->_having($attribute, $operator, $value);
-                    return;
-                default:
-                    throw new Exception('Unknown symbol “' . $c . '” in attribute “' . $attribute->original . '”.');
-                    break;
-            }
-        }
-
-        $relations = $attribute->relations;
-        $node = $arborescence->add($relations);
-        $attr = $attribute->attribute;
-
-        $res = array();
-
-        $attribute = new Attribute($attr, $value, $operator);
-
-        // We do not test on $node->relation because of Has subqueries.
-        if (! $node->isRoot())
-        {
-            $condition = new RelationCondition();
-            $condition->relation = $node->relation;
-        }
-        else
-        {
-            $condition = new SimpleCondition();
-        }
-        $condition->addAttribute($attribute);
+        $this->joins[] = $relations;
 
         // Is there a Model's method to handle this attribute? Useful for virtual attributes.
-        if (is_string($attr))
-        {
-            $cmClass = $node->relation ? $node->relation->lm->class : $this->_context->rootModel;
-            $method  = 'to_conditions_' . $attr;
+        /* if (is_string($attr)) */
+        /* { */
+        /*     $cmClass = $node->relation ? $node->relation->lm->class : $this->_->rootModel; */
+        /*     $method  = 'to_conditions_' . $attr; */
 
-            if (method_exists($cmClass, $method))
-            {
-                if ($subconditions = $cmClass::$method($attribute))
-                {
-                    return $this->_parse($subconditions, $node);
-                }
-            }
-        }
-
-        $condition->depth      = $node->depth;
-        $condition->table      = $node->table;
-        $condition->tableAlias = $node->table->alias;
+        /*     if (method_exists($cmClass, $method)) */
+        /*     { */
+        /*         if ($subconditions = $cmClass::$method($attribute)) */
+        /*         { */
+        /*             return $this->parseConditionArray($subconditions, $node); */
+        /*         } */
+        /*     } */
+        /* } */
 
         // Arborescence needs it to know if it useful to join some tables or
         // not.
-        $node->addCondition($condition);
 
         return $condition;
-    }
-
-    protected function _having($attribute, $operator, $value)
-    {
-        // Add related model(s) in join arborescence.
-        //
-        // We couldn't use second parameter of Attribute::parse() in
-        // build() to specify that there must be relations only in the raw
-        // attribute because we weren't able to know if it was an "order by
-        // count" case.
-        $attribute->relations[] = $attribute->attribute;
-
-        $node     = $this->_arborescence->add($attribute->relations, Arborescence::JOIN_LEFT, true);
-        // Note: $node->relation cannot be null (because $attribute->relations
-        // is never empty).
-        $relation = $node->relation;
-
-        // Depth string to suffix table alias if used.
-        $depth = (string) ($node->depth ?: '');
-
-        $operator = $operator ?: Attribute::DEFAULT_OP;
-
-        $column = $relation->lm->t->primaryKeyColumns;
-        // We assure that column is a string because it might be an array (in
-        // case of relationship over several attributes) and we need only one
-        // field for the COUNT().
-        $column = is_string($column) ? $column : $column[0];
-
-        $tableAlias = $this->_context->useAlias
-            ? '`' . $relation->lm->t->alias . $depth . '`.'
-            : '';
-
-        // What we put inside the COUNT.
-        $countAttribute = $this->_context->useAlias
-            ? '`' . $relation->lm->t->alias . $depth . '`.`' . $column . '`'
-            : '`' . $column . '`'
-            ;
-
-        // What will be returned by Select query.
-        $resultAttribute = $this->_context->useResultAlias
-            ? '`' . ($attribute->lastRelation ?: $this->_context->rootResultAlias) . '.' . self::SYMBOL_COUNT . $attribute->attribute . '`'
-            : '`' . self::SYMBOL_COUNT . $attribute->attribute . '`'
-            ;
-
-        // Count alias: `<result alias>.#<relation name>`;
-        $this->columns[] = 'COUNT(' . $countAttribute . ') AS ' . $resultAttribute;
-
-        // No need to handle ($previousDepth == -1) case. We would not be in
-        // this function: there is at least one relation specified in attribute.
-        // And first relation has a depth of 1. So $previousDepth minimum is 0.
-        $previousDepth = (string) ($node->depth - 1 ?: '');
-
-        // We have to group rows on something if we want the COUNT to make
-        // sense.
-        $tableToGroupOn = $node->parent ? $node->parent->relation->cm->t : $this->_context->rootTable;
-        $tableAlias     = $this->_context->useAlias ? '`' . $tableToGroupOn->alias . $previousDepth . '`.' : '';
-        foreach ((array) $tableToGroupOn->primaryKeyColumns as $column)
-        {
-            $this->groups[] = $tableAlias . '`' . $column . '`';
-        }
-
-        // I don't think it is dangerous to directly write value in HAVING
-        // clause => need proof.
-        $this->havings[]  = $countAttribute . $operator . ' ' . $value;
     }
 
     /**
@@ -272,7 +186,7 @@ class Conditions extends Option
      *  - A condition;
      *
      *  - An array, that is an array of conditions. Can be used to "group"
-     *  conditions. See that as SQL surrouding parenthesis;
+     *  conditions. See that as SQL surrounding parenthesis;
      *
      *  - A logical operator: "AND" or "OR" by default.
      *      @see Condition::LOGICAL_OP_AND
@@ -284,16 +198,16 @@ class Conditions extends Option
      *
      * @return array
      */
-    protected function _parse(array $conditions, Arborescence $arborescence = null)
+    protected function _parseConditionArray(array $conditions)
     {
-        $root = $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
+        $root = $currentAndGroup = new Condition\Group(Condition\Group::T_AND);
 
         foreach ($conditions as $key => $value)
         {
             // It is bound to be a condition. 'myAttribute' => 'myValue'
             if (is_string($key))
             {
-                $conditionOrParsedArray = $this->_condition($key, null, $value, $arborescence);
+                $conditionOrParsedArray = $this->_buildCondition($key, null, $value);
 
                 // The condition may have been transformed into a HAVING clause.
                 //
@@ -314,7 +228,7 @@ class Conditions extends Option
                     // Should happen only once.
                     if ($root === $currentAndGroup)
                     {
-                        $root = new ConditionGroup(ConditionGroup::T_OR);
+                        $root = new Condition\Group(Condition\Group::T_OR);
                     }
 
                     // Add current group.
@@ -324,7 +238,7 @@ class Conditions extends Option
                     }
 
                     // And initialize a new one.
-                    $currentAndGroup = new ConditionGroup(ConditionGroup::T_AND);
+                    $currentAndGroup = new Condition\Group(Condition\Group::T_AND);
                     continue;
                 }
 
@@ -337,7 +251,7 @@ class Conditions extends Option
 
                 elseif ($value instanceof Expression)
                 {
-                    $conditionOrParsedArray = $this->_condition(null, null, $value, $arborescence);
+                    $conditionOrParsedArray = $this->_buildCondition(null, null, $value);
 
                     // The condition may have been transformed into a HAVING clause.
                     //
@@ -354,7 +268,7 @@ class Conditions extends Option
                     // Condition.
                     if (isset($value[0]) && is_string($value[0]))
                     {
-                        $conditionOrParsedArray = $this->_condition($value[0], $value[1], $value[2], $arborescence);
+                        $conditionOrParsedArray = $this->_buildCondition($value[0], $value[1], $value[2]);
 
                         // The condition may have been transformed into a HAVING clause.
                         //
@@ -368,7 +282,7 @@ class Conditions extends Option
                     // Condition group.
                     else
                     {
-                        $res = $this->_parse($value, $arborescence);
+                        $res = $this->_parseConditionArray($value);
 
                         if ($currentAndGroup->isEmpty())
                         {

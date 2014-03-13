@@ -52,6 +52,7 @@ require __DIR__ . '/lib/Facades/Facade.php';
 require __DIR__ . '/lib/Facades/DB.php';
 require __DIR__ . '/lib/Facades/Cfg.php';
 require __DIR__ . '/tools/array_merge_recursive_distinct.php';
+require __DIR__ . '/tools/is_valid_model_class.php';
 
 use \SimpleAR\Config;
 use \SimpleAR\Database;
@@ -97,9 +98,7 @@ class SimpleAR
                     //  folder.
                     //  2) Class is not abstract: wake up has no sense on
                     //  abstract class.
-                    $reflection = new ReflectionClass($class);
-                    if ($reflection->isSubclassOf('SimpleAR\Model')
-                        && ! $reflection->isAbstract())
+                    if (SimpleAR\is_valid_model_class($class))
                     {
                         $class::wakeup();
                     }

@@ -7,7 +7,7 @@ class Table
     public $primaryKey;
     public $primaryKeyColumns;
     public $columns;
-    public $orderBy;
+    public $order = array();
     public $modelBaseName;
 
 	// Constructed.
@@ -64,7 +64,7 @@ class Table
         {
             if (! isset($this->columns[$key]) && $key !== 'id')
             {
-                throw new Exception('Attribute “' . $key . '” does not exist for model “' .  $this->modelBaseName . '”.');
+                throw new Exception('Attribute "' . $key . '" does not exist for model "' .  $this->modelBaseName . '".');
             }
 
             $res[] = $key === 'id'

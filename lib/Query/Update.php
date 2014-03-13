@@ -5,6 +5,8 @@
  * @author Lebugg
  */
 
+use \SimpleAR\Facades\DB;
+
 /**
  * This class handles UPDATE statements.
  */
@@ -17,9 +19,9 @@ class Update extends \SimpleAR\Query\Where
      */
     protected static $_isCriticalQuery = true;
 
-    protected static $_options = array('conditions', 'fields', 'values');
+    protected static $_availableOptions = array('conditions', 'fields', 'values');
 
-    protected $_table;
+    protected $_table = true;
     protected $_set;
 
     protected static $_components = array(
@@ -28,41 +30,35 @@ class Update extends \SimpleAR\Query\Where
         'where',
     );
 
-    public function __construct($root)
+    protected function _buildFields(Option\Fields $o)
     {
-        parent::__construct($root);
-
-        $this->_table = $root;
+        $this->_set = $o->columns;
     }
+
+    protected function _buildValues(Option\Values $o)
+    {
+        $this->_values = $o->values;
+    }
+
 
     protected function _compileTable()
     {
         $this->_sql = 'UPDATE ';
 
-        $c = $this->_context;
-		$this->_sql .= $c->useAlias
-            ? '`' . $c->rootTableName . '` `' .  $c->rootTableAlias . '`'
-            : '`' . $c->rootTableName . '`'
+        $this->_sql .= $this->_useAlias
+            ? DB::quote($this->_tableName) . ' ' . DB::quote($this->_rootAlias)
+            : DB::quote($this->_tableName)
             ;
     }
 
     protected function _compileSet()
     {
-        $this->_sql .= ' SET ' . implode(' = ?, ', $this->_set) . ' = ?';
-    }
+        $columns = $this->_useModel ? $this->_table->columnRealName($this->_set) : $this->_set;
+        $columns = $this->columnAliasing(
+            (array) $columns,
+            $this->_useAlias ? $this->_rootAlias : ''
+        );
 
-    protected function _handleOption(Option $option)
-    {
-        switch (get_class($option))
-        {
-            case 'SimpleAR\Query\Option\Fields':
-                $this->_set = $option->columns;
-                break;
-            case 'SimpleAR\Query\Option\Values':
-                $this->_values = $option->values;
-                break;
-            default:
-                parent::_handleOption($option);
-        }
+        $this->_sql .= ' SET ' . implode(' = ?, ', $columns) . ' = ?';
     }
 }

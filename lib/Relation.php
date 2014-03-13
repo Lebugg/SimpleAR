@@ -11,6 +11,7 @@ require __DIR__ . '/Relation/HasMany.php';
 require __DIR__ . '/Relation/ManyMany.php';
 
 use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Facades\DB;
 
 /**
  * This class modelizes a Relation between two Models.
@@ -245,8 +246,9 @@ abstract class Relation
 
     public function deleteLinkedModel($value)
     {
-        $query = Query::delete($this->lm->class, array($this->lm->attribute => $value));
-        $query->run();
+        $query = new Query\Delete($this->lm->class);
+        $query->conditions(array($this->lm->attribute => $value))
+            ->run();
     }
 
     /**
@@ -269,16 +271,22 @@ abstract class Relation
         return $relation;
     }
 
-    public function joinLinkedModel($depth, $joinType)
+    public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
     {
-        $previousDepth = $depth <= 1 ? '' : $depth - 1;
-        $depth         = $depth ?: '';
-
-		return " $joinType JOIN `{$this->lm->table}` {$this->lm->alias}$depth ON {$this->cm->alias}$previousDepth.{$this->cm->column} = {$this->lm->alias}$depth.{$this->lm->column}";
+		return $this->_buildJoin($joinType, $cmAlias, $this->lm->table, $lmAlias, $this->cm->column, $this->lm->column);
     }
 
-    public function joinAsLast($conditions, $depth, $joinType)
+    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
     {
-        return $this->joinLinkedModel($depth, $joinType);
+        return $this->joinLinkedModel($cmAlias, $lmAlias, $joinType);
+    }
+
+    protected function _buildJoin($joinType, $aliasA, $tableB, $aliasB, $colA, $colB)
+    {
+        $qAliasA = DB::quote($aliasA); $qColA   = DB::quote($colA);
+        $qTableB = DB::quote($tableB); $qAliasB = DB::quote($aliasB); $qColB   = DB::quote($colB);
+
+		return ' ' . $joinType . ' JOIN ' . $qTableB . ' ' . $qAliasB
+            . ' ON (' . $qAliasA . '.' . $qColA . ' = ' .  $qAliasB . '.' .  $qColB . ')';
     }
 }

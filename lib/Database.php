@@ -35,6 +35,17 @@ class Database
     }
 
     /**
+     * Quote an identifier.
+     *
+     * @param  string $expression The string to quote.
+     * @return string The quoted string.
+     */
+    public function quote($expression)
+    {
+        return '`' . $expression . '`';
+    }
+
+    /**
      * Forward function call to the Connection instance.
      *
      * @param  string $method The name of the called method.

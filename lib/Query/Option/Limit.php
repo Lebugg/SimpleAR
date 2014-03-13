@@ -1,15 +1,15 @@
-<?php
-namespace SimpleAR\Query\Option;
+<?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
 use \SimpleAR\Exception\MalformedOption;
 
-
 class Limit extends Option
 {
+    protected static $_name = 'limit';
+
     public $limit;
 
-    public function build()
+    public function build($useModel, $model = null)
     {
         $this->_value = (int) $this->_value;
 

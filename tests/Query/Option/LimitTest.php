@@ -1,11 +1,10 @@
 <?php
-date_default_timezone_set('Europe/Paris');
 
 use \SimpleAR\Database\Expression;
-use \SimpleAR\Query\Option;
-use \SimpleAR\Query\Option\Order;
+use \SimpleAR\Exception\MalformedOption;
+use \SimpleAR\Query\Option\Limit;
 
-class OrderTest extends PHPUnit_Framework_TestCase
+class LimitTest extends PHPUnit_Framework_TestCase
 {
     private static $_sar;
 
@@ -26,11 +25,18 @@ class OrderTest extends PHPUnit_Framework_TestCase
         self::_initializeSimpleAR();
     }
 
-    public function testExpressionValue()
+    public function testLimitValue()
     {
-        $expr = new Expression('RAND()');
-        $orderBy = Option::forge('order', $expr, null);
+        $option = new Limit(12);
+        $option->build(false, null);
+        $this->assertEquals(12, $option->limit);
 
-        $this->assertEquals(array('RAND()'), $orderBy->orders);
+        $option = new Limit(-1);
+        try
+        {
+            $option->build(false, null);
+            $this->fail('Should throw an exception!');
+        }
+        catch (MalformedOption $ex) {}
     }
 }

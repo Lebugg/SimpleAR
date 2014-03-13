@@ -1,103 +1,70 @@
-<?php
-/**
- * This file contains the Condition class.
- *
- * @author Lebugg
- */
-namespace SimpleAR\Query\Condition;
+<?php namespace SimpleAR\Query\Condition;
 
-use SimpleAR\BelongsTo;
-use SimpleAR\HasOne;
-use SimpleAR\HasMany;
-use SimpleAR\ManyMany;
+use \SimpleAR\Query\Condition;
+use SimpleAR\Query\Arborescence;
+use \SimpleAR\Exception;
 
-use SimpleAR\Exception;
-
-/**
- * The Condition class modelize a SQL condition (in a WHERE clause).
- */
-class RelationCondition extends \SimpleAR\Query\Condition
+class Relation extends Condition
 {
-    /**
-     * A Relation object used when condition is made through a Model relation.
-     *
-     * Optional
-     *
-     * @var Relation
-     */
-    public $relation;
+    public $subconditions;
 
-    public function toSql($useAliases = true, $toColumn = true)
+    public function compile(Arborescence $root, $useAlias = false, $toColumn = false)
     {
-        if (($r = $this->relation) === null)
-        {
-            throw new Exception('Cannot transform RelationCondition to SQL because “relation” is not set.');
-        }
+        $sql = array();
+        $val = array();
 
-        $res = array();
+        $nCurrent = $root->find($this->relations);
+        $relation = $nCurrent->relation;
 
         switch (get_class($r))
         {
             case 'SimpleAR\Relation\BelongsTo':
-                foreach ($this->attributes as $attribute)
+                foreach ($this->subconditions as $c)
                 {
-                    // We check that condition makes sense.
-                    if ($attribute->logic === 'and' && isset($attribute->value[1]))
-                    {
-                        throw new Exception('Condition does not make sense: ' . strtoupper($attribute->operator) . ' operator with multiple values for a ' . __CLASS__ . ' relationship.');
-                    }
-
                     // Get attribute column name.
-                    if ($attribute->name === 'id')
+                    if ($c->attribute === 'id')
                     {
-                        $column = $r->cm->column;
-                        $table  = $r->cm->t;
+                        $tmp = $c->compile($cm, $cmTableAlias);
                     }
                     else
                     {
-                        $column = $r->lm->t->columnRealName($attribute->name);
-                        $table  = $r->lm->t;
+                        $tmp = $c->compile($r->lm->class, $lmTableAlias);
                     }
 
-                    $lhs = self::leftHandSide($column, $table->alias . ($this->depth ?: ''));
-                    $rhs = self::rightHandSide($attribute->value);
-
-                    $res[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+                    $sql[] = $tmp[0];
+                    $val   = array_merge($val, $tmp[1]);
                 }
                 break;
 
         case 'SimpleAR\Relation\HasOne':
-            foreach ($this->attributes as $attribute)
+            foreach ($this->subconditions as $c)
             {
-                // We check that condition makes sense.
-                if ($attribute->logic === 'and' && isset($attribute->value[1]))
-                {
-                    throw new Exception('Condition does not make sense: "' . strtoupper($attribute->operator) . '" operator with multiple values for a ' . __CLASS__ . ' relationship.');
-                }
+                $tmp   = $c->compile($r->lm->class, $lmTableAlias);
 
-                $column = $r->lm->t->columnRealName($attribute->name);
-                $lhs = self::leftHandSide($column, $r->lm->t->alias . ($this->depth ?: ''));
-                $rhs = self::rightHandSide($attribute->value);
-
-                $res[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+                $sql[] = $tmp[0];
+                $val   = array_merge($val, $tmp[1]);
             }
             break;
 
         case 'SimpleAR\Relation\HasMany':
-            $depth         = (string) ($this->depth ?: '');
-            $previousDepth = (string) ($this->depth - 1 ?: '');
+            $orSql = array();
+            $orVal = array();
 
-            $orConditions  = array();
-            $andConditions = array();
+            $andConditions = null;
 
-            foreach ($this->attributes as $attribute)
+            foreach ($this->subconditions as $c)
             {
-                if ($attribute->logic === 'or')
+                if ($c->logic === 'or')
                 {
-                    $orConditions[] = $attribute->toSql($r->lm->t->alias . '_sub', $r->lm->t);
+                    $tmp = $attribute->compile($r->lm->class, $r->lm->t->alias . '_sub');
+
+                    $orSql[] = $tmp[0];
+                    $orVal   = array_merge($orVal, $tmp[0]);
                 }
                 else // logic == 'and'
                 {
+                    throw new Exception('Not implemented.');
+
                     $column = $r->lm->t->columnRealName($attribute->name);
 
                     $lhs2 = self::leftHandSide($column, $r->lm->t->alias . '_sub');
@@ -114,19 +81,21 @@ class RelationCondition extends \SimpleAR\Query\Condition
             }
 
             // Combine conditions.
-            if ($orConditions)
+            if ($orSql)
             {
-                $lhs_LMColumn = self::leftHandSide($r->lm->column, $r->lm->t->alias . '_sub');
-                $lhs_CMColumn = self::leftHandSide($r->cm->column, $r->cm->t->alias . $previousDepth);
+                $lhs_LMColumn = $this->_attributeToSql($r->lm->column, $lmTableAlias . '_sub');
+                $lhs_CMColumn = $this->_attributeToSql($r->cm->column, $cmTableAlias);
 
-                $condition = implode(' AND ', $orConditions);
+                $condition = implode(' AND ', $orSql);
 
-                $res[] = "EXISTS (
+                $sql[] = "EXISTS (
                             SELECT NULL
-                            FROM `{$r->lm->table}` `{$r->lm->alias}_sub`
+                            FROM `{$r->lm->table}` `{$lmTableAlias}_sub`
                             WHERE {$lhs_LMColumn} = {$lhs_CMColumn}
                             AND   {$condition}
                         )";
+
+                $val = array_merge($val, $orVal);
             }
             if ($andConditions)
             {
@@ -162,31 +131,34 @@ class RelationCondition extends \SimpleAR\Query\Condition
             break;
 
         case 'SimpleAR\Relation\ManyMany':
-            $depth         = (string) ($this->depth ?: '');
-            $previousDepth = (string) ($this->depth - 1 ?: '');
-
             $andConditions = array();
 
-            foreach ($this->attributes as $attribute)
+            foreach ($this->subconditions as $c)
             {
-                $column = $r->lm->t->columnRealName($attribute->name);
-
-                if ($attribute->logic === 'or')
+                if ($c->logic === 'or')
                 {
-                    $rhs = self::rightHandSide($attribute->value);
-                    if ($attribute->name === 'id')
+                    if ($c->attribute == 'id')
                     {
-                        $lhs = self::leftHandSide($r->jm->to, $r->jm->alias . $depth);
+                        $lhs = $c->_attributeToSql($r->jm->to, $cmTableAlias .  '_m');
+                        $op  = $c->_operatorToSql();
+                        $rhs = $c->_valueToSql();
+
+                        $sql[] = $lhs . ' ' . $op . ' ' . $rhs;
+                        $val   = array_merge($val, $c->flattenValues());
                     }
                     else
                     {
-                        $lhs = self::leftHandSide($column, $r->lm->t->alias . $depth);
-                    }
+                        $tmp = $c->compile($lmTableAlias, $relation->lm->class);
 
-                    $res[] = $lhs . ' ' . $attribute->operator . ' ' . $rhs;
+                        $sql[] = $tmp[0];
+                        $val   = array_merge($val, $tmp[1]);
+                    }
                 }
+
                 else // $attribute->logic === 'and'
                 {
+                    throw new Exception('Not implemented.');
+
                     $lhs = self::leftHandSide($column, $r->lm->t->alias . $depth);
                     $rhs = self::rightHandSide($attribute->value);
 
@@ -225,8 +197,8 @@ class RelationCondition extends \SimpleAR\Query\Condition
         } // end switch.
 
         return array(
-            implode(' AND ', $res),
-            $this->flattenValues(),
+            implode(' AND ', $sql),
+            $val,
         );
     }
 }

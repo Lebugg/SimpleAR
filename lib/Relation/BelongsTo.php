@@ -22,14 +22,14 @@ class BelongsTo extends Relation
     }
 
 
-    public function joinAsLast($conditions, $depth, $joinType)
+    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
     {
 		foreach ($conditions as $condition)
 		{
             foreach ($condition->attributes as $a)
             {
                 if ($a->name !== 'id') {
-                    return $this->joinLinkedModel($depth, $joinType);
+                    return $this->joinLinkedModel($cmAlias, $lmAlias, $joinType);
                 }
             }
 		}

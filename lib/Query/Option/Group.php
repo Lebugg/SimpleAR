@@ -1,54 +1,51 @@
 <?php namespace SimpleAR\Query\Option;
 
 use \SimpleAR\Query\Option;
-use \SimpleAR\Query\Arborescence;
-use \SimpleAR\Query\Condition\Attribute;
+use \SimpleAR\Database\Expression;
 
-/**
- * Supports:
- * - useModel
- * - useAlias
- *
- */
 class Group extends Option
 {
+    protected static $_name = 'group';
 
     public $groups = array();
 
-    public function build()
+    public function build($useModel, $model = null)
     {
-        $res = array();
-
-        foreach ((array) $this->_value as $attribute)
+        if (! is_array($this->_value))
         {
-            // $attribute is now an object.
-            $attribute = Attribute::parse($attribute);
-
-            $columns = $attribute->attribute;
-            if ($this->_context->useModel)
-            {
-                // Add related model(s) in join arborescence.
-                $node    = $this->_arborescence->add($attribute->relations, Arborescence::JOIN_INNER, true);
-                $columns = (array) $node->table->columnRealName($columns);
-            }
-
-            $tableAlias = '';
-            if ($this->_context->useAlias)
-            {
-                $tableAlias = $node
-                    ? $node->table->alias . ($node->depth ?: '') 
-                    : $this->_context->rootTableAlias
-                    ;
-
-               $tableAlias = '`' . $tableAlias . '`.';
-            }
-
-            foreach ($columns as $column)
-            {
-                $res[] = $tableAlias . '`' . $column . '`';
-            }
+            $this->_value = array($this->_value);
         }
 
-        $this->groups = $res;
+        foreach ($this->_value as $group)
+        {
+            // Raw SQL expression.
+            if ($group instanceof Expression)
+            {
+                $attribute = $group->val();
+                $toColumn  = false;
+                $relations = array();
+            }
+
+            // Classic group option.
+            //
+            // Example:
+            // --------
+            //
+            //  'my/relation/attribute'
+            //  'myAttribute'
+            else
+            {
+                $relations = explode('/', $group);
+
+                $attribute = array_pop($relations);
+                $toColumn  = $useModel;
+            }
+
+            $this->groups[] = array(
+                'attribute' => $attribute,
+                'toColumn'  => $toColumn,
+                'relations' => $relations,
+            );
+        }
     }
 }

@@ -1,10 +1,11 @@
-<?php
+<?php namespace SimpleAR\Query;
 /**
  * This file contains the Update class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Query;
+
+use \SimpleAR\Facades\DB;
 
 /**
  * This class handles UPDATE statements.
@@ -18,41 +19,32 @@ class Delete extends \SimpleAR\Query\Where
      */
     protected static $_isCriticalQuery = true;
 
-    protected static $_options = array('conditions');
+    protected static $_availableOptions = array('conditions');
 
-    protected $_from;
+    protected $_from = true;
 
     protected static $_components = array(
         'from',
         'where'
     );
 
-    public function __construct($root)
-    {
-        parent::__construct($root);
-        
-        $this->_from = $this->_context->rootTableName;
-    }
-
     protected function _compileFrom()
     {
         $this->_sql = 'DELETE ';
 
-        $c = $this->_context;
-		$this->_sql .= $c->useAlias
-            ? '`' . $c->rootTableAlias . '` FROM `' .  $c->rootTableName . '` AS `' .  $c->rootTableAlias . '`'
-            : 'FROM `' . $c->rootTableName . '`'
+        $qName  = DB::quote($this->_tableName);
+        $qAlias = DB::quote($this->_rootAlias);
+
+		$this->_sql .= $this->_useAlias
+            ? $qAlias . ' FROM ' . $qName . ' AS ' . $qAlias
+            : 'FROM `' . $qName . '`'
             ;
 
         // Equivalent JOIN clause for DELETE queries.
-        $join = $this->_join();
-        $this->_sql .= $join ? ' USING ' . $join : '';
-    }
-
-    protected function _initContext($root)
-    {
-        parent::_initContext($root);
-
-        $this->_context->useAlias = false;
+        if ($this->_arborescence
+            && $using = $this->_arborescence->toSql())
+        {
+            $this->_sql .= ' USING ' . $using;
+        }
     }
 }
