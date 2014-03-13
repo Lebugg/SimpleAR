@@ -359,8 +359,9 @@ class Select extends Where
         return $res;
     }
 
-    public function sum($column)
+    public function sum($attribute)
     {
+        $column = $this->_context->rootTable->columnRealName($attribute);
         $this->_filter = array('SUM(' . $column . ')');
         $this->run();
         return $this->_sth->fetch(\PDO::FETCH_COLUMN);
