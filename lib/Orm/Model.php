@@ -292,7 +292,7 @@ abstract class Model
      *  retrieved linked models.
      *  * "order_by": An order by array that will be used retrieving linked
      *  models.
-     * 
+     *
      *  Example:
      *  ```php
      *  class Company extends SimpleAR\Model
@@ -472,11 +472,11 @@ abstract class Model
         if (method_exists($this, 'get_' . $s))
         {
             return call_user_func(array($this, 'get_' . $s));
-        } 
+        }
 
         // Classic attribute.
         if (isset($this->_attributes[$s]) || array_key_exists($s, $this->_attributes))
-        { 
+        {
             return $this->_attributes[$s];
         }
 
@@ -496,7 +496,7 @@ abstract class Model
             return $this->_attributes[$s];
         }
 
-        // Count. Rare case, that is why it is at the end. 
+        // Count. Rare case, that is why it is at the end.
 		if ($s[0] === '#')
 		{
 			$baseName = substr($s, 1);
@@ -944,7 +944,7 @@ abstract class Model
      *  * "first": Retrieve first found Model. Function will return a Model instance;
      *  * "last": Retrieve last found Model. Function will return a Model instance;
      *  * "count": Return number of found Models.
-     * 
+     *
      * @param mixed $first Can be a ID to search on (shorthand for `Model::findByPK()`) or the find
      * type. For this to be considered as an ID, you must pass an integer or an array.
      * @param array $options An option array to find models.
@@ -955,7 +955,7 @@ abstract class Model
      */
     public static function find($first, array $options = array())
     {
-        // Find by primary key. It can be an array when using compound primary 
+        // Find by primary key. It can be an array when using compound primary
         // keys.
         if (is_int($first) || is_array($first))
         {
@@ -1070,7 +1070,7 @@ abstract class Model
         }
 
         // User wants to know if current object is linked to $what.
-        
+
         // We want to test by IDs, not by objects.
         $id = $what instanceof Model
             ? $what->id
@@ -1105,7 +1105,7 @@ abstract class Model
      *
      * @return void
      */
-    public function load(Relation $relation)
+    public function load($relation)
     {
         $this->_loadLinkedModel($relation);
     }
@@ -1139,7 +1139,7 @@ abstract class Model
     }
 
     /**
-     * Get or set the relation identified by its name. 
+     * Get or set the relation identified by its name.
      *
      * If second parameter is null, it works like a getter.
      * It works like a setter if second parameter is not null.
@@ -1286,7 +1286,7 @@ abstract class Model
      * Return the Table object corresponding to the current model class.
      *
      * @return SimpleAR\Table
-     * 
+     *
      * @see SimpleAR\Model::$_tables
      */
     public static function table()
@@ -1820,7 +1820,7 @@ abstract class Model
                         }
                     }
 
-                    // Run insert query only if there are values to insert. It 
+                    // Run insert query only if there are values to insert. It
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
@@ -1892,11 +1892,11 @@ abstract class Model
 
                 if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
                 {
-                    // $value is an array of attributes. The attributes of the linked model 
+                    // $value is an array of attributes. The attributes of the linked model
                     // instance.
-                    // But it *might* be an array of arrays of attributes. For instance, when 
-                    // relation is defined as a Has One relation but actually is a Has Many in 
-                    // database. In that case, SQL query would return several rows for this relation 
+                    // But it *might* be an array of arrays of attributes. For instance, when
+                    // relation is defined as a Has One relation but actually is a Has Many in
+                    // database. In that case, SQL query would return several rows for this relation
                     // and we would result with $value to be an array of arrays.
 
                     // Array of arrays ==> array of attribute.
@@ -1912,9 +1912,9 @@ abstract class Model
                 }
                 else
                 {
-                    // $value is an array of arrays. These subarrays contain attributes of linked 
+                    // $value is an array of arrays. These subarrays contain attributes of linked
                     // models.
-                    // But $value can directly be an associative array (if SQL query returned only 
+                    // But $value can directly be an associative array (if SQL query returned only
                     // one row). We have to check this, then.
 
                     $a = array();
@@ -1957,7 +1957,7 @@ abstract class Model
                 // strpos call <=> $key.startsWith('date')
                 if (is_string($value) && strpos($key, 'date') === 0)
                 {
-                    // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would 
+                    // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
                     // cause strange values.
                     // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
                     $value =  $value === '0000-00-00'
@@ -2200,7 +2200,7 @@ abstract class Model
                         }
                     }
 
-                    // Run insert query only if there are values to insert. It 
+                    // Run insert query only if there are values to insert. It
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
