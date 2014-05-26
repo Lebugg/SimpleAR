@@ -2235,10 +2235,11 @@ abstract class Model
 
         try
         {
+            $id = $table->isSimplePrimaryKey ? $this->_id : array($this->_id);
             $query = Query::update(get_called_class(), array(
                 'fields' => array_keys($fields),
                 'values' => array_values($fields),
-                'conditions' => array('id' => $this->_id)
+                'conditions' => array('id' => $id)
             ));
 
             $query->run();
