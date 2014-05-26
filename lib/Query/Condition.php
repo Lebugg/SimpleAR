@@ -208,7 +208,7 @@ abstract class Condition
             // Simple array.
             else
             {
-                $res = '(' . str_repeat('?,', $firstLevelCount - 1) . '?)';
+                $res = '((' . str_repeat('?,', $firstLevelCount - 1) . '?))';
             }
         }
         else

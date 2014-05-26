@@ -1009,9 +1009,6 @@ abstract class Model
      */
     public static function findByPK($id, array $options = array())
     {
-        // Handles multiple primary keys, too.
-        $options['conditions']['id'] = $id;
-
         $multiplicity = 'one';
         // If $id is an array, the user may want several objects.
         if (is_array($id))
@@ -1022,7 +1019,14 @@ abstract class Model
             {
                 $multiplicity = 'several';
             }
+
+            if (! self::table()->isSimplePrimaryKey && (! isset($id[0]) || ! is_array($id[0]))) {
+                $id = array($id);
+            }
         }
+
+        // Handles multiple primary keys, too.
+        $options['conditions']['id'] = $id;
 
 		$query = Query::select(get_called_class(), $options);
         if (!$res = self::_processSqlQuery($query, $multiplicity, $options))
@@ -2248,7 +2252,7 @@ abstract class Model
                     // Array cast allows user not to bother to necessarily set an array.
                     foreach ((array) $object as $o)
                     {
-                        if ($o instanceof Model && $o->id === null)
+                        if ($o instanceof Model)
                         {
                             $o->__set($relation->lm->attribute, $this->_id);
                             $o->save();
