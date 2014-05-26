@@ -993,6 +993,10 @@ abstract class Model
             {
                 $get = 'all';
             }
+
+            if (! self::table()->isSimplePrimaryKey && (! isset($id[0]) || ! is_array($id[0]))) {
+                $id = array($id);
+            }
         }
 
         $query = self::query()->setOptions($options);
@@ -2162,7 +2166,7 @@ abstract class Model
                     // Array cast allows user not to bother to necessarily set an array.
                     foreach ((array) $object as $o)
                     {
-                        if ($o instanceof Model && $o->id === null)
+                        if ($o instanceof Model)
                         {
                             $o->__set($relation->lm->attribute, $this->_id);
                             $o->save();
