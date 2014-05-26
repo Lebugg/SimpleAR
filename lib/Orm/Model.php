@@ -143,6 +143,8 @@ abstract class Model
      */
     protected static $_excludedKeys = array();
 
+    protected static $_includedKeys = array();
+
     /**
      * This array contains arrays of constraints that must be checked
      * before inserting a row in the database.
@@ -703,7 +705,17 @@ abstract class Model
      */
     public function attributes()
     {
-        return array('id' => $this->_id) + $this->_attributes;
+        $attrs = array_diff_key(
+            array('id' => $this->_id) + $this->_attributes,
+            array_flip(static::$_excludedKeys)
+        );
+
+        foreach (static::$_includedKeys as $key)
+        {
+            $attrs[$key] = $this->$key;
+        }
+
+        return $attrs;
     }
 
     /**
@@ -857,17 +869,21 @@ abstract class Model
      * Adds one or several fields in excluding filter array.
      *
      * @param string|array $keys The key(s) to add in the array.
-     * @return $this
      */
-    public function exclude($key)
+    public static function exclude($key)
     {
         foreach ((array) $key as $key)
         {
             static::$_excludedKeys[] = $key;
-            unset($this->_attributes[$key]);
         }
+    }
 
-        return $this;
+    public static function keep($key)
+    {
+        foreach ((array) $key as $key)
+        {
+            static::$_includedKeys[] = $key;
+        }
     }
 
     /**
