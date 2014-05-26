@@ -1032,6 +1032,10 @@ abstract class Model
             if (! self::table()->isSimplePrimaryKey && (! isset($id[0]) || ! is_array($id[0]))) {
                 $id = array($id);
             }
+
+            if (! self::table()->isSimplePrimaryKey && (! isset($id[0]) || ! is_array($id[0]))) {
+                $id = array($id);
+            }
         }
 
         $query = self::query()->setOptions($options);
