@@ -646,6 +646,16 @@ abstract class Model
             ->run();
     }
 
+    public static function getGlobalConditions()
+    {
+        return static::table()->conditions;
+    }
+
+    public static function setGlobalConditions(array $conditions)
+    {
+        static::table()->conditions = $conditions;
+    }
+
     /**
      * Return several Model instances according to an option array.
      *
@@ -971,6 +981,15 @@ abstract class Model
      */
     public static function find($first, array $options = array())
     {
+        // Add global conditions.
+        if ($conditions = self::getGlobalConditions()) {
+            if (isset($options['conditions'])) {
+                $options['conditions'] = array_merge($options['conditions'], $conditions);
+            } else {
+                $options['conditions'] = $conditions;
+            }
+        }
+
         // Find by primary key. It can be an array when using compound primary
         // keys.
         if (is_int($first) || is_array($first))
@@ -1125,9 +1144,9 @@ abstract class Model
      *
      * @return void
      */
-    public function load($relation)
+    public function load($relation, array $options = array())
     {
-        $this->_loadLinkedModel($relation);
+        $this->_loadLinkedModel($relation, $options);
     }
 
     /**
@@ -2003,7 +2022,7 @@ abstract class Model
      *
      * @return Model|array|null
      */
-    private function _loadLinkedModel($relationName)
+    private function _loadLinkedModel($relationName, array $localOptions = array())
     {
         $relation = static::relation($relationName);
 
@@ -2029,27 +2048,32 @@ abstract class Model
         $res	  = null;
 		$class = $relation->lm->class;
 
+        $options['order_by'] = $relation->order;
+        $options['filter']   = $relation->filter;
+
         if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
         {
-            $res = $class::first(array(
-                'conditions' => array_merge(
-                    $relation->conditions,
-                    array($relation->lm->attribute => $this->__get($relation->cm->attribute))
-                ),
-				'order_by'	 => $relation->order,
-                'filter'     => $relation->filter,
-            ));
+            $options['conditions'] = array_merge(
+                $relation->conditions,
+                array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
+                $class::getGlobalConditions()
+            );
+
+            $options = array_merge($options, $localOptions);
+
+            $res = $class::first($options);
         }
         elseif ($relation instanceof Relation\HasMany)
         {
-            $res = $class::all(array(
-                'conditions' => array_merge(
-                    $relation->conditions,
-                    array($relation->lm->attribute => $this->__get($relation->cm->attribute))
-                ),
-				'order_by'	 => $relation->order,
-                'filter'     => $relation->filter,
-            ));
+            $options['conditions'] = array_merge(
+                $relation->conditions,
+                array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
+                $class::getGlobalConditions()
+            );
+
+            $options = array_merge($options, $localOptions);
+
+            $res = $class::all($options);
         }
         else // ManyMany
         {
@@ -2057,16 +2081,15 @@ abstract class Model
 
 			$class::relation($reversed->name, $reversed);
 
-			$conditions = array_merge(
+			$options['conditions'] = array_merge(
 				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
+				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute)),
+                $class::getGlobalConditions()
 			);
 
-			$res = $class::all(array(
-                'conditions' => $conditions,
-				'order_by'	 => $relation->order,
-                'filter'     => $relation->filter,
-			));
+            $options = array_merge($options, $localOptions);
+
+			$res = $class::all($options);
         }
 
         $this->_attr($relationName, $res);

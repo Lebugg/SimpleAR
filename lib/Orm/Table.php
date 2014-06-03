@@ -8,7 +8,8 @@ class Table
     public $primaryKey;
     public $primaryKeyColumns;
     public $columns;
-    public $order = array();
+    public $orderBy;
+    public $conditions = array();
     public $modelBaseName;
 
 	// Constructed.
