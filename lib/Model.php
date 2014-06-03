@@ -1176,6 +1176,8 @@ abstract class Model
     public function load($relation, array $options = array())
     {
         $this->_loadLinkedModel($relation, $options);
+
+        return $this->$relation;
     }
 
     /**
