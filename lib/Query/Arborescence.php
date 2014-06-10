@@ -204,7 +204,7 @@ class Arborescence
             if (! $nCurrent->hasChild($relation))
             {
                 // @see Arborescence::__construct().
-                $new = new self($cm, $relation->lm->t, $relation, $joinType, $i +1, $nCurrent, $forceJoin);
+                $new = new self($cm, $relation->lm->t, $relation, $joinType, $nCurrent->depth + 1, $nCurrent, $forceJoin);
                 $nCurrent->addChild($new);
 
                 // Go forward.

@@ -34,7 +34,7 @@ class Has extends Conditions
     {
         $attribute = Attribute::parse($attribute, true);
 
-        $node = $arborescence->add($attribute->relations);
+        $node = $arborescence->add($attribute->relations, Arborescence::JOIN_LEFT);
         $has = new ExistsCondition($attribute->attribute, null, null);
 
         $has->depth    = $node->depth;
