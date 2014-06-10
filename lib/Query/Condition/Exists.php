@@ -52,7 +52,7 @@ class ExistsCondition extends Condition
             // If there are subconditions, we use linked table.
             if ($this->attributes || $this->subconditions)
             {
-                $tableAlias = $r->lm->alias . $depth;
+                $tableAlias = $r->lm->alias . $depth . '_sub';
                 $tableName  = $r->lm->table;
                 $join       = 'INNER JOIN `' . $r->jm->table . '` `' . $r->jm->alias . '` ON `' .  $tableAlias . '`.`' . $r->lm->column . '` = `' . $r->jm->alias .  '`.`' . $r->jm->to . '`';
                 $lmColumn   = '`' . $r->jm->alias . '`.`' . $r->jm->from . '`';
@@ -60,7 +60,7 @@ class ExistsCondition extends Condition
             // Otherwise, the middle table suffises.
             else
             {
-                $tableAlias = $r->jm->alias . $depth;
+                $tableAlias = $r->jm->alias . $depth . '_sub';
                 $tableName  = $r->jm->table;
                 $lmColumn   = self::leftHandSide($r->jm->from, $tableAlias);
             }
@@ -68,7 +68,7 @@ class ExistsCondition extends Condition
         // For all other Relation type, we use linked table.
         else
         {
-            $tableAlias = $r->lm->alias . $depth;
+            $tableAlias = $r->lm->alias . $depth . '_sub';
             $tableName  = $r->lm->table;
             $lmColumn   = self::leftHandSide($r->lm->column, $tableAlias);
         }
