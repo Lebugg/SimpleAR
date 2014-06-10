@@ -228,4 +228,9 @@ abstract class Condition
      * @retutn string A valid SQL condition string.
      */
     public abstract function toSql($useAliases = true, $toColumn = true);
+
+    public function setTableAlias($alias)
+    {
+        $this->tableAlias = $alias;
+    }
 }

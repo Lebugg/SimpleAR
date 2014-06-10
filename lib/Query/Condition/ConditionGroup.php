@@ -113,6 +113,14 @@ class ConditionGroup extends Condition
         return $this->_type;
     }
 
+    public function setTableAlias($alias)
+    {
+        foreach ($this->_elements as $element)
+        {
+            $element->setTableAlias($alias);
+        }
+    }
+
     public function toSql($useAliases = true, $toColumn = true)
     {
         $sql = array();
