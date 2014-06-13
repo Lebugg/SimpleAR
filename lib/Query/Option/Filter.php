@@ -86,14 +86,16 @@ class Filter extends Option
         //
         elseif ($this->_value instanceof Expression)
         {
-            $value = $this->value->val();
+            $value = $this->_value->val();
             
-            $columns = is_string($value)
+            $this->columns = is_string($value)
                 ? array_map(function($el) {
                         return trim($el);
                     }, explode(',', $value))
                 : $value
                 ;
+
+            return;
         }
 
         else
