@@ -6,7 +6,6 @@
  */
 
 require __DIR__ . '/Condition.php';
-require __DIR__ . '/Arborescence.php';
 require __DIR__ . '/Builder.php';
 require __DIR__ . '/Compiler.php';
 require __DIR__ . '/JoinClause.php';

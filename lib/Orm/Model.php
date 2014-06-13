@@ -1805,7 +1805,18 @@ abstract class Model
         try
         {
             $lastId = self::query()->insert(array_keys($fields), array_values($fields));
-            $this->_id = $lastId;
+
+            // We fetch the ID.
+            if ($table->isSimplePrimaryKey) {
+                $this->_id = $lastId;
+            } else {
+                $id = array();
+                foreach ($table->primaryKey as $attribute) {
+                    $id[] = $this->$attribute;
+                }
+
+                $this->_id = $id;
+            }
 
             // Process linked models.
             // We want to save linked models on cascade.
