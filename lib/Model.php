@@ -1827,7 +1827,16 @@ abstract class Model
             $query->run();
 
             // We fetch the ID.
-            $this->_id = $query->insertId();
+            if ($table->isSimplePrimaryKey) {
+                $this->_id = $query->insertId();
+            } else {
+                $id = array();
+                foreach ($table->primaryKey as $attribute) {
+                    $id[] = $this->$attribute;
+                }
+
+                $this->_id = $id;
+            }
 
             // Process linked models.
             // We want to save linked models on cascade.
