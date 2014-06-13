@@ -11,7 +11,7 @@ namespace SimpleAR\Query;
  */
 class Count extends Select
 {
-    protected static $_options = array('conditions', 'has');
+    protected static $_options = array('filter', 'conditions', 'has', 'group_by');
 
     protected $_filter = array('COUNT(*)');
 
