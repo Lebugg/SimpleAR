@@ -1761,7 +1761,7 @@ abstract class Model
         foreach ($this->_attributes as $key => $value)
         {
             // Handle actual columns.
-            if (isset($columns[$key]))
+            if (isset($columns[$key]) || $key === 'id')
             {
                 // Transform DateTime object into a database-formatted string.
                 if ($value instanceof \DateTime)
