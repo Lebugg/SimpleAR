@@ -1,6 +1,6 @@
 <?php
 
-class Blog extends SimpleAR\Model
+class Blog extends SimpleAR\Orm\Model
 {
     protected static $_columns = array(
         'description',

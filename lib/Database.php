@@ -8,30 +8,26 @@
 require __DIR__ . '/Database/Connection.php';
 require __DIR__ . '/Database/Expression.php';
 
-/**
- * This class abstracts a database connection.
- *
- * It follows a Singleton pattern. It is not vulnerable to SQL injection, every
- * request is processed by binding parameters to it. So use parameters binding
- * every time you can in your SQL strings.
- *
- * How to execute a query:
- *  ```php
- *  $db->query($query, $params);
- *  ```
- */
+use \SimpleAR\Database\Connection;
+use \SimpleAR\Database\Expression;
+
 class Database
 {
     private $_connection;
 
-    public function __construct(Config $config)
+    public function __construct(Connection $conn)
     {
-        $this->_connection = new Database\Connection($config);
+        $this->setConnection($conn);
+    }
+
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
     }
 
     public function expr($expression)
     {
-        return new Database\Expression($expression);
+        return new Expression($expression);
     }
 
     /**
@@ -43,6 +39,11 @@ class Database
     public function quote($expression)
     {
         return '`' . $expression . '`';
+    }
+
+    public function connection()
+    {
+        return $this->_connection;
     }
 
     /**

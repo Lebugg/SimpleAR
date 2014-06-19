@@ -1,10 +1,9 @@
-<?php
+<?php namespace SimpleAR;
 /**
  * This file contains the Exception class.
  *
  * @author Lebugg
  */
-namespace SimpleAR;
 
 require __DIR__ . '/Exception/Database.php';
 require __DIR__ . '/Exception/DuplicateKey.php';

@@ -1,6 +1,6 @@
 <?php
 
-class Blog extends SimpleAR\Model
+class Blog extends SimpleAR\Orm\Model
 {
     public static $_relations = array(
         'articles' => array(
@@ -14,7 +14,7 @@ class Blog extends SimpleAR\Model
     {
         if (self::$table === null)
         {
-            self::$table = new \SimpleAR\Table('blogs', 'id', array('name', 'description', 'created_at'));
+            self::$table = new \SimpleAR\Orm\Table('blogs', 'id', array('name', 'description', 'created_at'));
             self::$table->modelBaseName = 'Blog';
         }
 
@@ -22,14 +22,18 @@ class Blog extends SimpleAR\Model
     }
 }
 
-class Article extends SimpleAR\Model
+class Article extends SimpleAR\Orm\Model
 {
     public static $table;
     public static function table()
     {
         if (self::$table === null)
         {
-            self::$table = new \SimpleAR\Table('articles', 'id', array('blog_id', 'title', 'author'));
+            self::$table = new \SimpleAR\Orm\Table('articles', 'id', array(
+                'blogId' => 'blog_id',
+                'title',
+                'author',
+            ));
             self::$table->modelBaseName = 'Article';
             self::$table->order = array('title' => 'ASC');
         }

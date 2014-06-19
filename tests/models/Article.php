@@ -1,6 +1,6 @@
 <?php
 
-class Article extends SimpleAR\Model
+class Article extends SimpleAR\Orm\Model
 {
     public static function to_conditions_relevant($attribute)
     {

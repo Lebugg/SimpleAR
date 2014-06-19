@@ -11,5 +11,4 @@ $cfg->dateFormat       = 'd/m/Y';
 
 $sar = new SimpleAR($cfg);
 
-
 require __DIR__ . '/tests/models.php';

@@ -1,10 +1,9 @@
-<?php
+<?php namespace SimpleAR\Exception;
 /**
  * This file contains the MalformedOptionException class.
  *
  * @author Lebugg
  */
-namespace SimpleAR\Exception;
 
 use SimpleAR\Exception;
 

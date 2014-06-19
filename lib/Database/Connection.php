@@ -3,6 +3,18 @@
 use \SimpleAR\Config;
 use \SimpleAR\Exception\Database as DatabaseEx;
 
+/**
+ * This class abstracts a database connection.
+ *
+ * It follows a Singleton pattern. It is not vulnerable to SQL injection, every
+ * request is processed by binding parameters to it. So use parameters binding
+ * every time you can in your SQL strings.
+ *
+ * How to execute a query:
+ *  ```php
+ *  $db->query($query, $params);
+ *  ```
+ */
 class Connection
 {
     /**

@@ -25,12 +25,12 @@ function is_valid_model_class($class)
     {
         $reflection = new \ReflectionClass($class);
     }
-    // The class does not even exist.
-    catch (ReflectionException $ex)
+    catch (\ReflectionException $ex)
     {
+        // The class does not even exist.
         return false;
     }
 
-    return $reflection->isSubclassOf('\SimpleAR\Model')
+    return $reflection->isSubclassOf('\SimpleAR\Orm\Model')
         && ! $reflection->isAbstract();
 }
