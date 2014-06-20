@@ -1,5 +1,7 @@
 <?php namespace SimpleAR\Database\Query;
 
+use \SimpleAR\Database\Builder\DeleteBuilder;
+
 class Delete extends Where
 {
     public $type = 'delete';
@@ -11,12 +13,12 @@ class Delete extends Where
      */
     protected static $_isCriticalQuery = true;
 
-    public $from;
+    public $deleteFrom;
     public $using;
     public $where;
 
     protected function _newBuilder()
     {
-        return new InsertBuilder();
+        return new DeleteBuilder();
     }
 }

@@ -4,6 +4,7 @@ use \SimpleAR\Database\Compiler;
 
 use \SimpleAR\Database\Query\Insert;
 use \SimpleAR\Database\Query\Delete;
+use \SimpleAR\Database\JoinClause;
 
 class BaseCompiler extends Compiler
 {
@@ -109,17 +110,19 @@ class BaseCompiler extends Compiler
      */
     protected function _compileDeleteFrom($from)
     {
-        if (is_array($from))
+        // DELETE can be made over several tables at the same time. Here, we 
+        // don't want to cover two cases: one table or several tables. Thus, 
+        // we'll work with an array, whatever the table numbers.
+        $from = (array) $from;
+
+        foreach ($from as $tableName)
         {
-            $sql = $this->_compileJoins($from);
-        }
-        else
-        {
-            $alias = $this->useTableAlias ? $this->_getAliasForTableName($from) : '';
-            $sql = $this->_compileAlias($from, $alias);
+            $tableNames[] = $this->useTableAlias
+                ? $this->_getAliasForTableName($tableName)
+                : $tableName;
         }
 
-        return 'FROM ' . $sql;
+        return 'FROM ' . $this->wrapArrayToString($tableNames);
     }
 
     /**
@@ -130,9 +133,15 @@ class BaseCompiler extends Compiler
     protected function _compileJoins(array $joins)
     {
         $sql = array();
+
+        // A join list do not start with a "JOIN" keyword. I don't want to do 
+        // string manipulation, so I use a $first flag to tell _compileJoin() 
+        // whether to prepend or not the keyword.
+        $first = true;
         foreach ($joins as $join)
         {
-            $sql[] = $this->_compileJoin($join);
+            $sql[] = $this->_compileJoin($join, !$first);
+            $first = false;
         }
 
         $sql = $this->_concatenate($sql);
@@ -146,10 +155,17 @@ class BaseCompiler extends Compiler
      * @param JoinClause $join
      *
      */
-    protected function _compileJoin(JoinClause $join)
+    protected function _compileJoin(JoinClause $join, $withJoinKeyword = true)
     {
-        $sql = $this->_compileJoinType($join->type);
-        $sql .= ' ' .  $this->_compileAlias($join->table, $join->alias, $this->useTableAlias);
+        $sql = $withJoinKeyword ? $this->_compileJoinType($join->type) . ' ' : '';
+
+        $alias = $this->useTableAlias ? $join->alias : '';
+        $sql .= $this->_compileAlias($join->table, $alias);
+
+        if ($join->ons)
+        {
+            $sql .= ' ' . $this->_compileJoinOns($join->ons);
+        }
 
         return $sql;
     }
@@ -161,7 +177,44 @@ class BaseCompiler extends Compiler
             case JoinClause::INNER: return 'INNER JOIN';
             case JoinClause::LEFT: return 'LEFT JOIN';
             case JoinClause::RIGHT: return 'RIGHT JOIN';
+            default: return '';
         }
+    }
+
+    /**
+     * Compile a list of ON clauses of a JOIN clause.
+     *
+     * @param array $ons An array of array of ON clauses.
+     * @return string Compiled SQL.
+     *
+     * @see _compileJoinOn()
+     */
+    protected function _compileJoinOns(array $ons)
+    {
+        $sql = array();
+        foreach ($ons as $on)
+        {
+            $sql[] = $this->_compileJoinOn($on);
+        }
+
+        return $this->_concatenate($sql);
+    }
+
+    /**
+     * Compile an ON clause for a JOIN clause.
+     *
+     * @param array $on The ON array.
+     * @return string Compiled SQL.
+     */
+    protected function _compileJoinOn(array $on)
+    {
+        $lt = $this->wrap($on[0]);
+        $la = $this->wrap($on[1]);
+        $rt = $this->wrap($on[2]);
+        $ra = $this->wrap($on[3]);
+        $op = $on[4];
+
+        return "ON $lt.$la $op $rt.$ra";
     }
 
     /**
