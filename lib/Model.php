@@ -666,7 +666,7 @@ abstract class Model
      */
     public static function all(array $options = array())
     {
-        return self::find('all', $options);
+        return static::find('all', $options);
     }
 
     /**
