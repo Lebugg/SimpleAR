@@ -1,42 +1,44 @@
 <?php
 
 use \SimpleAR\Database\Query;
+use \SimpleAR\Database\Builder\SelectBuilder;
+use \SimpleAR\Database\Builder\InsertBuilder;
+use \SimpleAR\Database\Builder\DeleteBuilder;
+use \SimpleAR\Database\Builder\UpdateBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
 
 class QueryTest extends PHPUnit_Framework_TestCase
 {
-    public function setUp()
-    {
-        global $sar;
-        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
-        $sar->db->setConnection($conn);
-    }
-
     public function testGetConnection()
     {
         global $sar;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
 
-        $stub = $this->getMockForAbstractClass('\SimpleAR\Database\Query');
-        $this->assertEquals($sar->db->connection(), $stub->getConnection());
+        $stub = new Query(null, null, $conn);
+        $this->assertEquals($conn, $stub->getConnection());
     }
 
     public function testRunProcess()
     {
-        //$stub = $this->getMockForAbstractClass('\SimpleAR\Database\Query', array(), '', true, true, true, array('build', 'execute'));
-        $query = $this->getMockForAbstractClass('\SimpleAR\Database\Query', array(), '', true, true, true, array('getBuilder', 'getCompiler'));
+        global $sar;
 
         $builder  = $this->getMock('\SimpleAR\Database\Builder');
         $compiler = $this->getMock('\SimpleAR\Database\Compiler');
+        $conn     = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
 
-        $query->expects($this->once())->method('getBuilder')->will($this->returnValue($builder));
-        $query->expects($this->once())->method('getCompiler')->will($this->returnValue($compiler));
-        $query->expects($this->once())->method('getValues')->will($this->returnValue(array()));
+        $query = new Query($builder, $compiler, $conn);
+
+        $builder->expects($this->once())->method('build');
+        $builder->expects($this->once())->method('getValues')->will($this->returnValue(array()));
+        $compiler->expects($this->once())->method('compile');
+        $conn->expects($this->once())->method('query');
 
         $query->run();
     }
 
     public function testQueryIsSafe()
     {
-        $query = $this->getMockForAbstractClass('\SimpleAR\Database\Query');
+        $query = new Query();
 
         $sql = 'DELETE FROM users';
         $this->assertFalse($query->queryIsSafe($sql));
@@ -48,39 +50,94 @@ class QueryTest extends PHPUnit_Framework_TestCase
     public function testExecuteQuery()
     {
         global $sar;
-
-        $query = $this->getMockForAbstractClass('\SimpleAR\Database\Query');
-        $conn = $sar->db->connection();
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
         $conn->expects($this->once())->method('query')->with('SELECT * FROM articles', array());
 
-        $query->executeQuery($conn, 'SELECT * FROM articles', array());
+        $query = new Query(null, null, $conn);
+        $query->executeQuery('SELECT * FROM articles', array());
     }
 
-    public function testRoot()
+    public function testSelectQuery()
     {
-        $query = $this->getMockForAbstractClass('\SimpleAR\Database\Query', array(), '', true, true, true, array('rootModel'));
-        $query->expects($this->once())->method('rootModel')->with('Article');
+        global $sar;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
 
-        $query->root('Article');
+        $query = new Query(new SelectBuilder(), new BaseCompiler(), $conn);
+        $query->root('Article')
+            ->conditions(array(
+                'authorId' => 12,
+                'blogId' => 1,
+                array(
+                    'title' => array('Das Kapital', 'Essays'),
+                    'OR', 'authorId' => 1,
+                ),
+            ));
 
-        $query = $this->getMockForAbstractClass('\SimpleAR\Database\Query', array(), '', true, true, true, array('rootTable'));
-        $query->expects($this->once())->method('rootTable')->with('t_user');
+        $sql = 'SELECT * FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
+        $val = array(12, 1, 'Das Kapital', 'Essays', 1);
+        $conn->expects($this->once())->method('query')->with($sql, $val);
 
-        $query->root('t_user');
+        $query->run();
     }
 
-    public function testConstructorCallsRoot()
+    public function testInsertQuery()
     {
-        $class = '\SimpleAR\Database\Query';
-        $query = $this->getMockBuilder($class)
-            ->disableOriginalConstructor()
-            ->setMethods(array('root'))
-            ->getMockForAbstractClass();
+        global $sar;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
 
-        $query->expects($this->once())->method('root')->with('Article');
+        $query = new Query(new InsertBuilder(), new BaseCompiler(), $conn);
+        $query->root('Article')
+            ->fields('blogId', 'title', 'authorId')
+            ->values(array(
+                array(1, 'A', 12),
+                array(1, 'B', 15),
+                array(3, 'C', 16),
+            ));
 
-        $reflectedClass = new ReflectionClass($class);
-        $constructor = $reflectedClass->getConstructor();
-        $constructor->invoke($query, 'Article');
+        $sql = 'INSERT INTO `articles` (`blog_id`,`title`,`author_id`) VALUES(?,?,?),(?,?,?),(?,?,?)';
+        $val = array(1, 'A', 12, 1, 'B', 15, 3, 'C', 16);
+        $conn->expects($this->once())->method('query')->with($sql, $val);
+
+        $query->run();
     }
+
+    public function testUpdateQuery()
+    {
+        global $sar;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
+
+        $query = new Query(new UpdateBuilder(), new BaseCompiler(), $conn);
+        $query->root('Author')
+            ->conditions(array(
+                array('id', '!=', 12),
+                'lastName' => 'Bar',
+            ))
+            ->set('firstName', 'Foo');
+
+        $sql = 'UPDATE `authors` SET `first_name` = ? WHERE `id` != ? AND `last_name` = ?';
+        $val = array('Foo', 12, 'Bar');
+        $conn->expects($this->once())->method('query')->with($sql, $val);
+
+        $query->run();
+    }
+
+    public function testDeleteQuery()
+    {
+        global $sar;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
+
+        $query = new Query(new DeleteBuilder(), new BaseCompiler(), $conn);
+        $query->root('Article')
+            ->conditions(array(
+                array('authorId', '!=', 12),
+                array('blogId', '!=', array(1, 3)),
+            ));
+
+        $sql = 'DELETE FROM `articles` WHERE `author_id` != ? AND `blog_id` NOT IN (?,?)';
+        $val = array(12, 1, 3);
+        $conn->expects($this->once())->method('query')->with($sql, $val);
+
+        $query->run();
+    }
+
 }

@@ -14,7 +14,11 @@ class Blog extends SimpleAR\Orm\Model
     {
         if (self::$table === null)
         {
-            self::$table = new \SimpleAR\Orm\Table('blogs', 'id', array('name', 'description', 'created_at'));
+            self::$table = new \SimpleAR\Orm\Table('blogs', 'id', array(
+                'name',
+                'description',
+                'created_at'
+            ));
             self::$table->modelBaseName = 'Blog';
         }
 
@@ -24,6 +28,13 @@ class Blog extends SimpleAR\Orm\Model
 
 class Article extends SimpleAR\Orm\Model
 {
+    public static $_relations = array(
+        'author' => array(
+            'type'  => 'belongs_to',
+            'model' => 'Author',
+        ),
+    );
+
     public static $table;
     public static function table()
     {
@@ -32,10 +43,29 @@ class Article extends SimpleAR\Orm\Model
             self::$table = new \SimpleAR\Orm\Table('articles', 'id', array(
                 'blogId' => 'blog_id',
                 'title',
-                'author',
+                'authorId' => 'author_id',
             ));
             self::$table->modelBaseName = 'Article';
             self::$table->order = array('title' => 'ASC');
+        }
+
+        return self::$table;
+    }
+}
+
+class Author extends SimpleAR\Orm\Model
+{
+    public static $table;
+    public static function table()
+    {
+        if (self::$table === null)
+        {
+            self::$table = new \SimpleAR\Orm\Table('authors', 'id', array(
+                'firstName' => 'first_name',
+                'lastName'  => 'last_name',
+                'age',
+            ));
+            self::$table->modelBaseName = 'Author';
         }
 
         return self::$table;

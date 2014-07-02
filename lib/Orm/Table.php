@@ -1,5 +1,7 @@
 <?php namespace SimpleAR\Orm;
 
+use \SimpleAR\Exception;
+
 class Table
 {
     public $name;

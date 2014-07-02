@@ -271,6 +271,37 @@ abstract class Relation
         return $relation;
     }
 
+    /**
+     * Return an associative list of columns on which the relation is made.
+     *
+     * Examples:
+     * ---------
+     *
+     * If relation is made on `fk_id` for $cm and on `id` for $lm. The result of 
+     * will be the following array:
+     *
+     *  `['fk_id' => 'id']`
+     *
+     * If relation is made on `key_one` and `key_to` for $cm and respectively on 
+     * `pk_A` and `pk_B` for $lm, result will be:
+     *
+     *  `['key_one' => 'pk_A', 'key_two' => 'pk_B']`
+     *
+     */
+    public function getJoinColumns()
+    {
+        $cms = $this->cm->column; $cms = is_array($cms) ? $cms : array($cms);
+        $lms = $this->lm->column; $lms = is_array($lms) ? $lms : array($lms);
+
+        $res = array();
+        foreach ($cms as $i => $cmCol)
+        {
+            $res[$cmCol] = $lms[$i];
+        }
+
+        return $res;
+    }
+
     public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
     {
 		return $this->_buildJoin($joinType, $cmAlias, $this->lm->table, $lmAlias, $this->cm->column, $this->lm->column);

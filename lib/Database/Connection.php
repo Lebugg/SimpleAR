@@ -89,7 +89,12 @@ class Connection
      * @see SimpleAR.php
      * @see http://www.php.net/manual/en/pdo.construct.php
      */
-    public function __construct(Config $config)
+    public function __construct(Config $config = null)
+    {
+        $config && $this->configure($config);
+    }
+
+    public function configure(Config $config)
     {
         $a    = $config->dsn;
         $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
@@ -108,6 +113,7 @@ class Connection
         }
 
         $this->_database = $a['name'];
+        $this->_driver   = $a['driver'];
         $this->_debug    = $config->debug;
     }
 
@@ -129,18 +135,6 @@ class Connection
     public function database()
     {
         return $this->_database;
-    }
-
-    /**
-     * Gets the last inserted ID.
-     *
-     * Warning: Works for MySQL, but it won't for PostgreSQL.
-     *
-     * @return int The last inserted ID.
-     */
-    public function lastInsertId()
-    {
-        return $this->_pdo->lastInsertId();
     }
 
     /**
@@ -214,6 +208,10 @@ class Connection
         $this->_pdo->rollBack();
     }
 
+    public function getDriver()
+    {
+        return $this->_driver;
+    }
 
     /**
      * Executed queries getter.
@@ -224,5 +222,58 @@ class Connection
     public function queries()
     {
         return $this->_queries;
+    }
+
+    /**
+     * Gets the last inserted ID.
+     *
+     * Warning: Works for MySQL, but it won't for PostgreSQL.
+     *
+     * @return int The last inserted ID.
+     */
+    public function lastInsertId()
+    {
+        return $this->_pdo->lastInsertId();
+    }
+
+    /**
+     * Get the number of rows affected by the last SQL statement.
+     *
+     * @see http://www.php.net/manual/en/pdostatement.rowcount.php
+     */
+    public function rowCount()
+    {
+        return $this->_sth->rowCount();
+    }
+
+    /**
+     * Return next fetched row from DB.
+     *
+     * @return array
+     */
+    public function getNextRow()
+    {
+        return $this->_sth->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Fetch the last found row from DB.
+     *
+     * @return array
+     */
+    public function getLastRow()
+    {
+        return $this->_sth->fetch(\PDO::FETCH_ASSOC, \PDO::FETCH_ORI_LAST);
+    }
+
+    /**
+     * Return next value for column of given index.
+     *
+     * @param int $index The column index.
+     * @return mixed The column value.
+     */
+    public function getColumn($index = 0)
+    {
+        return $this->_sth->fetch(\PDO::FETCH_COLUMN, $index);
     }
 }

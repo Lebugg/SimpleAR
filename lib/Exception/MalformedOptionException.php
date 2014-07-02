@@ -10,6 +10,6 @@ use SimpleAR\Exception;
 /**
  * This exception is thrown by query classes.
  */
-class MalformedOption extends Exception
+class MalformedOptionException extends Exception
 {
 }

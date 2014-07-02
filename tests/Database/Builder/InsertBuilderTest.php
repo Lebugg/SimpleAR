@@ -1,13 +1,26 @@
 <?php
 
 use \SimpleAR\Database\Builder\InsertBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
 
 class InsertBuilderTest extends PHPUnit_Framework_TestCase
 {
+    private $_builder;
+    private $_compiler;
+    private $_conn;
+
+    public function setUp()
+    {
+        global $sar;
+
+        $this->_builder = new InsertBuilder();
+        $this->_compiler = new BaseCompiler();
+        $this->_conn = $sar->db->connection();
+    }
+
     public function testBuildWithoutUsingModel()
     {
-        $query  = $this->getMockForAbstractClass('\SimpleAR\Database\Query');
-        $builder = new InsertBuilder();
+        $builder = $this->_builder;
 
         $options = array(
             'fields' => array(
@@ -20,19 +33,18 @@ class InsertBuilderTest extends PHPUnit_Framework_TestCase
             ),
         );
 
-        $builder->build($query, $options);
+        $components = $builder->build($options);
 
-        $this->assertEquals($options['fields'], $query->columns);
-        $this->assertEquals($options['values'], $query->values);
+        $this->assertEquals($options['fields'], $components['insertColumns']);
+        $this->assertEquals($options['values'], $components['values']);
     }
 
     public function testBuildUsingModel()
     {
-        $query  = $this->getMockForAbstractClass('\SimpleAR\Database\Query');
-        $builder = new InsertBuilder();
+        $builder = $this->_builder;
 
         $table = Article::table();
-        $builder->setTable($table);
+        $builder->setRootModel('Article');
 
         $options = array(
             'fields' => array(
@@ -45,10 +57,10 @@ class InsertBuilderTest extends PHPUnit_Framework_TestCase
             ),
         );
 
-        $builder->build($query, $options);
+        $components = $builder->build($options);
 
         $expectedFields = $table->columnRealName($options['fields']);
-        $this->assertEquals($expectedFields, $query->columns);
-        $this->assertEquals($options['values'], $query->values);
+        $this->assertEquals($expectedFields, $components['insertColumns']);
+        $this->assertEquals($options['values'], $components['values']);
     }
 }

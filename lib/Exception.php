@@ -9,7 +9,7 @@ require __DIR__ . '/Exception/Database.php';
 require __DIR__ . '/Exception/DuplicateKey.php';
 require __DIR__ . '/Exception/RecordNotFound.php';
 require __DIR__ . '/Exception/ReadOnly.php';
-require __DIR__ . '/Exception/MalformedOption.php';
+require __DIR__ . '/Exception/MalformedOptionException.php';
 
 /**
  * Main SimpleAR exception class.

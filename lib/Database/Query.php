@@ -12,42 +12,37 @@ require __DIR__ . '/Compiler.php';
 require __DIR__ . '/JoinClause.php';
 require __DIR__ . '/Compiler/BaseCompiler.php';
 
-require __DIR__ . '/Query/Insert.php';
-require __DIR__ . '/Query/Where.php';
-//require __DIR__ . '/Query/Select.php';
-//require __DIR__ . '/Query/Count.php';
-//require __DIR__ . '/Query/Update.php';
-require __DIR__ . '/Query/Delete.php';
-
-use \SimpleAR\Facades\DB;
 use \SimpleAR\Exception;
-use \SimpleAR\Database\Compiler\BaseCompiler;
+
+use \SimpleAR\Database\Builder;
+use \SimpleAR\Database\Compiler;
+use \SimpleAR\Database\Connection;
 
 /**
  * This class is the superclass of all SQL queries.
  *
- * It defines several static methods to build queries:
- *
- * * Query::insert();
- * * Query::select();
- * * Query::count();
- * * Query::update();
- * * Query::delete();
  */
-abstract class Query
+class Query
 {
+
+    /**
+     * Component array.
+     *
+     * Query class is also a container. Builders fill this array with 
+     * appropriate components that Compiler will use to construct SQL.
+     *
+     * @var array
+     */
+    public $components = array();
 
     /**
      * Is this query class critical?
      *
-     * A critical query cannot be executed without a WHERE clause. Critical queries are:
+     * A critical query cannot be executed without a WHERE clause.
      *
-     * * UPDATE queries {@see SimpleAR\Query\Update}
-     * * DELETE queries {@see SimpleAR\Query\Delete}
-     *
-     * @var bool Default false
+     * @var bool false
      */
-    protected static $_isCriticalQuery = false;
+    protected $_isCriticalQuery = false;
 
     /**
      * The query string.
@@ -62,11 +57,6 @@ abstract class Query
      * @var array.
      */
 	protected $_values = array();
-
-    /* protected $_table; */
-    /* protected $_tableName; */
-    /* protected $_model; */
-
 
     /**
      * Is the query built?
@@ -88,20 +78,18 @@ abstract class Query
     protected $_executed = false;
 
     /**
-     * The list of options to build.
+     * The builder instance.
      *
-     * It contains a list of Option instances that will be built during query
-     * build step.
-     *
-     * @var array
+     * @var Builder
      */
-    protected $_options = array();
-
     protected $_builder;
-    protected $_compiler;
 
-    protected $_useModel = false;
-    protected $_useAlias = false;
+    /**
+     * The compiler instance.
+     *
+     * @var Compiler
+     */
+    protected $_compiler;
 
     /**
      * Connection
@@ -110,128 +98,69 @@ abstract class Query
      */
     protected $_connection;
 
-    public function __construct($root = null)
+    public function __construct(Builder $builder = null,
+        Compiler $compiler = null,
+        Connection $conn = null,
+        $criticalQuery = false
+    ) {
+        $builder && $this->setBuilder($builder);
+        $this->_compiler = $compiler;
+        $this->_connection = $conn;
+
+        $this->setCriticalQuery($criticalQuery);
+    }
+
+    public function getSql()
     {
-        $root !== null && $this->root($root);
+        return $this->_sql;
+    }
+
+    public function getValues()
+    {
+        $val = $this->_builder->getValues();
+        $val = $this->prepareValuesForExecution($val);
+
+        return $val;
+    }
+
+    public function getBuilder()
+    {
+        return $this->_builder;
+    }
+
+    public function setBuilder(Builder $b)
+    {
+        $this->_builder = $b;
     }
 
     /**
-     * Set the "root" of the query.
+     * Get compiler instance.
      *
-     * It can be:
-     *  
-     *  * A valid model class name.
-     *  * A table name.
-     *
-     * @param  string $root The query root.
-     * @return $this
+     * @return Compiler
      */
-    public function root($root)
+    public function getCompiler()
     {
-        if (\SimpleAR\is_valid_model_class($root))
-        {
-            $this->rootModel($root);
-        }
-        else
-        {
-            $this->rootTable($root);
-        }
-
-        return $this;
+        return $this->_compiler;
     }
 
     /**
-     * Set the model on which to build the query.
+     * Get connection instance.
      *
-     * The function checks that the given class is a subclass of SimpleAR\Model.
-     * If not, an Exception will be thrown.
-     *
-     * @param  string $class The model class.
-     * @return $this
-     *
-     * @throws \SimpleAR\Exception if the class is not a subclass of
-     * SimpleAR\Model.
+     * @return Connection
      */
-    public function rootModel($class)
+    public function getConnection()
     {
-        $this->_useModel = true;
-        $this->_root = $class;
-
-        return $this;
+        return $this->_connection;
     }
 
-    /**
-     * Set the table on which to execute the query.
-     *
-     * @param  string $tableName The table name.
-     * @return $this
-     */
-    public function rootTable($tableName)
+    public function isCriticalQuery()
     {
-        $this->_useModel = false;
-        $this->_root = $tableName;
-
-        return $this;
+        return $this->_isCriticalQuery;
     }
 
-    /**
-     * Generic option handler.
-     *
-     * It instanciate an new option according to a name and a value.
-     *
-     * @param  string $name  The option name.
-     * @param  mixed  $value The option value.
-     *
-     * @return $this
-     */
-    public function option($name, $value)
+    public function setCriticalQuery($bool = true)
     {
-        $this->_options[$name] = $value;
-
-        return $this;
-    }
-
-    /**
-     * Allows user to manually set query options.
-     *
-     * We use __call() magic method in order to avoid code duplication. Without
-     * this, we would have to write a method for each available option per query
-     * class...
-     *
-     * This is the matching of Query::build() method. But build() is used for
-     * automatical query build; __call() is here to open query manipulation to
-     * user.
-     *
-     * @param string $name      Name of the method being called. The method name
-     * must correspond to an option name.
-     * @param array  $arguments Enumerated array containing the parameters
-     * passed to the $name'ed method.
-     *
-     * @return $this
-     */
-    public function __call($name, $args)
-    {
-        if (! isset($args[1]) && isset($args[0]))
-        {
-            $args = $args[0];
-        }
-
-        $this->option($name, $args);
-
-        return $this;
-    }
-
-    /**
-     * Returns the number of rows affected by the last DELETE, INSERT, or UPDATE statement executed.
-     *
-     * @see http://php.net/manual/en/pdostatement.rowcount.php
-     *
-     * @return int
-     */
-    public function rowCount()
-    {
-        $this->run();
-        return $this->_sth->rowCount();
+        $this->_isCriticalQuery = $bool;
     }
 
     /**
@@ -247,12 +176,12 @@ abstract class Query
      */
     public function run($again = false)
     {
-        $this->_built    || $this->build($this->_options, $this->getBuilder());
-        $this->_compiled || $this->compile($this->getCompiler());
+        $this->_built    || $this->build();
+        $this->_compiled || $this->compile();
 
         if (! $this->_executed || $again)
         {
-            $this->execute(static::$_isCriticalQuery);
+            $this->execute($this->isCriticalQuery());
         }
 
         return $this;
@@ -265,15 +194,9 @@ abstract class Query
      *
      * @param  array $options The option array.
      */
-	public function build(array $options, Builder $builder)
+	public function build()
     {
-        if ($this->_useModel)
-        {
-            $modelClass = $this->_root;
-            $builder->setTable($modelClass::table());
-        }
-
-        $builder->build($this, $options);
+        $this->components = $this->getBuilder()->build();
         $this->_built = true;
     }
 
@@ -286,11 +209,16 @@ abstract class Query
      *
      * @return void.
      */
-    protected function compile(Compiler $compiler)
+    protected function compile()
     {
-        $compiler->useTablePrefix = $this->_useAlias;
+        if (! $this->_built)
+        {
+            throw new Exception('Cannot compile query: it is not built.');
+        }
 
-        $this->_sql = $compiler->compile($this);
+        //$compiler->useTablePrefix = $this->_useAlias;
+
+        $this->_sql = $this->getCompiler()->compile($this, $this->getBuilder()->type);
         $this->_compiled = true;
     }
 
@@ -305,7 +233,7 @@ abstract class Query
         }
 
         // At last, execute the query.
-        $this->executeQuery($this->getConnection(), $sql, $this->getValues());
+        $this->executeQuery($sql, $this->getValues());
         $this->_executed = true;
     }
 
@@ -314,91 +242,90 @@ abstract class Query
         return strpos($sql, ' WHERE ') !== false;
     }
 
-    public function executeQuery(Connection $conn, $sql, array $values)
+    public function executeQuery($sql, array $values)
     {
-        return $conn->query($sql, $values);
+        return $this->getConnection()->query($sql, $values);
     }
 
     /**
-     * Apply aliases to columns.
-     *
-     * It may be necessary to add alias to columns:
-     * - we want to prefix columns with table aliases;
-     * - we want to rename columns in query result (only for Select queries).
-     *
-     * Note: The function name may be confusing.
-     *
-     * @param array $columns The column array. It can take three forms:
-     * - an indexed array where values are column names;
-     * - an associative array where keys are attribute names and values are
-     * column names (for column renaming in result. Select queries only);
-     * - a mix of both. Values of numeric entries will be taken as column names.
-     *
-     * @param string $tableAlias  The table alias to prefix the column with.
-     * @param string $resultAlias The result alias to rename the column into.
+     * This function is used to format value array for PDO.
      *
      * @return array
      */
-    public function columnAliasing(array $columns, $tableAlias = '', $resultAlias = '')
+    public function prepareValuesForExecution(array $values)
     {
         $res = array();
 
-        // If a table alias is given, add a dot to respect SQL syntax and to not
-        // worry about it in following foreach loop.
-        if ($tableAlias)
+        foreach ($values as $value)
         {
-            $tableAlias = '`' . $tableAlias . '`.';
-        }
+            // Discard Expression. It is directly written in SQL.
+            if ($value instanceof Expression) { continue; }
 
-        // Result alias should only be used by Select queries.
-        if ($resultAlias)
-        {
-            $resultAlias .= '.';
-        }
-
-        foreach ($columns as $attribute => $column)
-        {
-            // $columns is an associative array.
-            if (is_string($attribute))
+            elseif (is_array($value))
             {
-                $res[] = $tableAlias . '`' . $column . '` AS `' . $resultAlias . $attribute . '`';
+                if (is_array($value[0]))
+                {
+                    $res = array_merge($res, call_user_func_array('array_merge', $value));
+                }
+                else
+                {
+                    $res = array_merge($res, $value);
+                }
             }
-            // $columns is an indexed array. We do not know the attribute name.
             else
             {
-                $res[] = $tableAlias . '`' . $column . '`';
+                $res[] = $value;
             }
         }
 
         return $res;
     }
 
-    public function getSql()
+    /**
+     * Returns the number of rows affected by the last DELETE, INSERT, or UPDATE statement executed.
+     *
+     * @see http://php.net/manual/en/pdostatement.rowcount.php
+     *
+     * @return int
+     */
+    public function rowCount()
     {
-        return $this->_sql;
+        $this->run();
+        return $this->getConnection()->rowCount();
     }
 
-    public abstract function getValues();
-
-    public function getBuilder()
+    /**
+     * Allows user to manually set query options.
+     *
+     * We use __call() magic method in order to avoid code duplication. Without
+     * this, we would have to write a method for each available option per query
+     * class...
+     *
+     * This is the matching of Query::build() method. But build() is used for
+     * automatical query build; __call() is here to open query manipulation to
+     * user.
+     *
+     * @param string $name Name of the method being called. The method name
+     * must correspond to an option name.
+     * @param array  $arguments Enumerated array containing the parameters
+     * passed to the $name'd method.
+     *
+     * @return $this
+     */
+    public function __call($name, $args)
     {
-        return $this->_builder = $this->_builder ?: $this->_newBuilder();
+        $b = $this->getBuilder();
+        switch (count($args))
+        {
+            case 0: $b->$name(); break;
+            case 1: $b->$name($args[0]); break;
+            case 2: $b->$name($args[0], $args[1]); break;
+            case 3: $b->$name($args[0], $args[1], $args[2]); break;
+            case 4: $b->$name($args[0], $args[1], $args[2], $args[3]); break;
+            default: call_user_func_array(array($b, $name), $args);
+        }
+
+        return $this;
     }
 
-    public function getCompiler()
-    {
-        return $this->_compiler = $this->_compiler ?: $this->_newCompiler();
-    }
-
-    public function getConnection()
-    {
-        return $this->_connection = $this->_connection ?: DB::connection();
-    }
-
-    protected abstract function _newBuilder();
-
-    protected function _newCompiler()
-    {
-        return new BaseCompiler();
-    }
 }

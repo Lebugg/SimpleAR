@@ -244,6 +244,15 @@ class Config
     private $_modelDirectory = array('./models/');
 
     /**
+     * The character to use to separate relation names in query options.
+     *
+     * Default value: '/'
+     *
+     * @var char
+     */
+    private $_queryOptionRelationSeparator = '/';
+
+    /**
      * Default primary key name.
      *
      * The default primary key name. If primary key is not specified

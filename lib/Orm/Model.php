@@ -5,12 +5,15 @@
  * @author Damien Launay
  */
 
-use \SimpleAR\Exception\Database as DatabaseEx;
-use \SimpleAR\Exception\RecordNotFound;
-use \SimpleAR\Exception;
+use \SimpleAR\Orm\Table;
+use \SimpleAR\Orm\Builder as QueryBuilder;
 
 use \SimpleAR\Facades\DB;
 use \SimpleAR\Facades\Cfg;
+
+use \SimpleAR\Exception\Database as DatabaseEx;
+use \SimpleAR\Exception\RecordNotFound;
+use \SimpleAR\Exception;
 
 /**
  * This class is the super class of all models.
@@ -634,11 +637,11 @@ abstract class Model
             $id = $what;
         }
 
-        $query = self::query('insert', array(), $relation->jm->table)
-            ->fields(array($relation->jm->from, $relation->jm->to))
-            ->values(array($this->_id, $id));
-
-        $query->run();
+        $table  = $relation->jm->table;
+        $fields = array($relation->jm->from, $relation->jm->to);
+        self::query()->insertInto($table, $fields)
+            ->values(array($this->_id, $id))
+            ->run();
     }
 
     /**
@@ -652,8 +655,7 @@ abstract class Model
      * @return array
      *
      * @see SimpleAR\Model::find()
-     */
-    public static function all(array $options = array())
+     returnublic static function all(array $options = array())
     {
         return self::find('all', $options);
     }
@@ -829,7 +831,9 @@ abstract class Model
         // Any last words to say?
         $this->_onBeforeDelete();
 
-        $count = self::query('delete')->conditions(array('id' => $this->_id))->rowCount();
+        $query = self::query()->delete()->where('id', $this->_id);
+        $count = $query->rowCount();
+        //$count = self::query('delete')->conditions(array('id' => $this->_id))->rowCount();
 
         // Was not here? Weird. Tell user.
         if ($count === 0)
@@ -958,46 +962,12 @@ abstract class Model
             return self::findByPK($first, $options);
         }
 
-        // $first is a string. It can be "count", "first", "last" or "all".
-        $multiplicity = null;
-        switch ($first)
-        {
-            case 'all':
-                $query = self::query('select', $options);
-                $multiplicity = 'several';
-                break;
-            case 'count':
-                $query = self::query('count', $options);
-                $multiplicity = 'count';
-                break;
-            case 'first':
-				$options['limit'] = 1;
-                $query = self::query('select', $options);
-                $multiplicity = 'one';
-                break;
-            case 'last':
-				$options['limit'] = 1;
+        // $first is the type of result we want. It can be:
+        // "first", "last", "one", "all" or "count".
+        $get   = $first;
+        $query = self::query()->setOptions($options);
 
-				if (isset($options['order_by']))
-				{
-					foreach ($options['order_by'] as $key => $order)
-					{
-						$options['order_by'][$key] = ($order == 'ASC' ? 'DESC' : 'ASC');
-					}
-				}
-				else
-				{
-					$options['order_by'] = array('id' => 'DESC');
-				}
-                $query = self::query('select', $options);
-                $multiplicity = 'one';
-                break;
-            default:
-                throw new Exception('Invalid first parameter (' . $first .').');
-                break;
-        }
-
-        return self::_processSqlQuery($query, $multiplicity, $options);
+        return $query->$get();
     }
 
     /**
@@ -1013,7 +983,7 @@ abstract class Model
         // Handles multiple primary keys, too.
         $options['conditions']['id'] = $id;
 
-        $multiplicity = 'one';
+        $get = 'one';
         // If $id is an array, the user may want several objects.
         if (is_array($id))
         {
@@ -1021,12 +991,12 @@ abstract class Model
             // compound, if $id is multidimensional.
             if (self::table()->isSimplePrimaryKey || is_array($id[0]))
             {
-                $multiplicity = 'several';
+                $get = 'all';
             }
         }
 
-        $query = self::query('select', $options);
-        if (!$res = self::_processSqlQuery($query, $multiplicity, $options))
+        $query = self::query()->setOptions($options);
+        if (! $res = $query->$get())
         {
             throw new RecordNotFound($id);
         }
@@ -1215,7 +1185,8 @@ abstract class Model
      */
     public static function remove(array $conditions = null)
     {
-        return self::query('delete')
+        return self::query()
+                ->delete()
                 ->conditions($conditions)
                 ->rowCount();
     }
@@ -1255,13 +1226,12 @@ abstract class Model
 
         if ($id === null) { return; }
 
-        $query = self::query('delete', array(), $relation->jm->table)
+        self::query()->deleteFrom($relation->jm->table)
             ->conditions(array(
                 $relation->jm->from => $this->_id,
                 $relation->jm->to   => $what,
-            ));
-
-        $query->run();
+            ))
+            ->run();
     }
 
     /**
@@ -1339,7 +1309,7 @@ abstract class Model
         return self::arrayToArray($this->attributes());
     }
 
-    public static function createFromRow($row, array $options)
+    public static function createFromRow($row, array $options = array())
     {
         $instance = new static(null, $options);
         $instance->_load($row);
@@ -1386,7 +1356,7 @@ abstract class Model
 			// They are not, fetch them from database.
             else
             {
-				$columns = DB::query('SHOW COLUMNS FROM `' . $tableName . '`')->fetchAll(\PDO::FETCH_COLUMN);
+                $columns = self::query()->getTableColumns($tableName);
 
                 // We do not want to insert primary key in
                 // static::$_columns unless it is a compound key.
@@ -1405,25 +1375,13 @@ abstract class Model
     }
 
     /**
-     * Create a new Query object.
+     * Create and return a new QueryBuilder instance.
      *
-     * The returned query is built with the model class by default. A table name
-     * can be passed as the second argument to build the query on this table.
-     *
-     * @param  string $type      The type of query to create.
-     * @param  string $rootTable An optional table name to build the query on
-     * it.
-     * @return Query
+     * @return QueryBuilder
      */
-    public static function query($type = 'select', $options = array(), $rootTable = null)
+    public static function query()
     {
-        $class = '\SimpleAR\Database\Builder\\' . ucfirst($type);
-        $root  = $rootTable ?: get_called_class();
-
-        $query = new $class($root);
-        $query->options($options);
-
-        return $query;
+        return new QueryBuilder(get_called_class());
     }
 
     /**
@@ -1452,7 +1410,7 @@ abstract class Model
      */
     public static function __callStatic($method, $args)
     {
-        $query = self::query('select');
+        $query = self::query();
 
         return call_user_func_array(array($query, $method), $args);
     }
@@ -1805,14 +1763,8 @@ abstract class Model
 
         try
         {
-            $query = self::query('insert')
-                ->fields(array_keys($fields))
-                ->values(array_values($fields));
-
-            $query->run();
-
-            // We fetch the ID.
-            $this->_id = $query->insertId();
+            $lastId = self::query()->insert(array_keys($fields), array_values($fields));
+            $this->_id = $lastId;
 
             // Process linked models.
             // We want to save linked models on cascade.
@@ -1872,11 +1824,9 @@ abstract class Model
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
-                        $query = self::query('insert', array(), $relation->jm->table)
-                            ->fields(array($relation->jm->from, $relation->jm->to))
-                            ->values($values);
-
-                        $query->run();
+                        $fields = array($relation->jm->from, $relation->jm->to);
+                        self::query()->insertInto($relation->jm->table, $fields)
+                            ->values($values)->run();
                     }
                 }
             }
@@ -2103,61 +2053,6 @@ abstract class Model
     }
 
     /**
-     * Run Select queries.
-     *
-     * @param Select $query         The query to run.
-     * @param string $multiplicity  Should we expect a count, one row, or
-     * several rows to be returned?
-     * @param array $options The option array. It will be passed to constructor.
-     *
-     * @return mixed.
-     */
-    private static function _processSqlQuery(Query\Select $query, $multiplicity, array $options)
-    {
-        $query->run();
-
-        switch ($multiplicity)
-		{
-            case 'count':
-                return $query->res();
-
-            case 'one':
-                return $query->one();
-                /* $row = $query->row(); */
-                /* $res = null; */
-
-                /* if ($row) */
-				/* { */
-                /*     $res = new static(null, $options); */
-                /*     $res->_load($row); */
-                /* } */
-
-                /* return $res; */
-
-            case 'several':
-                return $query->all();
-
-                /* $rows = $query->all(); */
-                /* $res  = array(); */
-
-                /* foreach ($rows as $row) */
-				/* { */
-                /*     $model = new static(null, $options); */
-                /*     $model->_load($row); */
-
-                /*     $res[] = $model; */
-                /* } */
-
-                /* return $res; */
-
-            default:
-                throw new Exception('Unknown multiplicity: "' . $multiplicity . '".');
-        }
-
-        return $res;
-    }
-
-    /**
      * Set default attribute values defined in $_defaultValues.
      *
      * @see Model::_hydrate()
@@ -2240,12 +2135,7 @@ abstract class Model
 
         try
         {
-            $query = self::query('update')
-                ->fields(array_keys($fields))
-                ->values(array_values($fields))
-                ->conditions(array('id' => $this->_id));
-
-            $query->run();
+            $query = self::query()->update()->set($fields)->where('id', $this->_id)->run();
 
             // I know code seems (is) redundant, but I am convinced that it is
             // better this way. Treatment of linked model can be different
@@ -2292,10 +2182,7 @@ abstract class Model
                     //      2) Insert new rows.
 
                     // Remove all rows from join table. (Easier this way.)
-					$query = self::query('delete')
-                        ->conditions(array($relation->jm->from => $this->_id));
-
-                    $query->run();
+                    self::query()->delete()->where($relation->jm->from, $this->_id)->run();
 
                     $values = array();
                     // Array cast allows user not to bother to necessarily set an array.
@@ -2317,11 +2204,11 @@ abstract class Model
                     // would throw a PDO Exception otherwise.
                     if ($values)
                     {
-                        $query = self::query('insert', array(), $relation->jm->table)
-                            ->fields(array($relation->jm->from, $relation->jm->to))
-                            ->values($values);
-
-                        $query->run();
+                        $fields = array($relation->jm->from, $relation->jm->to);
+                        $query = self::query()
+                            ->insertInto($relation->jm->table, $fields)
+                            ->values($values)
+                            ->run();
                     }
                 }
             }

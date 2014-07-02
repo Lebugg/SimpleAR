@@ -42,6 +42,7 @@ define('PHP_SIMPLEAR_VERSION_ID', '1.0');
 require __DIR__ . '/Config.php';
 require __DIR__ . '/Orm/Table.php';
 require __DIR__ . '/Orm/Model.php';
+require __DIR__ . '/Orm/Builder.php';
 require __DIR__ . '/Orm/ReadOnlyModel.php';
 require __DIR__ . '/Orm/Relation.php';
 require __DIR__ . '/Database.php';

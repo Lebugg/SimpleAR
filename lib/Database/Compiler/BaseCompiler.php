@@ -2,26 +2,69 @@
 
 use \SimpleAR\Database\Compiler;
 
-use \SimpleAR\Database\Query\Insert;
-use \SimpleAR\Database\Query\Delete;
+use \SimpleAR\Database\Query;
 use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Condition as WhereClause;
 
+/**
+ * This is the base SQL compiler.
+ *
+ * It is not aimed to work with any particular DBMS.
+ *
+ * It is greatly inspired from Eloquent ORM from the Laravel framework.
+ * @see https://github.com/illuminate/database/blob/master/Query/Grammars/Grammar.php
+ *
+ * @author Lebugg
+ */
 class BaseCompiler extends Compiler
 {
     public $components = array(
         'insert' => array(
             'into',
-            'columns',
+            'insertColumns',
             'values',
         ),
+        'select' => array(
+            'columns',
+            'aggregates',
+            'from',
+            'where',
+        ),
+        'update' => array(
+            'updateFrom',
+            'set',
+            'where',
+        ),
         'delete' => array(
+            // "deleteFrom" component can be a string or an array of strings.
             'deleteFrom',
             'using',
             'where',
         ),
     );
 
-    public function compileInsert(Insert $q)
+    /**
+     * Available operator for this compiler.
+     *
+     * @var array
+     */
+    public $operators = array(
+        '=', '<=', '>=', '!=',
+        'IN', 'BETWEEN',
+        'LIKE',
+    );
+
+    /**
+     * Possible arrayfications of some operators.
+     *
+     * @var array
+     */
+    public $operatorsArrayfy = array(
+        '=' => 'IN',
+        '!=' => 'NOT IN',
+    );
+
+    public function compileInsert(Query $q)
     {
         $components = $this->components['insert'];
         $sql = $this->_compileComponents($q, $components);
@@ -30,13 +73,36 @@ class BaseCompiler extends Compiler
         return $sql;
     }
 
-    public function compileDelete(Delete $q)
+    public function compileSelect(Query $q)
+    {
+        $components = $this->components['select'];
+        $sql = $this->_compileComponents($q, $components);
+        $sql = 'SELECT ' . $this->_concatenate($sql);
+
+        return $sql;
+    }
+
+    public function compileUpdate(Query $q)
+    {
+        $components = $this->components['update'];
+        $sql = $this->_compileComponents($q, $components);
+        $sql = 'UPDATE ' . $this->_concatenate($sql);
+
+        return $sql;
+    }
+
+    public function compileDelete(Query $q)
     {
         $components = $this->components['delete'];
         $sql = $this->_compileComponents($q, $components);
         $sql = 'DELETE ' . $this->_concatenate($sql);
 
         return $sql;
+    }
+
+    public function compileWhere(Query $q)
+    {
+        return $this->_compileWhere($q->components['where']);
     }
 
     /**
@@ -57,7 +123,7 @@ class BaseCompiler extends Compiler
      * @param array $columns The real columns, not the model attributes.
      * @return string
      */
-    protected function _compileColumns(array $columns)
+    protected function _compileInsertColumns(array $columns)
     {
         if (! $columns)
         {
@@ -104,25 +170,76 @@ class BaseCompiler extends Compiler
     }
 
     /**
+     * Compile aggregates clauses.
+     *
+     * @param array $aggregates The aggregates to compile.
+     *
+     * $aggregates is an array of array. Each sub-array correspond to an 
+     * aggregate to build. Each has these entries:
+     *  
+     *  * "function": The aggregate function;
+     *  * "columns": The columns to apply the function on.
+     */
+    protected function _compileAggregates(array $aggregates)
+    {
+        $sql = array();
+        foreach ($aggregates as $agg)
+        {
+            // $cols is now a string of wrapped column names.
+            $cols = $this->columnize($agg['columns'], $agg['tableAlias']);
+            $fn   = $agg['function'];
+
+            $sql[] = $fn . '(' . $cols . ')' . $this->_compileAs($agg['resultAlias']);
+        }
+
+        return implode(',', $sql);
+    }
+
+    protected function _compileColumns(array $columns)
+    {
+        $sql = array();
+        foreach ($columns as $tableAlias => $data)
+        {
+            $columns     = $data['columns'];
+            $tableAlias  = $this->useTableAlias ? $tableAlias : '';
+            $resultAlias = $this->useResultAlias ? $data['resultAlias'] : '';
+
+            $sql[] = $this->columnize($columns, $tableAlias, $resultAlias);
+        }
+
+        return implode(',', $sql);
+    }
+
+    protected function _compileFrom($from)
+    {
+        return 'FROM ' . $this->_compileJoins($from);
+    }
+
+    /**
      * Compile DELETE FROM clause.
      *
-     * @param string|array $from
+     * @param string|array $from An array of table names or table aliases.
      */
     protected function _compileDeleteFrom($from)
     {
         // DELETE can be made over several tables at the same time. Here, we 
         // don't want to cover two cases: one table or several tables. Thus, 
         // we'll work with an array, whatever the table numbers.
-        $from = (array) $from;
-
-        foreach ($from as $tableName)
-        {
-            $tableNames[] = $this->useTableAlias
-                ? $this->_getAliasForTableName($tableName)
-                : $tableName;
-        }
+        $tableNames = (array) $from;
 
         return 'FROM ' . $this->wrapArrayToString($tableNames);
+    }
+
+    /**
+     * There is no "FROM" keywprd in UPDATE statements. However, table 
+     * declaration is the same as in SELECT.
+     *
+     * @param array $from An array of JoinClause.
+     * @return string
+     */
+    protected function _compileUpdateFrom($from)
+    {
+        return $this->_compileJoins($from);
     }
 
     /**
@@ -153,7 +270,7 @@ class BaseCompiler extends Compiler
      * Compile a JOIN clause.
      *
      * @param JoinClause $join
-     *
+     * @return string
      */
     protected function _compileJoin(JoinClause $join, $withJoinKeyword = true)
     {
@@ -170,6 +287,12 @@ class BaseCompiler extends Compiler
         return $sql;
     }
 
+    /**
+     * Return SQL keywords matching the given join type.
+     *
+     * @param int $joinType The join type. {@see SimpleAR\Database\JoinClause}
+     * @return string
+     */
     protected function _compileJoinType($joinType)
     {
         switch ($joinType)
@@ -230,10 +353,174 @@ class BaseCompiler extends Compiler
         return 'USING ' . $this->_compileJoins($using);
     }
 
-    protected function _compileWhere($where)
+    protected function _compileWhere(array $wheres)
+    {
+        return 'WHERE ' . $this->_compileConditions($wheres);
+    }
+
+    /**
+     * Compile a bunch of WHERE clauses.
+     *
+     * @param array $wheres
+     * @return string
+     */
+    protected function _compileConditions(array $wheres)
     {
         $sql = '';
+        foreach ($wheres as $where)
+        {
+            $sql .= ' ' . $this->_compileCondition($where);
+        }
+
+        // We have to remove the first "AND" or "OR" at the beginning of the 
+        // string.
+        $sql = preg_replace('/ AND | OR /', '', $sql, 1);
 
         return $sql;
+    }
+
+    /**
+     * Compile a WHERE clause.
+     *
+     * @param WhereClause $where
+     * @return string SQL
+     */
+    protected function _compileCondition(WhereClause $where)
+    {
+        $fn  = '_where' . $where->type;
+        $sql = $this->$fn($where);
+
+        $logicalOp = $where->logicalOp;
+        $not       = $where->not ? ' NOT ' : ' ';
+
+        $sql = $logicalOp . $not . $sql;
+        return $sql;
+    }
+
+    /**
+     * Compile a basic WHERE clause.
+     *
+     * "Basic" means this condition format: <column> <operator> <value>
+     *
+     * @param WhereClause $where
+     * @return SQL
+     */
+    protected function _whereBasic(WhereClause $where)
+    {
+        $col = $this->_compileWhereColumns($where);
+        $op  = $this->_getWhereOperator($where);
+        $val = $this->parameterize($where->value);
+
+        return "$col $op $val";
+    }
+
+    /**
+     * Compile an EXISTS clause.
+     *
+     * @param Condition\Exists $where
+     * @return string SQL
+     */
+    protected function _whereExists(WhereClause $where)
+    {
+        return 'EXISTS (' . $this->compileSelect($where->query) . ')';
+    }
+
+    /**
+     * Compile an nested where clause.
+     *
+     * @param Condition\Nested $where
+     * @return string SQL
+     */
+    protected function _whereNested(WhereClause $where)
+    {
+        return '(' . $this->_compileConditions($where->nested) . ')';
+    }
+
+    /**
+     * Compile a "column" portion of a WHERE clause.
+     *
+     * If we are using table aliases, table alias will be prepend to it.
+     * Result string is wrapped SQL.
+     *
+     * It handles one or several columns.
+     *
+     * @param WhereClause $where
+     * @return Safe SQL.
+     */
+    protected function _compileWhereColumns(WhereClause $where)
+    {
+        $alias = $this->useTableAlias ? $where->tableAlias : '';
+
+        return $this->columnize($where->column, $alias);
+    }
+
+    /**
+     * Get appropriate operator for the given WhereClause.
+     *
+     * Sometimes, the conditional operator the user chose is not fitting for the 
+     * values type. Thus, we need to use a more appropriate one.
+     *
+     * Example:
+     * --------
+     *
+     * If this condition is given:
+     *
+     *  ['beerProof', '=', [7, 8, 9]] // A beer of which proof is 7%, 8% or 9%.
+     *
+     * We cannot use '=' operator, but 'IN' operator.
+     *
+     * @param WhereClause $where
+     */
+    protected function _getWhereOperator(WhereClause $where)
+    {
+        $op = $where->operator;
+        $val = $where->value;
+
+        // Do we need to arrayfy this operator?
+        if (is_array($val) && isset($this->operatorsArrayfy[$op]))
+        {
+            $op = $this->operatorsArrayfy[$op];
+        }
+
+        return $op;
+    }
+
+    /**
+     * Compile a SET clause.
+     *
+     * @param array $sets An array of "set" array.
+     * @return string a SET clause.
+     *
+     * @see _compileSet()
+     */
+    protected function _compileSet(array $sets)
+    {
+        foreach ($sets as $set)
+        {
+            $sql[] = $this->_compileSetPart($set);
+        }
+
+        $sql = 'SET ' . implode(',', $sql);
+        return $sql;
+    }
+
+    /**
+     * Compile a part of a SET clause.
+     *
+     * $set array entries:
+     *
+     *  * 'tableAlias': The table alias to use.
+     *  * 'column': The column.
+     *  * 'value': The value.
+     *
+     * @param array $set The set clause part data.
+     * @return string SQL
+     */
+    protected function _compileSetPart(array $set)
+    {
+        $left  = $this->column($set['column'], $set['tableAlias']);
+        $right = $this->parameterize($set['value']);
+
+        return $left . ' = ' . $right;
     }
 }

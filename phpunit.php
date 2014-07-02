@@ -8,6 +8,7 @@ $cfg->doForeignKeyWork = true;
 $cfg->debug            = true;
 $cfg->modelDirectory   = __DIR__ . '/tests/models/';
 $cfg->dateFormat       = 'd/m/Y';
+$cfg->foreignKeySuffix = 'Id';
 
 $sar = new SimpleAR($cfg);
 

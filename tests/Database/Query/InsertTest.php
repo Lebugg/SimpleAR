@@ -1,20 +1,19 @@
 <?php
 
-use \SimpleAR\Database\Query\Insert;
+use \SimpleAR\Database\Query;
+use \SimpleAR\Database\Builder\InsertBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
 
 class InsertTest extends PHPUnit_Framework_TestCase
 {
-    public function setUp()
+    public function testSelectOptionMethod()
     {
         global $sar;
         $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
-        $sar->db->setConnection($conn);
-    }
+        $insert = new Query(new InsertBuilder, new BaseCompiler, $conn);
 
-    public function testSelectOptionMethod()
-    {
-        $insert = new Insert('Article');
-        $insert->fields('blogId', 'title')
+        $insert->root('Article')
+            ->fields('blogId', 'title')
             ->values(12, 'Awesome!')
             ->run();
 
@@ -28,12 +27,12 @@ class InsertTest extends PHPUnit_Framework_TestCase
     public function testInsertId()
     {
         global $sar;
-        $conn = $sar->db->connection();
+        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
         $conn->expects($this->once())->method('lastInsertId')->will($this->returnValue(12));
 
-        $insert = new Insert('Article');
+        $insert = new Query(null, null, $conn);
 
-        $this->assertEquals(12, $insert->insertId());
+        $this->assertEquals(12, $insert->getConnection()->lastInsertId());
     }
 
 }
