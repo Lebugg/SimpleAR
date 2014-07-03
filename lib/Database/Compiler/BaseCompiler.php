@@ -29,6 +29,9 @@ class BaseCompiler extends Compiler
             'aggregates',
             'from',
             'where',
+            'orderBy',
+            'limit',
+            'offset',
         ),
         'update' => array(
             'updateFrom',
@@ -76,6 +79,14 @@ class BaseCompiler extends Compiler
     public function compileSelect(Query $q)
     {
         $components = $this->components['select'];
+
+        // If we are constructing query over several tables, we should use
+        // table aliases.
+        if (count($q->components['from']) > 1)
+        {
+            $this->useTableAlias = true;
+        }
+
         $sql = $this->_compileComponents($q, $components);
         $sql = 'SELECT ' . $this->_concatenate($sql);
 
@@ -84,6 +95,13 @@ class BaseCompiler extends Compiler
 
     public function compileUpdate(Query $q)
     {
+        // If we are constructing query over several tables, we should use
+        // table aliases.
+        if (count($q->components['updateFrom']) > 1)
+        {
+            $this->useTableAlias = true;
+        }
+
         $components = $this->components['update'];
         $sql = $this->_compileComponents($q, $components);
         $sql = 'UPDATE ' . $this->_concatenate($sql);
@@ -93,6 +111,13 @@ class BaseCompiler extends Compiler
 
     public function compileDelete(Query $q)
     {
+        // If we are constructing query over several tables, we should use
+        // table aliases.
+        if (! empty($q->components['using']))
+        {
+            $this->useTableAlias = true;
+        }
+
         $components = $this->components['delete'];
         $sql = $this->_compileComponents($q, $components);
         $sql = 'DELETE ' . $this->_concatenate($sql);
@@ -213,6 +238,27 @@ class BaseCompiler extends Compiler
     protected function _compileFrom($from)
     {
         return 'FROM ' . $this->_compileJoins($from);
+    }
+
+    protected function _compileOrderBy($orderBys)
+    {
+        foreach ($orderBys as $item)
+        {
+            $col = $this->column($item['column'], $item['tableAlias']);
+            $sql[] = $col . ' ' . $item['sort'];
+        }
+
+        return 'ORDER BY ' . implode(',', $sql);
+    }
+
+    protected function _compileLimit($limit)
+    {
+        return 'LIMIT ' . $limit;
+    }
+
+    protected function _compileOffset($offset)
+    {
+        return 'OFFSET ' . $offset;
     }
 
     /**
@@ -518,7 +564,8 @@ class BaseCompiler extends Compiler
      */
     protected function _compileSetPart(array $set)
     {
-        $left  = $this->column($set['column'], $set['tableAlias']);
+        $tableAlias = $this->useTableAlias ? $set['tableAlias'] : '';
+        $left  = $this->column($set['column'], $tableAlias);
         $right = $this->parameterize($set['value']);
 
         return $left . ' = ' . $right;

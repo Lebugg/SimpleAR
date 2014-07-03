@@ -216,7 +216,7 @@ class WhereBuilder extends Builder
      */
     public function getInvolvedTable($tableAlias)
     {
-        if (! $tableAlias)
+        if ($tableAlias === $this->getRootAlias())
         {
             return $this->getRootTable();
         }
@@ -488,7 +488,9 @@ class WhereBuilder extends Builder
         list($relations, $attribute) = $this->separateAttributeFromRelations($attribute);
 
         // 2)
-        $tableAlias = $this->relationsToTableAlias($relations);
+        $tableAlias = $relations
+            ? $this->relationsToTableAlias($relations)
+            : $this->getRootAlias();
         $table = $this->getInvolvedTable($tableAlias);
 
         // 3)

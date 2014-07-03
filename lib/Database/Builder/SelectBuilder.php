@@ -11,6 +11,8 @@ class SelectBuilder extends WhereBuilder
     public $availableOptions = array(
         'root',
         'conditions',
+        'limit',
+        'offset',
     );
 
     protected function _onAfterBuild()
@@ -58,5 +60,23 @@ class SelectBuilder extends WhereBuilder
 
         $this->_components['aggregates'][] = compact('columns', 'function',
             'tableAlias', 'resultAlias');
+    }
+
+    public function orderBy($attribute, $sort = 'ASC')
+    {
+        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
+        $column = $columns[0];
+
+        $this->_components['orderBy'][] = compact('tableAlias', 'column', 'sort');
+    }
+
+    public function _buildLimit($limit)
+    {
+        $this->_components['limit'] = (int) $limit;
+    }
+
+    public function _buildOffset($offset)
+    {
+        $this->_components['offset'] = (int) $offset;
     }
 }

@@ -77,7 +77,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $this->_builder->build($options);
 
-        $expected = array(new SimpleCond('', array('author_id'), '=', 12));
+        $expected = array(new SimpleCond('_', array('author_id'), '=', 12));
         $this->assertArrayHasKey('where', $components);
         $this->assertEquals($expected, $components['where']);
 
@@ -94,8 +94,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components =$this->_builder->build($options);
 
         $expected = array();
-        $expected[] = new SimpleCond('', array('author_id'), '=', array(12, 15, 16), 'AND');
-        $expected[] = new SimpleCond('', array('title'), '=', 'Essays', 'AND');
+        $expected[] = new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
+        $expected[] = new SimpleCond('_', array('title'), '=', 'Essays', 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
     }
@@ -118,11 +118,11 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components =$this->_builder->build($options);
 
-        $expected[] = new SimpleCond('', array('author_id'), '=', 12, 'AND');
-        $expected[] = new SimpleCond('', array('blog_id'), '=', 15, 'OR');
+        $expected[] = new SimpleCond('_', array('author_id'), '=', 12, 'AND');
+        $expected[] = new SimpleCond('_', array('blog_id'), '=', 15, 'OR');
 
-        $nested[] = new SimpleCond('', array('author_id'), '!=', array(12, 15, 16), 'AND');
-        $nested[] = new SimpleCond('', array('title'), '=', 'Alice in Wonderland', 'AND');
+        $nested[] = new SimpleCond('_', array('author_id'), '!=', array(12, 15, 16), 'AND');
+        $nested[] = new SimpleCond('_', array('title'), '=', 'Alice in Wonderland', 'AND');
         $expected[] = new NestedCond($nested, 'OR');
 
         $this->assertCount(3, $components['where']);
@@ -166,7 +166,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build($opts);
 
-        $expected[] = new SimpleCond('', 'name', '=', 'Glob', 'AND');
+        $expected[] = new SimpleCond('_', 'name', '=', 'Glob', 'AND');
         $expected[] = new SimpleCond('articles', array('title'), 'LIKE', '%beer%', 'AND');
         $expected[] = new NestedCond(array(
             new SimpleCond('articles.author', array('id'), '=', array(12,15,16), 'AND'),

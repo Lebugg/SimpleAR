@@ -49,6 +49,16 @@ class Builder
     protected $_useModel = false;
 
     /**
+     * The alias to use for root table.
+     *
+     * Table aliases are based on model relation names. Since root model is the
+     * root, there is no relation name for it.
+     *
+     * @var string
+     */
+    protected $_rootAlias = '_';
+
+    /**
      * The list of values to pass the query executor.
      *
      * @var array
@@ -141,6 +151,11 @@ class Builder
     public function getRootTable()
     {
         return $this->_table;
+    }
+
+    public function getRootAlias()
+    {
+        return $this->_rootAlias;
     }
 
     /**

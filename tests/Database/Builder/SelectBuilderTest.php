@@ -58,4 +58,50 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b->count('attribute');
         $b->count('my.attribute', 'coolAlias');
     }
+
+    public function testLimit()
+    {
+        $b = new SelectBuilder();
+        $b->limit(5);
+
+        $components = $b->build();
+
+        $this->assertEquals(5, $components['limit']);
+    }
+
+    public function testOffset()
+    {
+        $b = new SelectBuilder();
+        $b->offset(12);
+
+        $components = $b->build();
+
+        $this->assertEquals(12, $components['offset']);
+    }
+
+    public function testOrderBy()
+    {
+        $b = new SelectBuilder();
+        $b->root('Article');
+        $b->orderBy('author/lastName');
+        $b->orderBy('created_at', 'DESC');
+
+        $components = $b->build();
+
+        $expected = array(
+            array(
+                'tableAlias' => 'author',
+                'column' => 'last_name',
+                'sort' => 'ASC',
+            ),
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+                'sort' => 'DESC',
+            ),
+        );
+
+
+        $this->assertEquals($expected, $components['orderBy']);
+    }
 }

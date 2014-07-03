@@ -44,6 +44,7 @@ class Article extends SimpleAR\Orm\Model
                 'blogId' => 'blog_id',
                 'title',
                 'authorId' => 'author_id',
+                'created_at',
             ));
             self::$table->modelBaseName = 'Article';
             self::$table->order = array('title' => 'ASC');

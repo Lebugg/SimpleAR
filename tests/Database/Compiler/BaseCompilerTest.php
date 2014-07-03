@@ -69,11 +69,11 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
     }
 
-    public function testSelectBasicWithTableAlias()
+    public function notestSelectBasicWithTableAlias()
     {
         $query = new Query();
         $compiler = new BaseCompiler();
-        $compiler->useTableAlias = true;
+        //$compiler->useTableAlias = true;
 
         $query->components['from'] = array(new JoinClause('articles', 'a'));
 
@@ -99,7 +99,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     {
         $query = new Query();
         $compiler = new BaseCompiler();
-        $compiler->useTableAlias = true;
+        //$compiler->useTableAlias = true;
         $compiler->useResultAlias = true;
 
         $query->components['from'] = array(new JoinClause('articles', 'a'));
@@ -110,7 +110,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
             'resultAlias' => '_'
         ));
         $query->components['columns'] = $cols;
-        $expected = 'SELECT `a`.`id` AS `_.id`,`a`.`author_id` AS `_.authorId`,`a`.`title` AS `_.title` FROM `articles` `a`';
+        $expected = 'SELECT `id` AS `_.id`,`author_id` AS `_.authorId`,`title` AS `_.title` FROM `articles`';
         $result   = $compiler->compileSelect($query);
         $this->assertEquals($expected, $result);
     }
@@ -122,33 +122,25 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $query->components['deleteFrom'] = 'articles'; 
         $expectedSql = 'DELETE FROM `articles`';
         $resultSql   = $compiler->compileDelete($query);
-    }
 
-    public function testCompileDeleteUsingTableAlias()
-    {
         $query = new Query();
-        $compiler = new BaseCompiler();
 
         $query->components['deleteFrom'] = 'articles';
         $query->components['using'] = array(new JoinClause('articles'));
-        $compiler->useTableAlias = true;
+        //$compiler->useTableAlias = true;
 
         $expectedSql = 'DELETE FROM `articles` USING `articles` `articles`';
         $resultSql   = $compiler->compileDelete($query);
 
         $this->assertEquals($expectedSql, $resultSql);
-    }
 
-    public function testCompileDeleteOnSeveralTablesWithoutAlias()
-    {
         $query = new Query();
-        $compiler = new BaseCompiler();
 
         // Without ON clause.
         $query->components['deleteFrom'] = array('articles', 'users');
         $query->components['using'] = array(new JoinClause('articles'), new JoinClause('users'));
 
-        $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` INNER JOIN `users`';
+        $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` `articles` INNER JOIN `users` `users`';
         $resultSql   = $compiler->compileDelete($query);
 
         // With ON clause.
@@ -157,7 +149,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $joins[] = (new JoinClause('users'))->on('articles', 'user_id', 'users', 'id');
         $query->components['using'] = $joins;
 
-        $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` INNER JOIN `users` ON `articles`.`user_id` = `users`.`id`';
+        $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` `articles` INNER JOIN `users` `users` ON `articles`.`user_id` = `users`.`id`';
         $resultSql   = $compiler->compileDelete($query);
 
         $this->assertEquals($expectedSql, $resultSql);
@@ -167,7 +159,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     {
         $query    = new Query();
         $compiler = new BaseCompiler();
-        $compiler->useTableAlias = true;
+        //$compiler->useTableAlias = true;
 
         // Without ON clause.
         $query->components['deleteFrom'] = array('a', 'u');
@@ -199,11 +191,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $query->components['where'] = array($where);
 
         $expected = 'WHERE `author_id` = ?';
-        $result   = $compiler->compileWhere($query);
-        $this->assertEquals($expected, $result);
-
-        $compiler->useTableAlias = true;
-        $expected = 'WHERE `a`.`author_id` = ?';
         $result   = $compiler->compileWhere($query);
         $this->assertEquals($expected, $result);
     }
@@ -267,6 +254,59 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $q->components['aggregates'] = $agg;
 
         $expected = 'SELECT COUNT(*),COUNT(`articles`.*) AS `#articles`,SUM(`articles`.`views`) AS `#views` FROM `articles`';
+        $this->assertEquals($expected, $c->compileSelect($q));
+    }
+
+    public function testCompileLimit()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $q->components['from'] = array(new JoinClause('articles'));
+        $q->components['limit'] = 5;
+
+        $expected = 'SELECT * FROM `articles` LIMIT 5';
+        $this->assertEquals($expected, $c->compileSelect($q));
+    }
+
+    public function testOffset()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $q->components['from'] = array(new JoinClause('articles'));
+        $q->components['offset'] = 12;
+
+        $expected = 'SELECT * FROM `articles` OFFSET 12';
+        $this->assertEquals($expected, $c->compileSelect($q));
+    }
+
+    public function testOrderBy()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $jc[] = new JoinClause('articles', '_');
+        $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
+        $q->components['from'] = $jc;
+        $q->components['orderBy'] = array(
+            array(
+                'tableAlias' => 'author',
+                'column' => 'last_name',
+                'sort' => 'ASC',
+            ),
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+                'sort' => 'DESC',
+            ),
+        );
+
+        $expected = 'SELECT * FROM `articles` `_` INNER JOIN `authors` `author` ON `_`.`author_id` = `author`.`id` ' .
+            'ORDER BY `author`.`last_name` ASC,`_`.`created_at` DESC';
         $this->assertEquals($expected, $c->compileSelect($q));
     }
 }
