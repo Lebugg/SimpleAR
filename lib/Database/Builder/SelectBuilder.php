@@ -70,12 +70,20 @@ class SelectBuilder extends WhereBuilder
         $this->_components['orderBy'][] = compact('tableAlias', 'column', 'sort');
     }
 
-    public function _buildLimit($limit)
+    public function groupBy($attribute)
+    {
+        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
+        $column = $columns[0];
+
+        $this->_components['groupBy'][] = compact('tableAlias', 'column');
+    }
+
+    protected function _buildLimit($limit)
     {
         $this->_components['limit'] = (int) $limit;
     }
 
-    public function _buildOffset($offset)
+    protected function _buildOffset($offset)
     {
         $this->_components['offset'] = (int) $offset;
     }

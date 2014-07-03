@@ -30,6 +30,7 @@ class BaseCompiler extends Compiler
             'from',
             'where',
             'orderBy',
+            'groupBy',
             'limit',
             'offset',
         ),
@@ -240,15 +241,27 @@ class BaseCompiler extends Compiler
         return 'FROM ' . $this->_compileJoins($from);
     }
 
-    protected function _compileOrderBy($orderBys)
+    protected function _compileOrderBy(array $orderBys)
     {
         foreach ($orderBys as $item)
         {
+            $tableAlias = $this->useTableAlias ? $item['tableAlias'] : '';
             $col = $this->column($item['column'], $item['tableAlias']);
             $sql[] = $col . ' ' . $item['sort'];
         }
 
         return 'ORDER BY ' . implode(',', $sql);
+    }
+
+    protected function _compileGroupBy(array $groups)
+    {
+        foreach ($groups as $g)
+        {
+            $tableAlias = $this->useTableAlias ? $g['tableAlias'] : '';
+            $sql[] = $this->column($g['column'], $g['tableAlias']);
+        }
+
+        return 'GROUP BY ' . implode(',', $sql);
     }
 
     protected function _compileLimit($limit)

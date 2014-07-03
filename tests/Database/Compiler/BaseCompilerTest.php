@@ -309,4 +309,29 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
             'ORDER BY `author`.`last_name` ASC,`_`.`created_at` DESC';
         $this->assertEquals($expected, $c->compileSelect($q));
     }
+
+    public function testGroupBy()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $jc[] = new JoinClause('articles', '_');
+        $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
+        $q->components['from'] = $jc;
+        $q->components['groupBy'] = array(
+            array(
+                'tableAlias' => 'author',
+                'column' => 'last_name',
+            ),
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+            ),
+        );
+
+        $expected = 'SELECT * FROM `articles` `_` INNER JOIN `authors` `author` ON `_`.`author_id` = `author`.`id` ' .
+            'GROUP BY `author`.`last_name`,`_`.`created_at`';
+        $this->assertEquals($expected, $c->compileSelect($q));
+    }
 }
