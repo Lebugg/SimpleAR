@@ -138,7 +138,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals('Article', $b->getInvolvedModel('articles'));
         $this->assertEquals(Article::table(), $b->getInvolvedTable('articles'));
-        $jc = (new JoinClause('articles', 'articles'))->on('', 'id', 'articles', 'blog_id');
+        $jc = (new JoinClause('articles', 'articles'))->on('_', 'id', 'articles', 'blog_id');
         $this->assertEquals($jc, $b->getJoinClause('articles'));
 
         $this->assertEquals('Author', $b->getInvolvedModel('articles.author'));

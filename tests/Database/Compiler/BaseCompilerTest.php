@@ -334,4 +334,29 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
             'GROUP BY `author`.`last_name`,`_`.`created_at`';
         $this->assertEquals($expected, $c->compileSelect($q));
     }
+
+    public function testWith()
+    {
+        $q = new Query();
+
+        $jc = array(
+            (new JoinClause('blogs', '_')),
+            (new JoinClause('articles', 'articles', JoinClause::LEFT))->on('_', 'id', 'articles', 'blog_id')
+        );
+
+        $columns = array(
+            '_' => array('columns' => array('*')),
+            'articles' => array('columns' => array('*'))
+        );
+
+        $q->components['from'] = $jc;
+        $q->components['columns'] = $columns;
+
+        $c = new BaseCompiler();
+
+        $sql = 'SELECT `_`.*,`articles`.* FROM `blogs` `_` LEFT JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id`';
+        $val = array();
+
+        $this->assertEquals($sql, $c->compile($q, 'select'));
+    }
 }

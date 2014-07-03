@@ -183,7 +183,7 @@ class WhereBuilder extends Builder
      */
     public function getInvolvedModel($alias)
     {
-        if (! $alias)
+        if ($alias === $this->getRootAlias())
         {
             return $this->getRootModel();
         }
@@ -274,7 +274,7 @@ class WhereBuilder extends Builder
      *
      * @return void
      */
-    public function addInvolvedTable($tableAlias)
+    public function addInvolvedTable($tableAlias, $joinType = JoinClause::INNER)
     {
         $alias   = '';
         $relNames = explode('.', $tableAlias);
@@ -283,11 +283,13 @@ class WhereBuilder extends Builder
         $currentModel = $this->_model;
         $currentRel   = null;
 
+        // The first alias is the root table's alias.
+        $previousAlias = $this->getRootAlias();
+
         // For each possible table alias, we check whether it known or not. If 
         // not, we get to know it.
         foreach ($relNames as $relName)
         {
-            $previousAlias = $alias;
             $alias .= $alias ? '.' . $relName : $relName;
 
             // Is this one known to us?
@@ -302,13 +304,14 @@ class WhereBuilder extends Builder
                 $currentTable = $currentModel::table();
                 $this->setInvolvedModel($alias, $currentModel);
                 $this->setInvolvedTable($alias, $currentTable);
-                $this->addJoinClause(
-                    $currentTable,
-                    $alias,
-                    $currentRel,
-                    $previousAlias
+                $this->_addJoinClause(
+                    $currentTable, $alias,
+                    $currentRel, $previousAlias,
+                    $joinType
                 );
             }
+
+            $previousAlias = $alias;
         }
     }
 
@@ -339,9 +342,11 @@ class WhereBuilder extends Builder
      * @param Table
      * @param string
      */
-    public function addJoinClause(Table $toJoin, $toJoinAlias, Relation $rel = null, $previousAlias = '')
-    {
-        $jc = new JoinClause($toJoin->name, $toJoinAlias);
+    protected function _addJoinClause(Table $toJoin, $toJoinAlias,
+        Relation $rel = null, $previousAlias = '',
+        $joinType = JoinClause::INNER
+    ) {
+        $jc = new JoinClause($toJoin->name, $toJoinAlias, $joinType);
 
         // We may have to connect it to a previous JoinClause.
         if ($rel)

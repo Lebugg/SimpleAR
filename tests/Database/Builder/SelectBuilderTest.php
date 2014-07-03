@@ -2,6 +2,7 @@
 
 use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\JoinClause;
 
 class SelectBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -127,5 +128,40 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
 
         $this->assertEquals($expected, $components['groupBy']);
+    }
+
+    public function testWith()
+    {
+        $b = new SelectBuilder();
+        $b->root('Blog');
+        $b->with('articles');
+
+        $components = $b->build();
+
+        $jc = array(
+            (new JoinClause('blogs', '_')),
+            (new JoinClause('articles', 'articles', JoinClause::LEFT))->on('_', 'id', 'articles', 'blog_id')
+        );
+
+        $columns = array(
+            '_' => array('columns' => array('*')),
+            'articles' => array('columns' => array('*'))
+        );
+
+        $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
+
+        // Deeper "with"
+        $b = new SelectBuilder();
+        $b->root('Blog');
+        $b->with('articles/author');
+
+        $components = $b->build();
+
+        $jc[] = (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id');
+        $columns['articles.author'] = array('columns' => array('*'));
+
+        $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
     }
 }
