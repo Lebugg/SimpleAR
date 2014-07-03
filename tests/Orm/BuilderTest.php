@@ -172,4 +172,48 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(12, $qb->root('Article')->count());
     }
 
+    public function testModelConstructWithEagerLoad()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+
+        $return[] = array(
+            'id' => 5,
+            'title' => 'Das Kapital',
+            'authorId' => 12,
+            'blogId' => 2,
+            'author.id' => 12,
+            'author.firstName' => 'Karl',
+            'author.lastName' => 'Marx',
+            'blog.id' => 2,
+            'blog.title' => 'My Nice Blog',
+        );
+        $return[] = array(
+            'id' => 6,
+            'title' => 'What about Foo?',
+            'authorId' => 13,
+            'blogId' => 2,
+            'author.id' => 13,
+            'author.firstName' => 'John',
+            'author.lastName' => 'Doe',
+            'blog.id' => 2,
+            'blog.title' => 'My Nice Blog',
+        );
+
+        $conn->expects($this->exactly(4))->method('getNextRow')->will($this->onConsecutiveCalls(
+            $return[0], $return[1], false
+        ));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $articles = $qb->root('Article')->all();
+        foreach ($articles as $i => $article)
+        {
+            $this->assertInstanceOf('Article', $article);
+            $this->assertInstanceOf('Author', $article->author);
+            $this->assertEquals($return[$i]['author.firstName'], $article->author->firstName);
+            $this->assertInstanceOf('Blog', $article->blog);
+            $this->assertEquals($return[$i]['blog.id'], $article->blog->id);
+        }
+    }
 }
