@@ -63,6 +63,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
     public function testLimit()
     {
         $b = new SelectBuilder();
+        $b->root('Blog');
         $b->limit(5);
 
         $components = $b->build();
@@ -73,6 +74,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
     public function testOffset()
     {
         $b = new SelectBuilder();
+        $b->root('Blog');
         $b->offset(12);
 
         $components = $b->build();
@@ -144,8 +146,8 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => array('columns' => array('*')),
-            'articles' => array('columns' => array('*'))
+            '_' => array('columns' => array_flip(Blog::table()->getColumns())),
+            'articles' => array('columns' => array_flip(Article::table()->getColumns())),
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -159,7 +161,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
 
         $jc[] = (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id');
-        $columns['articles.author'] = array('columns' => array('*'));
+        $columns['articles.author'] = array('columns' => array_flip(Author::table()->getColumns()));
 
         $this->assertEquals($jc, $components['from']);
         $this->assertEquals($columns, $components['columns']);

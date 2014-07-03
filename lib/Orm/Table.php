@@ -83,4 +83,25 @@ class Table
     {
         return $s == 'id' || (isset($this->columns[$s]) || array_key_exists($this->columns[$s]));
     }
+
+    /**
+     * Get *all* table columns, including primary keys.
+     *
+     * It returns an associative between attribute names and column names.
+     *
+     * @return array
+     */
+    public function getColumns()
+    {
+        $columns = $this->columns;
+
+        $pk = (array) $this->primaryKey;
+        $pkCols = (array) $this->primaryKeyColumns;
+        foreach ($pk as $i => $attrName)
+        {
+            $columns[$attrName] = $pkCols[$i];
+        }
+
+        return $columns;
+    }
 }

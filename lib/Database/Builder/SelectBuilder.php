@@ -127,9 +127,17 @@ class SelectBuilder extends WhereBuilder
      *
      * @param string $tableAlias The alias of the table the columns belong.
      * @param array  $columns The columns to select. (Columns, not attributes).
+     * @param bool   $expand Whether to expand '*' wildcard or not.
      */
-    protected function _selectColumns($tableAlias, array $columns)
+    protected function _selectColumns($tableAlias, array $columns, $expand = true)
     {
+        if ($expand && $columns === array('*'))
+        {
+            $columns = $this->getInvolvedTable($tableAlias)->getColumns();
+            // Compiler wants it the other way.
+            $columns = array_flip($columns);
+        }
+
         $this->_components['columns'][$tableAlias]['columns'] = $columns;
     }
 

@@ -12,6 +12,7 @@ use \SimpleAR\Orm\Table;
 use \SimpleAR\Facades\Cfg;
 
 use \SimpleAR\Exception\MalformedOptionException;
+use \SimpleAR\Exception;
 
 class WhereBuilder extends Builder
 {
@@ -218,7 +219,12 @@ class WhereBuilder extends Builder
     {
         if ($tableAlias === $this->getRootAlias())
         {
-            return $this->getRootTable();
+            if (($t = $this->getRootTable()) === null)
+            {
+                throw new Exception('Root is not set.');
+            }
+
+            return $t;
         }
 
         if (! $this->isKnownTableAlias($tableAlias))
