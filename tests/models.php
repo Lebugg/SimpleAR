@@ -28,6 +28,9 @@ class Blog extends SimpleAR\Orm\Model
 
 class Article extends SimpleAR\Orm\Model
 {
+    protected static $_tableName  = 'articles';
+    protected static $_primaryKey = 'id';
+
     public static $_relations = array(
         'author' => array(
             'type'  => 'belongs_to',
@@ -39,23 +42,16 @@ class Article extends SimpleAR\Orm\Model
         ),
     );
 
-    public static $table;
-    public static function table()
-    {
-        if (self::$table === null)
-        {
-            self::$table = new \SimpleAR\Orm\Table('articles', 'id', array(
-                'blogId' => 'blog_id',
-                'title',
-                'authorId' => 'author_id',
-                'created_at',
-            ));
-            self::$table->modelBaseName = 'Article';
-            self::$table->order = array('title' => 'ASC');
-        }
+    protected static $_columns = array(
+        'blogId' => 'blog_id',
+        'title',
+        'authorId' => 'author_id',
+        'created_at',
+    );
 
-        return self::$table;
-    }
+    protected static $_orderBy = array(
+        'title' => 'ASC',
+    );
 }
 
 class Author extends SimpleAR\Orm\Model
@@ -76,3 +72,5 @@ class Author extends SimpleAR\Orm\Model
         return self::$table;
     }
 }
+
+Article::wakeup();

@@ -1336,9 +1336,7 @@ abstract class Model
      */
     public static function table()
     {
-        $a = explode('\\', get_called_class());
-
-        return self::$_tables[array_pop($a)];
+        return self::$_tables[get_called_class()];
     }
 
     /**
@@ -1382,14 +1380,6 @@ abstract class Model
         $with && $this->_populateEagerLoad($with);
     }
 
-    // public static function createFromRow($row, array $options = array())
-    // {
-    //     $instance = new static(null, $options);
-    //     $instance->_load($row);
-    //
-    //     return $instance;
-    // }
-
     /**
      * Initialize current model class.
      *
@@ -1407,44 +1397,41 @@ abstract class Model
      */
     public static function wakeup()
     {
-		// get_called_class() returns the namespaced class. So we have to parse
-		// it.
-		$a = explode('\\', get_called_class());
-		$currentClass = array_pop($a);
+        // It is way easier to use ReflectionClass!
+        $fqcn = get_called_class();
+        $rc = new \ReflectionClass($fqcn);
 
 		// Set defaults for model classes
-		if ($currentClass != 'Model')
-		{
-            $suffix        = Cfg::get('modelClassSuffix');
-            $modelBaseName = $suffix ? strstr($currentClass, $suffix, true) : $currentClass;
+        $suffix = Cfg::get('modelClassSuffix');
+        $className = $rc->getShortName();
+        $modelBaseName = $suffix ? strstr($className, $suffix, true) : $className;
 
-            $tableName  = static::$_tableName  ?: call_user_func(Cfg::get('classToTable'), $modelBaseName);
-            $primaryKey = static::$_primaryKey ?: Cfg::get('primaryKey');
+        $tableName  = static::$_tableName  ?: call_user_func(Cfg::get('classToTable'), $modelBaseName);
+        $primaryKey = static::$_primaryKey ?: Cfg::get('primaryKey');
 
-            // Columns are defined in model, perfect!
-			if (static::$_columns)
-			{
-                $columns = static::$_columns;
-			}
-			// They are not, fetch them from database.
-            else
+        // Columns are defined in model, perfect!
+        if (static::$_columns)
+        {
+            $columns = static::$_columns;
+        }
+        // They are not, fetch them from database.
+        else
+        {
+            $columns = self::query()->getTableColumns($tableName);
+
+            // We do not want to insert primary key in
+            // static::$_columns unless it is a compound key.
+            if (is_string($primaryKey))
             {
-                $columns = self::query()->getTableColumns($tableName);
-
-                // We do not want to insert primary key in
-                // static::$_columns unless it is a compound key.
-                if (is_string($primaryKey))
-                {
-                    unset($columns[$primaryKey]);
-                }
+                unset($columns[$primaryKey]);
             }
+        }
 
-            $table = new Table($tableName, $primaryKey, $columns);
-            $table->order       = static::$_orderBy;
-            $table->modelBaseName = $modelBaseName;
+        $table = new Table($tableName, $primaryKey, $columns);
+        $table->order       = static::$_orderBy;
+        $table->modelBaseName = $modelBaseName;
 
-            self::$_tables[$currentClass] = $table;
-		}
+        self::$_tables[$fqcn] = $table;
     }
 
     /**
