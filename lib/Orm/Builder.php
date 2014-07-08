@@ -40,6 +40,29 @@ class Builder
      */
     protected $_root;
 
+    /**
+     * Do we have eager loading processing?
+     *
+     * @var bool
+     */
+    protected $_eagerLoad = false;
+
+    /**
+     * A row fetched from DB but stored here because not used yet.
+     *
+     * @var array
+     */
+    protected $_pendingRow = false;
+
+    /**
+     * Is it worth calling Connection?
+     *
+     * True if there is no more row to fetch from DB, false otherwise.
+     *
+     * @var bool
+     */
+    protected $_noRowToFetch = false;
+
     public function __construct($root = null)
     {
         $root && $this->root($root);
@@ -147,7 +170,7 @@ class Builder
     }
 
     /**
-     * Return the current query instance or a new Select query if there is no 
+     * Return the current query instance or a new Select query if there is no
      * query yet.
      *
      * @see newQuery()
@@ -190,7 +213,7 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->run();
 
-        return $this->_getModelFromRow($q->getConnection()->getNextRow());
+        return $this->_fetchModelInstance();
     }
 
     /**
@@ -213,7 +236,7 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->run();
 
-        return $this->_getModelFromRow($q->getConnection()->getLastRow());
+        return $this->_fetchModelInstance(false);
     }
 
     /**
@@ -230,7 +253,7 @@ class Builder
         $q = $this->getQueryOrNewSelect()->run();
 
         $all = array();
-        while ($one = $this->_getModelFromRow($q->getConnection()->getNextRow()))
+        while ($one = $this->_fetchModelInstance())
         {
             $all[] = $one;
         }
@@ -253,80 +276,119 @@ class Builder
     }
 
     /**
-     * Fetch next row from DB and create a model instance out of it.
-     *
-     * @return Model
+     * Reset current query builder state.
      */
-    protected function _getModelFromRow($row)
+    public function reset()
     {
-        if ($row)
-        {
-            $class = $this->_root;
-            return $class::createFromRow($row);
-        }
+        $this->_pendingRow = false;
+        $this->_eagerLoad = false;
     }
 
     /**
-     * Return first fetch Model instance.
+     * Construct and return a model instance from result.
      *
-     * @return Model
+     * Algorithm:
+     * ----------
+     *
+     *  * Fetch data;
+     *  * Instanciate model object and populate it;
+     *  * Return it.
+     *
+     * If some model relation are to be eager loaded, the 'fetch data' step can
+     * retrieve several rows from DB.
      */
-    protected function row()
+    protected function _fetchModelInstance($next = true)
     {
+        $data = $this->_fetchModelInstanceData($this->_eagerLoad, $next);
+
+        if (! $data)
+        {
+            return null;
+        }
+
+        $model = $this->_root;
+        $instance = new $model();
+        $instance->populate($data);
+
+        return $instance;
+    }
+
+    protected function _fetchModelInstanceData($eagerLoad = false, $next = true)
+    {
+        // If there is no eager load, we are sure that one row equals one model
+        // instance.
+        if (! $eagerLoad)
+        {
+            return $this->_getNextOrPendingRow($next);
+        }
+
+
+        // Otherwise, it is more complicated: several rows can be returned for
+        // only one model instance.
+
+        $model = $this->_root;
+        $pk = array_flip($model::table()->getPrimaryKey());
+
         $res = array();
+        $instanceId  = null;
 
-        $reversedPK = $this->_table->isSimplePrimaryKey
-            ? array('id' => 0)
-            : array_flip((array) $this->_table->primaryKey);
+        while (($row = $this->_getNextOrPendingRow($next)) !== false)
+        {
+            // Get the ID of the row.
+            $rowId = array_intersect_key($row, $pk);
 
-        $resId      = null;
-
-        // We want one resulting object. But we may have to process several lines in case that eager
-        // load of related models have been made with has_many or many_many relations.
-        while (
-               ($row = $this->_pendingRow)                    !== false ||
-               ($row = $this->_sth->fetch(\PDO::FETCH_ASSOC)) !== false
-        ) {
-
-            if ($this->_pendingRow)
+            // I remind us of that we want *one* model instance: we have to stop
+            // when the next row does not concern the same model instance than
+            // the previous.
+            if ($instanceId && $instanceId !== $rowId)
             {
-                // Prevent infinite loop.
-                $this->_pendingRow = false;
-                // Pending row is already parsed.
-                $parsedRow = $row;
-            }
-            else
-            {
-                $parsedRow = $this->_parseRow($row);
-            }
-
-            // New main object, we are finished.
-            if ($res && $resId !== array_intersect_key($parsedRow, $reversedPK)) // Compare IDs
-            {
-                $this->_pendingRow = $parsedRow;
+                $this->_pendingRow = $row;
                 break;
             }
 
-            // Same row but there is no linked model to fetch. Weird. Query must be not well
-            // constructed. (Lack of GROUP BY).
-            if ($res && !isset($parsedRow['_WITH_']))
-            {
-                continue;
-            }
+            $instanceId = $rowId;
 
-            // Now, we have to combined new parsed row with our constructing result.
+            // Parse result (parse eager load).
+            $row = $this->_parseRow($row);
 
-            if ($res)
-            {
-                // Merge related models.
-                $res = \SimpleAR\array_merge_recursive_distinct($res, $parsedRow);
-            }
-            else
-            {
-                $res   = $parsedRow;
+            // Construct result.
+            $res = $res ? \SimpleAR\array_merge_recursive_distinct($res, $row) : $row;
+        }
 
-                // Store result object ID for later use.
-                $resId = array_intersect_key($res, $reversedPK);
+        return $res;
+    }
+
+    /**
+     * Get next DB row or the pending one is there is.
+     *
+     * @return array
+     */
+    protected function _getNextOrPendingRow($next = true)
+    {
+        $row = $this->_pendingRow ?: $this->_getNextRow($next);
+        $this->_pendingRow = false;
+
+        return $row;
+    }
+
+    /**
+     * Get next DB row.
+     *
+     * $_query must be set.
+     *
+     * @return array
+     */
+    protected function _getNextRow($next = true)
+    {
+        $res = false;
+
+        if (! $this->_noRowToFetch)
+        {
+            $res = $this->_query->getConnection()->getNextRow($next);
+
+            if ($res === false)
+            {
+                $this->_noRowToFetch = true;
             }
         }
 
@@ -351,57 +413,50 @@ class Builder
      *
      * Note: does not parse relations recursively (only on one level).
      *
+     * This function has to be called only if we have to parse eager loaded
+     * related models.
+     *
      * @return array
      */
-    private function _parseRow($row)
+    private function _parseRow(array $row)
     {
-        $res = array();
+        static $i = 0;
+
+        $res = array(
+            // To store eager loaded stuff.
+            '__with__' => array()
+        );
 
         foreach ($row as $key => $value)
         {
-            // We do not want null values. It would result with linked model instances with null 
-            // attributes and null IDs. Moreover, it reduces process time (does not process useless 
-            // null-valued attributes).
+            // Keys are prefixed with alias matching relation names.
+            // They are constructed like the following:
             //
-            // EDIT
-            // ----
-            // Note: Now, the check is made in Model::_load(). We don't keep linked models with null 
-            // ID at that moment.
-            // Why: by discarding attributes with null value here, object's attribute array was not 
-            // filled with them and we were forced to check attribute presence in columns definition 
-            // in Model::__get(). Not nice.
+            //  `[<relationName>\.]*<attributeName>`
             //
-            // if ($value === null) { continue; }
+            // If there is no relation name, it means that attribute belongs to
+            // root model.
+            $relations = explode('.', $key);
+            $attribute = array_pop($relations);
 
-            // Keys are prefixed with an alias corresponding:
-            // - either to the root model;
-            // - either to a linked model (thanks to the relation name).
-            if ($this->_useResultAlias)
+            // There may be several relations; we need to go down the
+            // arborescence.
+            $end =& $res;
+            foreach ($relations as $rel)
             {
-                $a = explode('.', $key);
-
-                if ($a[0] === $this->_rootAlias)
+                if (! isset($end['__with__'][$rel]))
                 {
-                    // $a[1]: table column name.
-
-                    $res[$a[1]] = $value;
+                    // We add a "__with__" entry at each level for easy
+                    // recursivity.
+                    $end['__with__'][$rel][$i] = array();
                 }
-                else
-                {
-                    // $a[0]: relation name.
-                    // $a[1]: linked table column name.
-
-                    $res['_WITH_'][$a[0]][$a[1]] = $value;
-                }
+                $end =& $end['__with__'][$rel][$i];
             }
 
-            // Much more simple in that case.
-            else
-            {
-                $res[$key] = $value;
-            }
+            $end[$attribute] = $value;
         }
 
+        $i++;
         return $res;
     }
 
@@ -412,13 +467,21 @@ class Builder
      *
      * Note: The SelectBuilder will be used.
      * -----
-     * 
+     *
      * @return Query The current query instance.
      */
     public function __call($name, $args)
     {
-        $q = $this->newQuery(new SelectBuilder);
+        $q = $this->getQueryOrNewSelect();
 
+        // If 'with()' option is called, query builder has to parse eager loaded
+        // models.
+        if ($name === 'with' && $args)
+        {
+            $this->_eagerLoad = true;
+        }
+
+        // Redirect method calls on Query.
         switch (count($args))
         {
             case 0: $q->$name(); break;
@@ -429,6 +492,7 @@ class Builder
             default: call_user_func_array(array($q, $name), $args);
         }
 
+        // We always want to use the query builder, not the Query class.
         return $this;
     }
 }

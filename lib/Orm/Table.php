@@ -85,6 +85,18 @@ class Table
     }
 
     /**
+     * Return the primary key column(s).
+     *
+     * It always return an array, even if primary key is not compound.
+     *
+     * @return array
+     */
+    public function getPrimaryKey()
+    {
+        return (array) $this->primaryKey;
+    }
+
+    /**
      * Get *all* table columns, including primary keys.
      *
      * It returns an associative between attribute names and column names.

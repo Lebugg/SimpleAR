@@ -540,9 +540,7 @@ abstract class Model
     public function __isset($name)
     {
         return isset($this->_attributes[$name])
-            || isset(static::$_relations[$name])
             || array_key_exists($name, $this->_attributes)
-            || array_key_exists($name, static::$_relations)
             ;
     }
 
@@ -568,10 +566,16 @@ abstract class Model
      */
     public function __set($name, $value)
     {
-        if (method_exists($this, 'set_' . $name))
+        if ($name === 'id')
+        {
+            $this->_id = $value;
+        }
+
+        elseif (method_exists($this, 'set_' . $name))
         {
             call_user_func(array($this, 'set_' . $name), $value);
         }
+
         else
         {
             $this->_attr($name, $value);
@@ -1354,13 +1358,41 @@ abstract class Model
         return self::arrayToArray($this->attributes());
     }
 
-    public static function createFromRow($row, array $options = array())
+    /**
+     * Populate a fresh model instance with data fetch from DB.
+     *
+     * @param array $data Data fetch from DB.
+     */
+    public function populate(array $data)
     {
-        $instance = new static(null, $options);
-        $instance->_load($row);
+        $with = isset($data['__with__']) ? $data['__with__'] : null;
+        unset($data['__with__']);
 
-        return $instance;
+        // Populating is easy: just call __set() on each key-value pair.
+        foreach ($data as $key => $value)
+        {
+            $this->$key = $value;
+        }
+
+        // If PK  is compound, $_id will not be set: attributes that compose PK 
+        // will, but not $_id.
+        if (! $this->_id)
+        {
+            $pk = array_flip(static::table()->getPrimaryKey());
+            $this->_id = array_intersect_key($data, $pk);
+        }
+
+        // Handle eager loading if needed.
+        $with && $this->_populateEagerLoad($with);
     }
+
+    // public static function createFromRow($row, array $options = array())
+    // {
+    //     $instance = new static(null, $options);
+    //     $instance->_load($row);
+    //
+    //     return $instance;
+    // }
 
     /**
      * Initialize current model class.
@@ -1592,6 +1624,55 @@ abstract class Model
      */
     protected function _onBeforeUpdate()
     {
+    }
+
+    protected function _populateEagerLoad(array $with)
+    {
+        foreach ($with as $relName => $data)
+        {
+            $rel = static::relation($relName);
+            $lmClass = $rel->lm->class;
+
+            if ($rel instanceof Relation\BelongsTo || $rel instanceof Relation\HasOne)
+            {
+                // $value is an array of attributes. The attributes of the linked model
+                // instance.
+                // But it *might* be an array of arrays of attributes. For instance, when
+                // relation is defined as a Has One relation but actually is a Has Many in
+                // database. In that case, SQL query would return several rows for this relation
+                // and we would result with $value to be an array of arrays.
+
+                // Array of arrays ==> array of attribute.
+                $data = reset($data);
+
+                $lmInstance = new $lmClass();
+                $lmInstance->populate($data);
+
+                $this->_attr($relName, $lmInstance);
+            }
+            else
+            {
+                // $value is an array of arrays. These subarrays contain attributes of linked
+                // models.
+                // But $value can directly be an associative array (if SQL query returned only
+                // one row). We have to check this, then.
+
+                // $data is an attribute array.
+                // Array of attributes ==> array of arrays.
+                //if (! isset($data[0])) { $data = array($data); }
+
+                $lmInstances = array();
+                foreach ($data as $attributes)
+                {
+                    $lmInstance = new $lmClass();
+                    $lmInstance->populate($attributes);
+
+                    $lmInstances[] = $lmInstance;
+                }
+
+                $this->_attr($relName, $lmInstances);
+            }
+        }
     }
 
     /**

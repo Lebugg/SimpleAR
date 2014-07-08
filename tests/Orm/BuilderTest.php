@@ -121,10 +121,10 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     public function testLast()
     {
         $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
-        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getLastRow'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
 
         $row = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
-        $conn->expects($this->once())->method('getLastRow')->will($this->returnValue($row));
+        $conn->expects($this->once())->method('getNextRow')->with(false)->will($this->returnValue($row));
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
         $article  = $qb->root('Article')->last();
@@ -143,7 +143,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $return[] = array('id' => 11, 'title' => 'My Book', 'authorId' => 1, 'blogId' => 4);
         $return[] = array('id' => 7, 'title' => 'Peter Pan', 'authorId' => 15, 'blogId' => 2);
 
-        $conn->expects($this->exactly(4))->method('getNextRow')->will($this->onConsecutiveCalls(
+        $conn->expects($this->exactly(4))->method('getNextRow')->with(true)->will($this->onConsecutiveCalls(
             $return[0], $return[1], $return[2], false
         ));
 
@@ -200,20 +200,103 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             'blog.title' => 'My Nice Blog',
         );
 
-        $conn->expects($this->exactly(4))->method('getNextRow')->will($this->onConsecutiveCalls(
+        $conn->expects($this->exactly(3))->method('getNextRow')->will($this->onConsecutiveCalls(
             $return[0], $return[1], false
         ));
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
-        $articles = $qb->root('Article')->all();
+        // with() method will set a flag to true to make the query builder 
+        // parse eager loaded models.
+        $articles = $qb->root('Article')->with('author', 'blog')->all();
         foreach ($articles as $i => $article)
         {
             $this->assertInstanceOf('Article', $article);
+            $this->assertTrue(isset($article->author));
             $this->assertInstanceOf('Author', $article->author);
             $this->assertEquals($return[$i]['author.firstName'], $article->author->firstName);
+            $this->assertTrue(isset($article->blog));
             $this->assertInstanceOf('Blog', $article->blog);
             $this->assertEquals($return[$i]['blog.id'], $article->blog->id);
         }
+    }
+
+    public function testModelConstructWithDeepEagerLoad()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+
+        $return[] = array(
+            'id' => 2,
+            'title' => 'My Nice Blog',
+            'description' => ' A blog where I say stuff.',
+            'articles.id' => 5,
+            'articles.title' => 'What about Bar?',
+            'articles.authorId' => 13,
+            'articles.blogId' => 2,
+            'articles.author.id' => 13,
+            'articles.author.firstName' => 'Karl',
+            'articles.author.lastName' => 'Marx',
+        );
+        $return[] = array(
+            'id' => 2,
+            'title' => 'My Nice Blog',
+            'description' => ' A blog where I say stuff.',
+            'articles.id' => 6,
+            'articles.title' => 'What about Foo?',
+            'articles.authorId' => 13,
+            'articles.blogId' => 2,
+            'articles.author.id' => 13,
+            'articles.author.firstName' => 'Karl',
+            'articles.author.lastName' => 'Marx',
+        );
+        $return[] = array(
+            'id' => 2,
+            'title' => 'My Nice Blog',
+            'description' => ' A blog where I say stuff.',
+            'articles.id' => 7,
+            'articles.title' => 'Article 3.',
+            'articles.authorId' => 15,
+            'articles.blogId' => 2,
+            'articles.author.id' => 15,
+            'articles.author.firstName' => 'John',
+            'articles.author.lastName' => 'Doe',
+        );
+        $return[] = array(
+            'id' => 3,
+            'title' => 'Blog 2',
+            'description' => 'A blog where on the Internet',
+            'articles.id' => 100,
+            'articles.title' => 'Huh?',
+            'articles.authorId' => 1,
+            'articles.blogId' => 3,
+            'articles.author.id' => 1,
+            'articles.author.firstName' => 'First',
+            'articles.author.lastName' => 'Last',
+        );
+
+        $conn->expects($this->exactly(5))->method('getNextRow')->will($this->onConsecutiveCalls(
+            $return[0], $return[1], $return[2], $return[3], false
+        ));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        // with() method will set a flag to true to make the query builder 
+        // parse eager loaded models.
+        $blogs = $qb->root('Blog')->with('articles/author')->all();
+        $this->assertCount(2, $blogs);
+
+        $first = $blogs[0];
+        $this->assertInstanceOf('Blog', $first);
+        $this->assertEquals('My Nice Blog', $first->title);
+        $this->assertCount(3, $first->articles);
+        $this->assertEquals('What about Foo?', $first->articles[1]->title);
+        $this->assertEquals('Article 3.', $first->articles[2]->title);
+        $this->assertEquals('Doe', $first->articles[2]->author->lastName);
+
+        $sec = $blogs[1];
+        $this->assertInstanceOf('Blog', $sec);
+        $this->assertEquals('Blog 2', $sec->title);
+        $this->assertEquals('First', $sec->articles[0]->author->firstName);
     }
 }

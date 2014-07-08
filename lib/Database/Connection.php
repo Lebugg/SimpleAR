@@ -249,11 +249,15 @@ class Connection
     /**
      * Return next fetched row from DB.
      *
+     * @param bool $next Set it to false to get previous row instead on next 
+     * row. (Default: true)
+     *
      * @return array
      */
-    public function getNextRow()
+    public function getNextRow($next = true)
     {
-        return $this->_sth->fetch(\PDO::FETCH_ASSOC);
+        $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
+        return $this->_sth->fetch(\PDO::FETCH_ASSOC|$ori);
     }
 
     /**

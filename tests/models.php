@@ -33,6 +33,10 @@ class Article extends SimpleAR\Orm\Model
             'type'  => 'belongs_to',
             'model' => 'Author',
         ),
+        'blog' => array(
+            'type'  => 'belongs_to',
+            'model' => 'Blog',
+        ),
     );
 
     public static $table;
