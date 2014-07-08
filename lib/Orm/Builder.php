@@ -197,7 +197,7 @@ class Builder
         return $this;
     }
 
-    public function getTableColumns($table)
+    public function getTableColumns($tableName)
     {
         $conn = $this->getConnection();
         $columns = $conn->query('SHOW COLUMNS FROM `' . $tableName . '`')
