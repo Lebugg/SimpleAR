@@ -1,8 +1,7 @@
-<?php
+<?php namespace SimpleAR;
 /**
  * This file contains a extension of PHP DateTime class.
  */
-namespace SimpleAR;
 
 /**
  * This extension implements __toString() function to automatically format DateTime when

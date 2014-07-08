@@ -244,6 +244,15 @@ class Config
     private $_modelDirectory = array('./models/');
 
     /**
+     * The character to use to separate relation names in query options.
+     *
+     * Default value: '/'
+     *
+     * @var char
+     */
+    private $_queryOptionRelationSeparator = '/';
+
+    /**
      * Default primary key name.
      *
      * The default primary key name. If primary key is not specified
@@ -344,20 +353,20 @@ class Config
      * @param array $a The DSN array.
      * @see \SimpleAR\Config::$_dsn
      */
-    public function dsn($a)
+    public function dsn(array $dsn)
     {
-        if (!isset($a['driver'], $a['host'], $a['name'], $a['user'], $a['password']))
+        if (!isset($dsn['driver'], $dsn['host'], $dsn['name'], $dsn['user'], $dsn['password']))
         {
             throw new Exception('Database configuration array is not complete.');
         }
 
         $this->_dsn = array(
-            'driver'   => $a['driver'],
-            'host'     => $a['host'],
-            'name'     => $a['name'],
-            'user'     => $a['user'],
-            'password' => $a['password'],
-            'charset'  => isset($a['charset']) ? $a['charset'] : $this->_charset,
+            'driver'   => $dsn['driver'],
+            'host'     => $dsn['host'],
+            'name'     => $dsn['name'],
+            'user'     => $dsn['user'],
+            'password' => $dsn['password'],
+            'charset'  => isset($dsn['charset']) ? $dsn['charset'] : $this->_charset,
         );
     }
 
