@@ -24,7 +24,25 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals('blogId', $fn('Blog'));
     }
-    
+
+    public function testClassAliases()
+    {
+        $this->assertFalse(class_exists('DB'));
+        $this->assertFalse(class_exists('SimpleAR\Model'));
+        $this->assertFalse(class_exists('Cfg'));
+
+        $cfg = new Config();
+        $cfg->aliases = array(
+            'SimpleAR\Facades\DB' => 'DB',
+            'SimpleAR\Orm\Model'  => 'SimpleAR\Model',
+        );
+        $cfg->apply();
+
+        $this->assertTrue(class_exists('DB'));
+        $this->assertTrue(class_exists('SimpleAR\Model'));
+        $this->assertFalse(class_exists('Cfg'));
+    }
+
     /*
     public function testUnknownOption()
     {

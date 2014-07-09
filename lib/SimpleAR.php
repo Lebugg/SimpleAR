@@ -89,6 +89,7 @@ class SimpleAR
     public function configure(Config $cfg)
     {
         $this->cfg = $cfg;
+        $this->cfg->apply();
         $this->localize($cfg->dateFormat);
     }
 
