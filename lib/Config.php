@@ -390,23 +390,23 @@ class Config
      *
      * This function checks that given path exists.
      *
-     * @param string|array $m The directory path or an array containing
+     * @param string|array $pathes The directory path or an array containing
      * differents directory paths.
      * @see \SimpleAR\Config::$_modelDirectory
      */
-    public function modelDirectory($m)
+    public function modelDirectory($pathes)
     {
-        $a = (array) $m;
+        $pathes = (array) $pathes;
 
-        foreach ($a as $s)
+        foreach ($pathes as $path)
         {
-            if (!is_dir($s))
+            if (! is_dir($path))
             {
-                throw new Exception('Model path "' . $s . '" does not exist.');
+                throw new Exception('Model path "' . $path . '" does not exist.');
             }
         }
 
-        $this->_modelDirectory = $a;
+        $this->_modelDirectory = $pathes;
     }
 
     /**
@@ -417,7 +417,7 @@ class Config
      */
     public function apply()
     {
-        $aliases = array_flip($this->aliases);
+        $aliases = array_flip($this->_aliases);
         array_walk($aliases, 'class_alias');
     }
 
