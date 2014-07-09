@@ -37,7 +37,7 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 	die('SimpleAR requires PHP 5.3 or higher.');
 }
 
-define('PHP_SIMPLEAR_VERSION_ID', '1.2.1');
+define('PHP_SIMPLEAR_VERSION_ID', '1.2.2');
 
 require __DIR__ . '/Config.php';
 require __DIR__ . '/Orm/Table.php';
