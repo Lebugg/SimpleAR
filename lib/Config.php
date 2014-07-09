@@ -53,7 +53,22 @@
  */
 class Config
 {
-   
+
+    /**
+     * Class aliases.
+     *
+     * This array defines aliases for classes.
+     * Keys are the original class names, values are aliases.
+     *
+     * @see http://www.php.net/manual/en/function.class-alias.php
+     * @var array
+     */
+    private $_aliases = array(
+        'SimpleAR\Orm\Model'   => 'SimpleAR\Model',
+        'SimpleAR\Facades\DB'  => 'DB',
+        'SimpleAR\Facades\Cfg' => 'Cfg',
+    );
+
     /**
      * Charset to be used by SimpleAR. Only used for database communication.
      *
@@ -375,23 +390,35 @@ class Config
      *
      * This function checks that given path exists.
      *
-     * @param string|array $m The directory path or an array containing
+     * @param string|array $pathes The directory path or an array containing
      * differents directory paths.
      * @see \SimpleAR\Config::$_modelDirectory
      */
-    public function modelDirectory($m)
+    public function modelDirectory($pathes)
     {
-        $a = (array) $m;
+        $pathes = (array) $pathes;
 
-        foreach ($a as $s)
+        foreach ($pathes as $path)
         {
-            if (!is_dir($s))
+            if (! is_dir($path))
             {
-                throw new Exception('Model path "' . $s . '" does not exist.');
+                throw new Exception('Model path "' . $path . '" does not exist.');
             }
         }
 
-        $this->_modelDirectory = $a;
+        $this->_modelDirectory = $pathes;
+    }
+
+    /**
+     * Apply configuration.
+     *
+     * Some configuration options need few operation to be correctly set. See 
+     * $_aliases for example.
+     */
+    public function apply()
+    {
+        $aliases = array_flip($this->_aliases);
+        array_walk($aliases, 'class_alias');
     }
 
     public function get($option)
