@@ -1,6 +1,5 @@
 <?php namespace SimpleAR\Orm;
 
-use SimpleAR\Database\Query;
 use SimpleAR\Database\Builder as QueryBuilder;
 use SimpleAR\Database\Builder\InsertBuilder;
 use SimpleAR\Database\Builder\SelectBuilder;
@@ -8,6 +7,9 @@ use SimpleAR\Database\Builder\UpdateBuilder;
 use SimpleAR\Database\Builder\DeleteBuilder;
 use SimpleAR\Database\Compiler;
 use SimpleAR\Database\Connection;
+use SimpleAR\Database\Query;
+
+use SimpleAR\Facades\Cfg;
 use SimpleAR\Facades\DB;
 
 class Builder
@@ -84,29 +86,76 @@ class Builder
     }
 
     /**
-     * Get the compiler instance.
+     * Add a condition that check existence of related model instances for the 
+     * root model.
      *
-     * @return Compiler
+     * @param string $relation The name of the relation to check on.
+     * @return $this
      */
-    public function getCompiler()
+    public function has($relation, $op = null, $value = null)
     {
-        return $this->_compiler = ($this->_compiler ?: DB::compiler());
+        $this->_query = $mainQuery = $this->getQueryOrNewSelect();
+        $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
+
+        $model = $this->_root;
+        $rel   = $model::relation($relation);
+
+        // We construct the sub-query. It can be the sub-query of an Exists 
+        // clause or a Count (if $op and $value are given).
+        $hasQuery = $this->newQuery(new SelectBuilder);
+        $hasQuery->getBuilder()->setRootAlias($mainQueryRootAlias . '_');
+        $hasQuery->setInvolvedTable($mainQueryRootAlias, $mainQuery->getBuilder()->getRootTable());
+        $hasQuery->root($rel->lm->class);
+
+        // Make the join between both tables.
+        $sep = Cfg::get('queryOptionRelationSeparator');
+        foreach ($rel->getJoinAttributes() as $mainAttr => $hasAttr)
+        {
+            $hasQuery->whereAttr($hasAttr, $mainQueryRootAlias . $sep . $mainAttr);
+        }
+
+        // We want a Count sub-query.
+        if (func_num_args() === 3)
+        {
+            $hasQuery->count();
+            $mainQuery->whereSub($hasQuery, $op, $value);
+        }
+
+        // We don't want anything special. This will be a simple Select 
+        // sub-query.
+        else
+        {
+            $hasQuery->select(array('*'), false);
+            $mainQuery->whereExists($hasQuery);
+        }
+
+        $mainQuery->getCompiler()->useTableAlias = true;
+
+        return $this;
     }
 
     /**
-     * Get the connection instance.
+     * Set several options.
      *
-     * @return Connection
+     * @param array $options The options to set.
+     * @return $this
      */
-    public function getConnection()
+    public function setOptions(array $options)
     {
-        return $this->_connection = ($this->_connection ?: DB::connection());
+        $q = $this->getQueryOrNewSelect();
+
+        foreach ($options as $name => $value)
+        {
+            $q->$name($value);
+        }
+
+        return $this;
     }
 
     public function delete($root = '')
     {
         $query = $this->newQuery(new DeleteBuilder);
-        $root && $this->root($root);
+        $root && $query->root($root);
 
         $query->setCriticalQuery();
 
@@ -150,54 +199,7 @@ class Builder
         return $query;
     }
 
-    /**
-     * Return a new Query instance.
-     *
-     * @param Builder $b The builder to use.
-     * @param Compiler $c The compiler to use.
-     * @param Connection $conn The connection to use.
-     * @return Query
-     */
-    public function newQuery(QueryBuilder $b = null, Compiler $c = null, Connection $conn = null)
-    {
-        $c = $c ?: $this->getCompiler();
-        $conn = $conn ?: $this->getConnection();
-
-        $q = new Query($b, $c, $conn);
-        $this->_root && $q->root($this->_root);
-
-        return $this->_query = $q;
-    }
-
-    /**
-     * Return the current query instance or a new Select query if there is no
-     * query yet.
-     *
-     * @see newQuery()
-     */
-    public function getQueryOrNewSelect()
-    {
-        if (! $this->_query)
-        {
-            $this->_query = $this->newQuery(new SelectBuilder);
-        }
-
-        return $this->_query;
-    }
-
-    public function setOptions(array $options)
-    {
-        $q = $this->getQueryOrNewSelect();
-
-        foreach ($options as $name => $value)
-        {
-            $q->$name($value);
-        }
-
-        return $this;
-    }
-
-    public function getTableColumns($table)
+    public function getTableColumns($tableName)
     {
         $conn = $this->getConnection();
         $columns = $conn->query('SHOW COLUMNS FROM `' . $tableName . '`')
@@ -211,7 +213,7 @@ class Builder
      */
     public function one()
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $this->_query = $this->getQueryOrNewSelect()->run();
 
         return $this->_fetchModelInstance();
     }
@@ -234,7 +236,7 @@ class Builder
      */
     public function last()
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $this->_query = $this->getQueryOrNewSelect()->run();
 
         return $this->_fetchModelInstance(false);
     }
@@ -250,7 +252,7 @@ class Builder
      */
     public function all()
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $this->_query = $this->getQueryOrNewSelect()->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
@@ -282,6 +284,104 @@ class Builder
     {
         $this->_pendingRow = false;
         $this->_eagerLoad = false;
+    }
+
+    /**
+     * Redirect method calls.
+     *
+     * All unknown method calls are redirected to be called on Query instance.
+     *
+     * Note: The SelectBuilder will be used.
+     * -----
+     *
+     * @return Query The current query instance.
+     */
+    public function __call($name, $args)
+    {
+        $q = $this->getQueryOrNewSelect();
+
+        // If 'with()' option is called, query builder has to parse eager loaded
+        // models.
+        if ($name === 'with' && $args)
+        {
+            $this->_eagerLoad = true;
+        }
+
+        // Redirect method calls on Query.
+        switch (count($args))
+        {
+            case 0: $q->$name(); break;
+            case 1: $q->$name($args[0]); break;
+            case 2: $q->$name($args[0], $args[1]); break;
+            case 3: $q->$name($args[0], $args[1], $args[2]); break;
+            case 4: $q->$name($args[0], $args[1], $args[2], $args[3]); break;
+            default: call_user_func_array(array($q, $name), $args);
+        }
+
+        // We always want to use the query builder, not the Query class.
+        return $this;
+    }
+
+    /**
+     * Return the current query.
+     *
+     * @return Query
+     */
+    public function getQuery()
+    {
+        return $this->_query;
+    }
+
+    /**
+     * Return a new Query instance.
+     *
+     * @param Builder $b The builder to use.
+     * @param Compiler $c The compiler to use.
+     * @param Connection $conn The connection to use.
+     * @return Query
+     */
+    public function newQuery(QueryBuilder $b = null, Compiler $c = null, Connection $conn = null)
+    {
+        $c = $c ?: $this->getCompiler();
+        $conn = $conn ?: $this->getConnection();
+
+        $q = new Query($b, $c, $conn);
+
+        return $q;
+    }
+
+    /**
+     * Return the current query instance or a new Select query if there is no
+     * query yet.
+     *
+     * @see newQuery()
+     */
+    public function getQueryOrNewSelect()
+    {
+        $q = $this->getQuery() ?: $this->newQuery(new SelectBuilder);
+        $this->_root && $q->root($this->_root);
+
+        return $q;
+    }
+
+    /**
+     * Get the compiler instance.
+     *
+     * @return Compiler
+     */
+    public function getCompiler()
+    {
+        return $this->_compiler = ($this->_compiler ?: DB::compiler());
+    }
+
+    /**
+     * Get the connection instance.
+     *
+     * @return Connection
+     */
+    public function getConnection()
+    {
+        return $this->_connection = ($this->_connection ?: DB::connection());
     }
 
     /**
@@ -460,39 +560,4 @@ class Builder
         return $res;
     }
 
-    /**
-     * Redirect method calls.
-     *
-     * All unknown method calls are redirected to be called on Query instance.
-     *
-     * Note: The SelectBuilder will be used.
-     * -----
-     *
-     * @return Query The current query instance.
-     */
-    public function __call($name, $args)
-    {
-        $q = $this->getQueryOrNewSelect();
-
-        // If 'with()' option is called, query builder has to parse eager loaded
-        // models.
-        if ($name === 'with' && $args)
-        {
-            $this->_eagerLoad = true;
-        }
-
-        // Redirect method calls on Query.
-        switch (count($args))
-        {
-            case 0: $q->$name(); break;
-            case 1: $q->$name($args[0]); break;
-            case 2: $q->$name($args[0], $args[1]); break;
-            case 3: $q->$name($args[0], $args[1], $args[2]); break;
-            case 4: $q->$name($args[0], $args[1], $args[2], $args[3]); break;
-            default: call_user_func_array(array($q, $name), $args);
-        }
-
-        // We always want to use the query builder, not the Query class.
-        return $this;
-    }
 }

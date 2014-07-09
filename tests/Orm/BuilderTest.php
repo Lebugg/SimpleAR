@@ -65,7 +65,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
-        $qb->delete()->where('id', 12)->run();
+        $qb->delete('Article')->where('id', 12)->run();
     }
 
     public function testUpdate()
@@ -298,5 +298,33 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf('Blog', $sec);
         $this->assertEquals('Blog 2', $sec->title);
         $this->assertEquals('First', $sec->articles[0]->author->firstName);
+    }
+
+    public function testHas()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $qb->root('Blog')->has('articles')->select(array('*'), false);
+
+        $sql = 'SELECT * FROM `blogs` `_` WHERE EXISTS (SELECT * FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`)';
+        $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
+    }
+
+    public function testHasWithCount()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $qb->root('Blog')->has('articles', '>', 3)->select(array('*'), false);
+
+        $sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
+        $val[] = 3;
+        $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
+        $this->assertEquals($val, $qb->getQuery()->getValues());
     }
 }

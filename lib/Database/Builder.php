@@ -6,6 +6,7 @@ require __DIR__ . '/Builder/SelectBuilder.php';
 require __DIR__ . '/Builder/UpdateBuilder.php';
 require __DIR__ . '/Builder/DeleteBuilder.php';
 
+use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Query;
 use \SimpleAR\Orm\Table;
 
@@ -113,6 +114,7 @@ class Builder
         }
 
         $this->_options[$name] = $args;
+        return $this;
     }
 
     /**
@@ -143,19 +145,39 @@ class Builder
         return $this->_values;
     }
 
-    public function getRootModel()
-    {
-        return $this->_model;
-    }
-
     public function getRootTable()
     {
         return $this->_table;
     }
 
+    /**
+     * Get the root alias.
+     *
+     * @return string The root alias
+     */
     public function getRootAlias()
     {
         return $this->_rootAlias;
+    }
+
+    /**
+     * Set the root alias.
+     *
+     * @param string $alias The alias to set as root.
+     */
+    public function setRootAlias($alias)
+    {
+        $this->_rootAlias = $alias;
+    }
+
+    /**
+     * Get the root model class.
+     *
+     * @return string The root model class.
+     */
+    public function getRootModel()
+    {
+        return $this->_model;
     }
 
     /**
@@ -191,7 +213,10 @@ class Builder
      */
     public function addValueToQuery($value)
     {
-        $this->_values[] = $value;
+        if (! $value instanceof Expression)
+        {
+            $this->_values[] = $value;
+        }
     }
 
     protected function _buildOptions(array $options)
@@ -233,6 +258,7 @@ class Builder
         }
 
         $this->_components['root'] = $root;
+        return $this;
     }
 
     /**

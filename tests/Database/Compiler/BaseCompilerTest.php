@@ -7,6 +7,9 @@ use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Condition\Simple as SimpleCond;
 use \SimpleAR\Database\Condition\Nested as NestedCond;
 use \SimpleAR\Database\Condition\Exists as ExistsCond;
+use \SimpleAR\Database\Condition\Attribute as AttrCond;
+
+use \SimpleAR\Facades\DB;
 
 class BaseCompilerTest extends PHPUnit_Framework_TestCase
 {
@@ -237,6 +240,24 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $query->components['where'] = array($where);
 
         $expected = 'WHERE EXISTS (SELECT `id` FROM `articles`)';
+        $result   = $compiler->compileWhere($query);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testCompileWhereAttribute()
+    {
+        $query    = new Query();
+        $compiler = new BaseCompiler();
+
+        $where = new AttrCond('a', 'author_id', '=', 'b', 'id');
+        $query->components['where'] = array($where);
+
+        $expected = 'WHERE `author_id` = `id`';
+        $result   = $compiler->compileWhere($query);
+        $this->assertEquals($expected, $result);
+
+        $compiler->useTableAlias = true;
+        $expected = 'WHERE `a`.`author_id` = `b`.`id`';
         $result   = $compiler->compileWhere($query);
         $this->assertEquals($expected, $result);
     }

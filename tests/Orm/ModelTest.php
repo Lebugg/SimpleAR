@@ -82,4 +82,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $stub->x;
         $stub->x;
     }
+
+    public function testTablesStorage()
+    {
+        Article::wakeup();
+
+        $this->assertInstanceOf('SimpleAR\Orm\Table', Article::table());
+    }
 }
