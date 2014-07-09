@@ -5,6 +5,7 @@ use \SimpleAR\Database\Condition\Exists as ExistsCond;
 use \SimpleAR\Database\Condition\Nested as NestedCond;
 use \SimpleAR\Database\Condition\Simple as SimpleCond;
 use \SimpleAR\Database\Condition\Attribute as AttrCond;
+use \SimpleAR\Database\Condition\SubQuery as SubQueryCond;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
@@ -78,6 +79,14 @@ class WhereBuilder extends Builder
         $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
     }
 
+    /**
+     * Add a condition between two attributes.
+     *
+     * @param string $leftAttr An extended attribute string.
+     * @param string $op A conditional operator.
+     * @param string $rightAttr An extended attribute string.
+     * @param string $logicalOp The logical operator (AND, OR).
+     */
     public function whereAttr($leftAttr, $op = null, $rightAttr = null, $logicalOp = 'AND')
     {
         if (func_num_args() === 2)
@@ -89,6 +98,23 @@ class WhereBuilder extends Builder
         list($rightAlias, $rightCols) = $this->_processExtendedAttribute($rightAttr);
 
         $cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logicalOp);
+
+        $this->_components['where'][] = $cond;
+    }
+
+    /**
+     * Add a condition on a sub-query.
+     *
+     * @param Query  $query The sub-query.
+     * @param string $op The condition operator.
+     * @param mixed  $value The condition value.
+     */
+    public function whereSub(Query $q, $op = null, $value = null, $logicalOp = 'AND')
+    {
+        $cond = new SubQueryCond($q, $op, $value, $logicalOp);
+        $val = $q->getValues();
+        $val && $this->addValueToQuery($val);
+        $this->addValueToQuery($value);
 
         $this->_components['where'][] = $cond;
     }
