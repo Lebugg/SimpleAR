@@ -466,11 +466,29 @@ class BaseCompiler extends Compiler
      */
     protected function _whereBasic(WhereClause $where)
     {
-        $col = $this->_compileWhereColumns($where);
+        $alias = $this->useTableAlias ? $where->tableAlias : '';
+        $col = $this->columnize($where->column, $alias);
         $op  = $this->_getWhereOperator($where);
         $val = $this->parameterize($where->value);
 
         return "$col $op $val";
+    }
+
+    /**
+     * Compile a WHERE clause over two columns.
+     *
+     * "Attribute" means this condition format: <column> <operator> <column>
+     *
+     * @param WhereClause $where
+     * @return SQL
+     */
+    protected function _whereAttribute(WhereClause $where)
+    {
+        $lCol = $this->columnize($where->lCol, $this->useTableAlias ? $where->lAlias : '');
+        $rCol = $this->columnize($where->rCol, $this->useTableAlias ? $where->rAlias : '');
+        $op  = $this->_getWhereOperator($where);
+
+        return "$lCol $op $rCol";
     }
 
     /**
@@ -496,24 +514,6 @@ class BaseCompiler extends Compiler
     }
 
     /**
-     * Compile a "column" portion of a WHERE clause.
-     *
-     * If we are using table aliases, table alias will be prepend to it.
-     * Result string is wrapped SQL.
-     *
-     * It handles one or several columns.
-     *
-     * @param WhereClause $where
-     * @return Safe SQL.
-     */
-    protected function _compileWhereColumns(WhereClause $where)
-    {
-        $alias = $this->useTableAlias ? $where->tableAlias : '';
-
-        return $this->columnize($where->column, $alias);
-    }
-
-    /**
      * Get appropriate operator for the given WhereClause.
      *
      * Sometimes, the conditional operator the user chose is not fitting for the 
@@ -533,6 +533,12 @@ class BaseCompiler extends Compiler
     protected function _getWhereOperator(WhereClause $where)
     {
         $op = $where->operator;
+
+        if (! isset($where->value))
+        {
+            return $op;
+        }
+
         $val = $where->value;
 
         // Do we need to arrayfy this operator?
@@ -577,10 +583,30 @@ class BaseCompiler extends Compiler
      */
     protected function _compileSetPart(array $set)
     {
-        $tableAlias = $this->useTableAlias ? $set['tableAlias'] : '';
-        $left  = $this->column($set['column'], $tableAlias);
+        $prefix = $this->_getPrefix($set['tableAlias']);
+        $left  = $this->column($set['column'], $prefix);
         $right = $this->parameterize($set['value']);
 
         return $left . ' = ' . $right;
+    }
+
+    /**
+     * Get correct table prefix.
+     *
+     * It can return:
+     *
+     *  * The table alias;
+     *  * The table name;
+     *  * The empty string: ''.
+     */
+    protected function _getPrefix($tableAlias)
+    {
+        if ($this->useTableAlias)
+        {
+            return $tableAlias;
+        }
+
+        // return $this->getInvolvedTable($tableAlias)->name;
+        return '';
     }
 }

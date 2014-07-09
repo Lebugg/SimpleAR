@@ -27,6 +27,13 @@ class SelectBuilder extends WhereBuilder
         $joinClause = new JoinClause($this->_table->name, $this->getRootAlias());
         $this->_joinClauses[$this->getRootAlias()] = $joinClause;
         //$this->_components['from'] = array($joinClause);
+
+        return $this;
+    }
+
+    public function select(array $columns, $expand = true)
+    {
+        $this->_selectColumns('', $columns, $expand);
     }
 
             //$c['columns'] = array($this->getRootAlias() => array('columns' => array('*')));
@@ -120,6 +127,8 @@ class SelectBuilder extends WhereBuilder
             $alias .= $alias ? '.' . $relName : $relName;
             $this->_selectColumns($alias, array('*'));
         }
+
+        return $this;
     }
 
     /**
@@ -146,8 +155,10 @@ class SelectBuilder extends WhereBuilder
         $c =& $this->_components;
         $rootAlias = $this->getRootAlias();
 
-        if (empty($c['columns'][$rootAlias]) && empty($c['aggregates']))
-        {
+        if (empty($c['columns'][$rootAlias])
+            && empty($c['columns'][''])
+            && empty($c['aggregates'])
+        ) {
             $this->_selectColumns($rootAlias, array('*'));
         }
 

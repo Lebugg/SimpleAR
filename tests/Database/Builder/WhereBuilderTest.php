@@ -1,13 +1,17 @@
 <?php
 
 use \SimpleAR\Database\Builder\WhereBuilder;
+use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Condition\Simple as SimpleCond;
 use \SimpleAR\Database\Condition\Nested as NestedCond;
+use \SimpleAR\Database\Condition\Exists as ExistsCond;
+use \SimpleAR\Database\Condition\Attribute as AttrCond;
 use \SimpleAR\Database\JoinClause;
 
 use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Facades\DB;
 
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -75,13 +79,12 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
             ),
         );
 
-        $components = $this->_builder->build($options);
+        $b = new WhereBuilder();
+        $components = $b->build($options);
 
         $expected = array(new SimpleCond('_', array('author_id'), '=', 12));
         $this->assertArrayHasKey('where', $components);
         $this->assertEquals($expected, $components['where']);
-
-        $query = new Query();
 
         $options = array(
             'root' => 'Article',
@@ -91,7 +94,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
             ),
         );
 
-        $components =$this->_builder->build($options);
+        $b = new WhereBuilder();
+        $components = $b->build($options);
 
         $expected = array();
         $expected[] = new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
@@ -102,8 +106,6 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
     public function testOrAndLogicalOps()
     {
-        $query = new Query();
-
         $options = array(
             'root' => 'Article',
             'conditions' => array(
@@ -174,5 +176,41 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         ), 'AND');
 
         $this->assertEquals($expected, $components['where']);
+    }
+
+    public function testWhereAttribute()
+    {
+        $b = new WhereBuilder();
+        $b->setRootAlias('__');
+        $b->setInvolvedTable('_', Blog::table());
+        $b->root('Article')->whereAttr('blogId', '_/id');
+
+        $components = $b->build();
+
+        $where[] = new AttrCond('__', 'blog_id', '=', '_', 'id', 'AND');
+
+        $this->assertEquals($where, $components['where']);
+    }
+
+    public function testWhereExists()
+    {
+        $subQuery = new Query(new SelectBuilder);
+        $subQuery->setInvolvedTable('_', Blog::table());
+        $subQuery->setRootAlias('__')
+            ->root('Article')
+            ->where('title', 'Article 1')
+            ->whereAttr('blogId', '_/id');
+
+        $b = new WhereBuilder;
+        $b->root('Blog')->whereExists($subQuery);
+
+        $components = $b->build();
+
+        $where[] = new ExistsCond($subQuery);
+        // There is a sub array because Builders do not flatten value array.
+        $val[] = array('Article 1');
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals($val, $b->getValues());
     }
 }

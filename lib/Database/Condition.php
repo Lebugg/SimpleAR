@@ -1,5 +1,6 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Condition/Attribute.php';
 require __DIR__ . '/Condition/Simple.php';
 require __DIR__ . '/Condition/Exists.php';
 require __DIR__ . '/Condition/Nested.php';

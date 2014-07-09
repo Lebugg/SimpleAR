@@ -1,18 +1,22 @@
 <?php namespace SimpleAR\Database\Builder;
 
 use \SimpleAR\Database\Builder;
-use \SimpleAR\Database\Expression;
-use \SimpleAR\Database\Condition\Simple as SimpleCond;
+use \SimpleAR\Database\Condition\Exists as ExistsCond;
 use \SimpleAR\Database\Condition\Nested as NestedCond;
+use \SimpleAR\Database\Condition\Simple as SimpleCond;
+use \SimpleAR\Database\Condition\Attribute as AttrCond;
+use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
-
-use \SimpleAR\Orm\Relation;
-use \SimpleAR\Orm\Table;
-
-use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Database\Query;
 
 use \SimpleAR\Exception\MalformedOptionException;
 use \SimpleAR\Exception;
+
+use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Facades\DB;
+
+use \SimpleAR\Orm\Relation;
+use \SimpleAR\Orm\Table;
 
 class WhereBuilder extends Builder
 {
@@ -54,6 +58,54 @@ class WhereBuilder extends Builder
      * @var string
      */
     protected $_queryOptionAttributeSeparator = ',';
+
+    /**
+     * Add a condition.
+     *
+     * @param string $attribute
+     * @param mixed  $value
+     * @param mixed  $op
+     *
+     * @return void
+     */
+    public function where($attribute, $op = null, $value = null, $logicalOp = 'AND')
+    {
+        if (func_num_args() === 2)
+        {
+            list($value, $op) = array($op, '=');
+        }
+
+        $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
+    }
+
+    public function whereAttr($leftAttr, $op = null, $rightAttr = null, $logicalOp = 'AND')
+    {
+        if (func_num_args() === 2)
+        {
+            list($rightAttr, $op) = array($op, '=');
+        }
+
+        list($leftAlias, $leftCols)   = $this->_processExtendedAttribute($leftAttr);
+        list($rightAlias, $rightCols) = $this->_processExtendedAttribute($rightAttr);
+
+        $cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logicalOp);
+
+        $this->_components['where'][] = $cond;
+    }
+
+    /**
+     * Add an exists condition to the query.
+     *
+     * @param Query $q The Select sub-query.
+     * @return $this
+     */
+    public function whereExists(Query $q)
+    {
+        $this->_components['where'][] = new ExistsCond($q);
+        $this->addValueToQuery($q->getValues());
+
+        return $this;
+    }
 
     /**
      * Get the separation character of relation names in options.
@@ -141,7 +193,7 @@ class WhereBuilder extends Builder
      *
      * This function decompose the attribute part into an attribute array.
      *
-     * @param string $attribtue The attribute string.
+     * @param string $attribute The attribute string.
      * @return array
      */
     public function decomposeAttribute($attribute)
@@ -301,8 +353,7 @@ class WhereBuilder extends Builder
             // Is this one known to us?
             if (! $this->isKnownTableAlias($alias))
             {
-                // $previousAlias will always be known (there is no risk of 
-                // loop like: getInvolvedTable() <-> adtInvolvedTable()).
+                // $previousAlias will always be known.
                 $previousModel = $this->getInvolvedModel($previousAlias);
                 $currentRel    = $this->getNextRelationByModel($previousModel, $relName);
                 $currentModel  = $this->getNextModelByRelation($currentRel);
@@ -442,28 +493,6 @@ class WhereBuilder extends Builder
     }
 
     /**
-     * Add a condition.
-     *
-     * @param string $attribute
-     * @param mixed  $value
-     * @param mixed  $op
-     *
-     * @return void
-     */
-    public function where($attribute, $value, $op = null, $logicalOp = 'AND')
-    {
-        if ($op !== null)
-        {
-            $value = $op;
-            $op    = $value;
-        } else {
-            $op = '=';
-        }
-
-        $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
-    }
-
-    /**
      * Parse an extended attribute string and extract data of it.
      *
      * What is an extended attribute?
@@ -520,7 +549,15 @@ class WhereBuilder extends Builder
     protected function _buildConditions(array $conditions)
     {
         $wheres = $this->parseConditionArray($conditions);
-        $this->_components['where'] = $wheres;
+
+        if (! empty($this->_components['where']))
+        {
+            $this->_components['where'] = array_merge($this->_components['where'], $wheres);
+        }
+        else
+        {
+            $this->_components['where'] = $wheres;
+        }
     }
 
     /**

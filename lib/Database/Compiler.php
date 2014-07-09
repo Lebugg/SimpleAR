@@ -11,12 +11,17 @@ abstract class Compiler
      * Do we need to use table alias in query?
      *
      * Indicate whether we are using models to build query. If false, we only use the
-     * raw table name given in constructor. In this case, we would be enable to
+     * raw table name given in constructor. In this case, we would not be able to
      * use many features like process query on linked models.
+     *
+     * Property's value is set when starting the compilation step. Each public 
+     * compile can decide whether to use table alias or not depending on number 
+     * of used tables or things like that.
      *
      * @var bool
      */
     public $useTableAlias = false;
+
     public $useResultAlias = false;
 
     public $rootAlias = '_';

@@ -109,13 +109,31 @@ class Query
         $this->setCriticalQuery($criticalQuery);
     }
 
+    /**
+     * Get the SQL representation of the query.
+     *
+     * Query will be automatically compiled if it is not yet.
+     *
+     * @return string SQL
+     */
     public function getSql()
     {
+        $this->_compiled || $this->compile();
+
         return $this->_sql;
     }
 
+    /**
+     * Get values that are to be bind to query at execution.
+     *
+     * Query will be automatically built if it is not yet.
+     *
+     * @return array The flat value array
+     */
     public function getValues()
     {
+        $this->_built || $this->build();
+
         $val = $this->_builder->getValues();
         $val = $this->prepareValuesForExecution($val);
 
@@ -190,13 +208,17 @@ class Query
      * This function builds the query.
      *
      * Actually, it builds all the given options.
+     * After build step, query values can be retrieved with `getValues()`.
      *
      * @param  array $options The option array.
+     * @return $this
      */
 	public function build()
     {
         $this->components = $this->getBuilder()->build();
         $this->_built = true;
+
+        return $this;
     }
 
     /**
@@ -205,6 +227,8 @@ class Query
      *
      * In the same time, $_values has to contain values in correct order so that
      * run() can safely be called.
+     *
+     * After compilation, query's SQL can be retrieved with `getSql()`.
      *
      * @return void.
      */
