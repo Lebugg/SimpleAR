@@ -312,4 +312,19 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $sql = 'SELECT * FROM `blogs` `_` WHERE EXISTS (SELECT * FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`)';
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
     }
+
+    public function testHasWithCount()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $qb->root('Blog')->has('articles', '>', 3)->select(array('*'), false);
+
+        $sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
+        $val[] = 3;
+        $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
+        $this->assertEquals($val, $qb->getQuery()->getValues());
+    }
 }

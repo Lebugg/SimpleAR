@@ -502,6 +502,15 @@ class BaseCompiler extends Compiler
         return 'EXISTS (' . $this->compileSelect($where->query) . ')';
     }
 
+    protected function _whereSub(WhereClause $where)
+    {
+        $sub = '(' . $this->compileSelect($where->query) . ')';
+        $op  = $this->_getWhereOperator($where);
+        $val = $this->parameterize($where->value);
+
+        return "$sub $op $val";
+    }
+
     /**
      * Compile an nested where clause.
      *

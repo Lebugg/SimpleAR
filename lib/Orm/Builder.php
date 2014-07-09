@@ -92,7 +92,7 @@ class Builder
      * @param string $relation The name of the relation to check on.
      * @return $this
      */
-    public function has($relation)
+    public function has($relation, $op = null, $value = null)
     {
         $this->_query = $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
@@ -100,18 +100,35 @@ class Builder
         $model = $this->_root;
         $rel   = $model::relation($relation);
 
+        // We construct the sub-query. It can be the sub-query of an Exists 
+        // clause or a Count (if $op and $value are given).
         $hasQuery = $this->newQuery(new SelectBuilder);
         $hasQuery->getBuilder()->setRootAlias($mainQueryRootAlias . '_');
         $hasQuery->setInvolvedTable($mainQueryRootAlias, $mainQuery->getBuilder()->getRootTable());
-        $hasQuery->root($rel->lm->class)->select(array('*'), false);
+        $hasQuery->root($rel->lm->class);
 
+        // Make the join between both tables.
         $sep = Cfg::get('queryOptionRelationSeparator');
         foreach ($rel->getJoinAttributes() as $mainAttr => $hasAttr)
         {
             $hasQuery->whereAttr($hasAttr, $mainQueryRootAlias . $sep . $mainAttr);
         }
 
-        $mainQuery->whereExists($hasQuery);
+        // We want a Count sub-query.
+        if (func_num_args() === 3)
+        {
+            $hasQuery->count();
+            $mainQuery->whereSub($hasQuery, $op, $value);
+        }
+
+        // We don't want anything special. This will be a simple Select 
+        // sub-query.
+        else
+        {
+            $hasQuery->select(array('*'), false);
+            $mainQuery->whereExists($hasQuery);
+        }
+
         $mainQuery->getCompiler()->useTableAlias = true;
 
         return $this;
