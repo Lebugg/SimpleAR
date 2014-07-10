@@ -747,41 +747,7 @@ abstract class Model
      */
     public static function columns()
     {
-        return array_keys(static::table()->columns);
-    }
-
-    /**
-     * Very useful function to get an array of the attributes to select from
-     * database. Attributes are values of $_columns.
-     *
-     * @param string $filter Optional filter that prevents us to fetch all
-     * attribute from the table.
-     *
-     * @param string $tableAlias The alias to use to designate the table.
-     * @param string $resAlias   The alias to use to tidy resulting row up.
-     *
-     * @note: it will *not* throw any exception if filter does not exist; instead,
-     * it will not use any filter.
-     *
-     * @return array
-     */
-    public static function columnsToSelect($filter = null)
-    {
-        $table = static::table();
-
-        $res = ($filter !== null && isset(static::$_filters[$filter]))
-            ? array_intersect_key($table->columns, array_flip(static::$_filters[$filter]))
-            : $table->columns
-            ;
-
-        // Include primary key to columns to fetch. Useful only for simple
-        // primary keys.
-        if ($table->isSimplePrimaryKey)
-        {
-            $res['id'] = $table->primaryKey;
-        }
-
-        return $res;
+        return static::table()->columns;
     }
 
     /**
@@ -1994,7 +1960,7 @@ abstract class Model
      *
      * @param array $row It is the array directly given by the
      * \PDOStatement:fetch() function. Every field contained in this  parameter
-     * correspond to attribute name, not to column's (@see columnsToSelect()).
+     * correspond to attribute name, not to column's.
      *
      * @return $this
      *

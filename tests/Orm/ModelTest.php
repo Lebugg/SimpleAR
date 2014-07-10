@@ -31,8 +31,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testGetColumns()
     {
-        $expected = array('name', 'description', 'created_at');
+        $expected = array('name', 'description', 'created_at', 'id');
         $this->assertEquals($expected, array_values(Blog::columns()));
+
+        $expected = array('blog_id', 'author_id', 'title', 'created_at', 'id');
+        $this->assertEquals($expected, array_values(Article::columns()));
     }
 
     /**

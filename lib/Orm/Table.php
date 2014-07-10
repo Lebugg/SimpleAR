@@ -13,14 +13,11 @@ class Table
     public $modelBaseName;
 
 	// Constructed.
-	public $alias;
     public $isSimplePrimaryKey;
 
     public function __construct($name, $primaryKey, $columns)
     {
-        $this->name       = $name;
-        $this->primaryKey = $primaryKey;
-        $this->columns    = $columns;
+        $this->name = $name;
 
         /**
          * Allows $_columns declaration like:
@@ -38,15 +35,33 @@ class Table
         {
             if (is_int($key))
             {
-                $this->columns[$value] = $value;
-                unset($this->columns[$key]);
+                $columns[$value] = $value;
+                unset($columns[$key]);
             }
         }
 
-		$this->alias		      = '_' . strtolower($name);
-        $this->isSimplePrimaryKey = is_string($primaryKey);
+        // @deprecated
+        if (is_string($primaryKey))
+        {
+            $columns['id'] = $primaryKey;
+            $primaryKey = array('id');
+        }
+        else
+        {
+            foreach ($primaryKey as $attr)
+            {
+                if (! isset($columns[$attr]))
+                {
+                    $columns[$attr] = $attr;
+                }
+            }
+        }
 
-        $this->primaryKeyColumns  = $this->isSimplePrimaryKey ? $this->primaryKey : $this->columnRealName($this->primaryKey);
+        $this->columns = $columns;
+        $this->primaryKey = $primaryKey;
+
+        $this->primaryKeyColumns = array_values(array_intersect_key($columns, array_flip($primaryKey)));
+        $this->isSimplePrimaryKey = false;
     }
 
     /**
@@ -61,18 +76,17 @@ class Table
     {
         if (! $key) { return $key; }
 
-        $res = array();
-        foreach ((array) $key as $key)
+        $keys = (array) $key;
+        $res  = array();
+
+        foreach ($keys as $key)
         {
-            if (! isset($this->columns[$key]) && $key !== 'id')
+            if (! isset($this->columns[$key]))
             {
                 throw new Exception('Attribute "' . $key . '" does not exist for model "' .  $this->modelBaseName . '".');
             }
 
-            $res[] = $key === 'id'
-                ? $this->primaryKeyColumns
-                : $this->columns[$key]
-                ;
+            $res[] = $this->columns[$key];
         }
 
         // Return a string if only one element.

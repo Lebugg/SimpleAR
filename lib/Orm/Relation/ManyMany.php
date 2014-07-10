@@ -40,60 +40,60 @@ class ManyMany extends Relation
             $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : (strtolower($this->lm->t->name) . '_id');
         }
 
-        $this->jm->alias = '_' . strtolower($this->jm->table);
+        //$this->jm->alias = '_' . strtolower($this->jm->table);
     }
 
-    public function deleteJoinModel($value)
-    {
-        $query = Query::delete(array($this->jm->from => $value), $this->jm->table);
-        $query->run();
-    }
-
-    public function deleteLinkedModel($value)
-    {
-        $lHS = Condition::leftHandSide($this->lm->pk, 'a');
-        $rHS = Condition::leftHandSide($this->jm->to, 'b');
-        $condition = $lHS . ' = ' . $rHS;
-
-        $query =  "DELETE FROM {$this->lm->table} a
-                    WHERE EXISTS (
-                        SELECT NULL
-                        FROM {$this->jm->table} b
-                        WHERE b." . implode(' = ? AND b.', $this->jm->from) ." = ?
-                        AND $condition
-                    )";
-
-        DB::query($query, $value);
-    }
-
-    public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
-    {
-        return $this->_joinJM($cmAlias, $lmAlias, $joinType) . ' ' . $this->_joinLM($cmAlias, $lmAlias, $joinType);
-    }
-
-    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
-    {
-        $res = '';
-
-       // We always want to join the middle table.
-        $res .= $this->_joinJM($cmAlias, $lmAlias, $joinType);
-
-		foreach ($conditions as $condition)
-		{
-            foreach ($condition->attributes as $a)
-            {
-                // And, under certain conditions, the linked table.
-                if ($a->logic !== 'or' || $a->name !== 'id')
-                {
-                    $res .= $this->_joinLM($cmAlias, $lmAlias, $joinType);
-                    break 2;
-                }
-            }
-		}
-
-        return $res;
-    }
-
+    // public function deleteJoinModel($value)
+    // {
+    //     $query = Query::delete(array($this->jm->from => $value), $this->jm->table);
+    //     $query->run();
+    // }
+    //
+    // public function deleteLinkedModel($value)
+    // {
+    //     $lHS = Condition::leftHandSide($this->lm->pk, 'a');
+    //     $rHS = Condition::leftHandSide($this->jm->to, 'b');
+    //     $condition = $lHS . ' = ' . $rHS;
+    //
+    //     $query =  "DELETE FROM {$this->lm->table} a
+    //                 WHERE EXISTS (
+    //                     SELECT NULL
+    //                     FROM {$this->jm->table} b
+    //                     WHERE b." . implode(' = ? AND b.', $this->jm->from) ." = ?
+    //                     AND $condition
+    //                 )";
+    //
+    //     DB::query($query, $value);
+    // }
+    //
+    // public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
+    // {
+    //     return $this->_joinJM($cmAlias, $lmAlias, $joinType) . ' ' . $this->_joinLM($cmAlias, $lmAlias, $joinType);
+    // }
+    //
+    // public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
+    // {
+    //     $res = '';
+    //
+    //    // We always want to join the middle table.
+    //     $res .= $this->_joinJM($cmAlias, $lmAlias, $joinType);
+    //
+	// 	foreach ($conditions as $condition)
+	// 	{
+    //         foreach ($condition->attributes as $a)
+    //         {
+    //             // And, under certain conditions, the linked table.
+    //             if ($a->logic !== 'or' || $a->name !== 'id')
+    //             {
+    //                 $res .= $this->_joinLM($cmAlias, $lmAlias, $joinType);
+    //                 break 2;
+    //             }
+    //         }
+	// 	}
+    //
+    //     return $res;
+    // }
+    //
 	public function reverse()
 	{
 		$relation = clone $this;
@@ -110,18 +110,18 @@ class ManyMany extends Relation
         return $relation;
 	}
 
-    private function _joinJM($cmAlias, $lmAlias, $joinType)
-    {
-        $jmAlias = $lmAlias . '_middle';
-
-		return $this->_buildJoin($joinType, $cmAlias, $this->jm->table, $jmAlias, $this->cm->column, $this->jm->from);
-    }
-
-    private function _joinLM($cmAlias, $lmAlias, $joinType)
-    {
-        $jmAlias = $lmAlias . '_middle';
-
-		return $this->_buildJoin($joinType, $jmAlias, $this->lm->table, $lmAlias, $this->jm->to, $this->lm->pk);
-    }
-
+    // private function _joinJM($cmAlias, $lmAlias, $joinType)
+    // {
+    //     $jmAlias = $lmAlias . '_middle';
+    //
+	// 	return $this->_buildJoin($joinType, $cmAlias, $this->jm->table, $jmAlias, $this->cm->column, $this->jm->from);
+    // }
+    //
+    // private function _joinLM($cmAlias, $lmAlias, $joinType)
+    // {
+    //     $jmAlias = $lmAlias . '_middle';
+    //
+	// 	return $this->_buildJoin($joinType, $jmAlias, $this->lm->table, $lmAlias, $this->jm->to, $this->lm->pk);
+    // }
+    //
 }

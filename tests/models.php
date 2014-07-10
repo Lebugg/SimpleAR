@@ -29,7 +29,7 @@ class Blog extends SimpleAR\Orm\Model
 class Article extends SimpleAR\Orm\Model
 {
     protected static $_tableName  = 'articles';
-    protected static $_primaryKey = 'id';
+    protected static $_primaryKey = array('id');
 
     public static $_relations = array(
         'author' => array(
