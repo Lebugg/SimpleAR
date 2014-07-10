@@ -265,9 +265,17 @@ class Query
         return strpos($sql, ' WHERE ') !== false;
     }
 
+    /**
+     * Execute the SQL query.
+     *
+     * @param string $sql The SQL query.
+     * @param array  $values The values to bind to query.
+     *
+     * @see \SimpleAR\Database\Connection::query()
+     */
     public function executeQuery($sql, array $values)
     {
-        return $this->getConnection()->query($sql, $values);
+        $this->getConnection()->query($sql, $values);
     }
 
     /**
