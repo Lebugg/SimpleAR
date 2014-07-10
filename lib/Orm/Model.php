@@ -746,7 +746,7 @@ abstract class Model
      */
     public static function columns()
     {
-        return array_keys(static::table()->columns);
+        return static::table()->columns;
     }
 
     /**
