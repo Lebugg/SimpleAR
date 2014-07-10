@@ -20,23 +20,4 @@ class HasMany extends Relation
 
         $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
-
-    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
-    {
-        if ($conditions)
-        {
-            return $this->joinLinkedModel($cmAlias, $lmAlias, $joinType);
-        }
-
-		/* foreach ($conditions as $condition) */
-		/* { */
-            /* foreach ($condition->attributes as $a) */
-            /* { */
-                /* if ($a->logic !== 'or') { */
-                    /* return $this->joinLinkedModel($cmAlias, $lmAlias, $joinType); */
-                /* } */
-            /* } */
-		/* } */
-    }
-
 }

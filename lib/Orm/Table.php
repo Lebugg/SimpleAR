@@ -13,7 +13,6 @@ class Table
     public $modelBaseName;
 
 	// Constructed.
-    public $alias;
     public $isSimplePrimaryKey;
 
     public function __construct($name, $primaryKey, $columns)
