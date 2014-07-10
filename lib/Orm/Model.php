@@ -673,7 +673,8 @@ abstract class Model
      * @return array
      *
      * @see SimpleAR\Model::find()
-     returnublic static function all(array $options = array())
+     */
+    public static function all(array $options = array())
     {
         return static::find('all', $options);
     }
