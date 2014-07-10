@@ -11,7 +11,7 @@ class HasOne extends Relation
 
         $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
-        $this->cm->pk        = $this->cm->t->primaryKey;
+        //$this->cm->pk        = $this->cm->t->primaryKey;
 
         $this->lm->attribute = isset($a['key_to'])
             ? $a['key_to']

@@ -6,16 +6,12 @@ class Table
 {
     public $name;
     public $primaryKey;
-    public $primaryKeyColumns;
     public $columns;
     public $orderBy;
     public $conditions = array();
     public $modelBaseName;
 
-	// Constructed.
-    public $isSimplePrimaryKey;
-
-    public function __construct($name, $primaryKey, $columns)
+    public function __construct($name, $primaryKey, array $columns = array())
     {
         $this->name = $name;
 
@@ -46,6 +42,7 @@ class Table
             $columns['id'] = $primaryKey;
             $primaryKey = array('id');
         }
+        // Right way.
         else
         {
             foreach ($primaryKey as $attr)
@@ -59,9 +56,6 @@ class Table
 
         $this->columns = $columns;
         $this->primaryKey = $primaryKey;
-
-        $this->primaryKeyColumns = array_values(array_intersect_key($columns, array_flip($primaryKey)));
-        $this->isSimplePrimaryKey = false;
     }
 
     /**
@@ -93,11 +87,6 @@ class Table
         return isset($res[1]) ? $res : $res[0];
     }
 
-    public function hasAttribute($s)
-    {
-        return $s == 'id' || (isset($this->columns[$s]) || array_key_exists($this->columns[$s]));
-    }
-
     /**
      * Return the primary key column(s).
      *
@@ -107,7 +96,7 @@ class Table
      */
     public function getPrimaryKey()
     {
-        return $this->isSimplePrimaryKey ? array('id') : $this->primaryKey;
+        return $this->primaryKey;
     }
 
     /**
@@ -119,13 +108,16 @@ class Table
      */
     public function getColumns()
     {
-        $columns = $this->columns;
+        return $this->columns;
+    }
 
-        if ($this->isSimplePrimaryKey)
-        {
-            $columns['id'] = $this->primaryKey;
-        }
-
-        return $columns;
+    /**
+     * Check whether primary key is a compound key.
+     *
+     * @return bool True if primary key is compound, false otherwise.
+     */
+    public function hasCompoundPK()
+    {
+        return count($this->primaryKey) > 1;
     }
 }

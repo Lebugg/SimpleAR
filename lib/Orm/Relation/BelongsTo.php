@@ -15,7 +15,7 @@ class BelongsTo extends Relation
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
-        $this->cm->pk        = $this->cm->t->primaryKey;
+        //$this->cm->pk        = $this->cm->t->primaryKey;
 
         $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
         $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);

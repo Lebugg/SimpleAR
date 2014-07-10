@@ -4,6 +4,7 @@ error_reporting(E_ALL | E_STRICT);
 
 use \SimpleAR\Facades\DB;
 use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Orm\Table;
 
 class ModelTest extends PHPUnit_Framework_TestCase
 {
@@ -95,8 +96,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testFindByPKWithSimplePK()
     {
-        $t = $this->getMock('SimpleAR\Orm\Table', array(), array('models', 'id', array()));
-        $t->isSimplePrimaryKey = true;
+        $t = new Table('models', array('id'));
 
         $m = 'SimpleAR\Orm\Model';
         $m::setTable($m, $t);
@@ -120,8 +120,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testFindByPKWithCompoundPK()
     {
-        $t = $this->getMock('SimpleAR\Orm\Table', array(), array('models', 'id', array()));
-        $t->isSimplePrimaryKey = false;
+        $t = new Table('models', array('a1', 'a2'));
 
         $m = 'SimpleAR\Orm\Model';
         $m::setTable($m, $t);

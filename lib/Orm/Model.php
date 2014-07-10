@@ -997,7 +997,7 @@ abstract class Model
         {
             // But only if the primary key is not compound *or*, if it is
             // compound, if $id is multidimensional.
-            if (self::table()->isSimplePrimaryKey || is_array($id[0]))
+            if (! self::table()->hasCompoundPK() || is_array($id[0]))
             {
                 $get = 'all';
             }
@@ -1862,18 +1862,19 @@ abstract class Model
         try
         {
             $lastId = self::query()->insert(array_keys($fields), array_values($fields));
+            $this->_refreshId($lastId);
 
-            // We fetch the ID.
-            if ($table->isSimplePrimaryKey) {
-                $this->_id = $lastId;
-            } else {
-                $id = array();
-                foreach ($table->primaryKey as $attribute) {
-                    $id[] = $this->$attribute;
-                }
-
-                $this->_id = $id;
-            }
+            // // We fetch the ID.
+            // if ($table->isSimplePrimaryKey) {
+            //     $this->_id = $lastId;
+            // } else {
+            //     $id = array();
+            //     foreach ($table->primaryKey as $attribute) {
+            //         $id[] = $this->$attribute;
+            //     }
+            //
+            //     $this->_id = $id;
+            // }
 
             // Process linked models.
             // We want to save linked models on cascade.
@@ -1967,123 +1968,122 @@ abstract class Model
      * @see SimpleAR\Model::_onBeforeLoad()
      * @see SimpleAR\Model::_onAfterLoad()
      */
-    private function _load(array $row)
-    {
-        // Need to prepare?
-        $this->_onBeforeLoad();
-
-        $table = static::table();
-
-        // We set our object ID.
-        if ($table->isSimplePrimaryKey)
-        {
-            $this->_id = $row['id'];
-            unset($row['id']);
-        }
-        else
-        {
-            $this->_id = array();
-
-            foreach ($table->primaryKey as $attribute)
-            {
-                $this->_id[] = $row[$attribute];
-                //unset($row[$key]);
-            }
-        }
-
-        // Eager load.
-        if (isset($row['_WITH_']))
-        {
-            foreach ($row['_WITH_'] as $relation => $value)
-            {
-                $relation = static::relation($relation);
-                $class  = $relation->lm->class;
-
-                if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
-                {
-                    // $value is an array of attributes. The attributes of the linked model
-                    // instance.
-                    // But it *might* be an array of arrays of attributes. For instance, when
-                    // relation is defined as a Has One relation but actually is a Has Many in
-                    // database. In that case, SQL query would return several rows for this relation
-                    // and we would result with $value to be an array of arrays.
-
-                    // Array of arrays ==> array of attribute.
-                    if (isset($value[0])) { $value = $value[0]; }
-
-                    $o = new $class();
-                    $o->_load($value);
-
-                    if ($o->id !== null)
-                    {
-                        $this->_attr($relation->name, $o);
-                    }
-                }
-                else
-                {
-                    // $value is an array of arrays. These subarrays contain attributes of linked
-                    // models.
-                    // But $value can directly be an associative array (if SQL query returned only
-                    // one row). We have to check this, then.
-
-                    $a = array();
-
-                    if ($value)
-                    {
-                        // $value is an attribute array.
-                        // Array of attributes ==> array of arrays.
-                        if (! isset($value[0])) { $value = array($value); }
-
-                        foreach ($value as $attributes)
-                        {
-                            $o = new $class();
-                            $o->_load($attributes);
-
-                            if ($o->id !== null)
-                            {
-                                $a[] = $o;
-                            }
-                        }
-                    }
-
-                    $this->_attr($relation->name, $a);
-                }
-            }
-
-            unset($row['_WITH_']);
-        }
-
-        $this->_hydrate($row, false);
-
-        if (Cfg::get('convertDateToObject'))
-        {
-            foreach ($this->_attributes as $key => &$value)
-            {
-                // We test that is a string because setters might have been
-                // called from within _hydrate() so we cannot be sure of what
-                // $value is.
-                //
-                // strpos call <=> $key.startsWith('date')
-                if (is_string($value) && strpos($key, 'date') === 0)
-                {
-                    // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
-                    // cause strange values.
-                    // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
-                    $value =  $value === '0000-00-00'
-                            || $value === '0000-00-00 00:00:00'
-                            || $value === null
-                            ? null
-                            : new DateTime($value)
-                            ;
-                }
-            }
-        }
-
-        $this->_onAfterLoad();
-        $this->_isDirty = false;
-
-        return $this;
-    }
+    // private function _load(array $row)
+    // {
+    //     // Need to prepare?
+    //     $this->_onBeforeLoad();
+    //
+    //     $table = static::table();
+    //
+    //     if ($table->isSimplePrimaryKey)
+    //     {
+    //         $this->_id = $row['id'];
+    //         unset($row['id']);
+    //     }
+    //     else
+    //     {
+    //         $this->_id = array();
+    //
+    //         foreach ($table->primaryKey as $attribute)
+    //         {
+    //             $this->_id[] = $row[$attribute];
+    //             //unset($row[$key]);
+    //         }
+    //     }
+    //
+    //     // Eager load.
+    //     if (isset($row['_WITH_']))
+    //     {
+    //         foreach ($row['_WITH_'] as $relation => $value)
+    //         {
+    //             $relation = static::relation($relation);
+    //             $class  = $relation->lm->class;
+    //
+    //             if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
+    //             {
+    //                 // $value is an array of attributes. The attributes of the linked model
+    //                 // instance.
+    //                 // But it *might* be an array of arrays of attributes. For instance, when
+    //                 // relation is defined as a Has One relation but actually is a Has Many in
+    //                 // database. In that case, SQL query would return several rows for this relation
+    //                 // and we would result with $value to be an array of arrays.
+    //
+    //                 // Array of arrays ==> array of attribute.
+    //                 if (isset($value[0])) { $value = $value[0]; }
+    //
+    //                 $o = new $class();
+    //                 $o->_load($value);
+    //
+    //                 if ($o->id !== null)
+    //                 {
+    //                     $this->_attr($relation->name, $o);
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 // $value is an array of arrays. These subarrays contain attributes of linked
+    //                 // models.
+    //                 // But $value can directly be an associative array (if SQL query returned only
+    //                 // one row). We have to check this, then.
+    //
+    //                 $a = array();
+    //
+    //                 if ($value)
+    //                 {
+    //                     // $value is an attribute array.
+    //                     // Array of attributes ==> array of arrays.
+    //                     if (! isset($value[0])) { $value = array($value); }
+    //
+    //                     foreach ($value as $attributes)
+    //                     {
+    //                         $o = new $class();
+    //                         $o->_load($attributes);
+    //
+    //                         if ($o->id !== null)
+    //                         {
+    //                             $a[] = $o;
+    //                         }
+    //                     }
+    //                 }
+    //
+    //                 $this->_attr($relation->name, $a);
+    //             }
+    //         }
+    //
+    //         unset($row['_WITH_']);
+    //     }
+    //
+    //     $this->_hydrate($row, false);
+    //
+    //     if (Cfg::get('convertDateToObject'))
+    //     {
+    //         foreach ($this->_attributes as $key => &$value)
+    //         {
+    //             // We test that is a string because setters might have been
+    //             // called from within _hydrate() so we cannot be sure of what
+    //             // $value is.
+    //             //
+    //             // strpos call <=> $key.startsWith('date')
+    //             if (is_string($value) && strpos($key, 'date') === 0)
+    //             {
+    //                 // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
+    //                 // cause strange values.
+    //                 // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
+    //                 $value =  $value === '0000-00-00'
+    //                         || $value === '0000-00-00 00:00:00'
+    //                         || $value === null
+    //                         ? null
+    //                         : new DateTime($value)
+    //                         ;
+    //             }
+    //         }
+    //     }
+    //
+    //     $this->_onAfterLoad();
+    //     $this->_isDirty = false;
+    //
+    //     return $this;
+    // }
 
     /**
      * Loads a model defined in model relations array.
