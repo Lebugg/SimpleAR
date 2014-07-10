@@ -60,6 +60,7 @@ use \SimpleAR\Database;
 use \SimpleAR\Database\Connection;
 use \SimpleAR\DateTime;
 use \SimpleAR\Facades\Facade;
+use \SimpleAR\Orm\Model;
 
 class SimpleAR
 {
@@ -105,6 +106,9 @@ class SimpleAR
         // lightweight and not-as-clean implementation.
         // Facades are located in lib/Facades/.
         Facade::bind($sar);
+
+        // Boot model class. It will load its dependency.
+        Model::boot();
     }
 
     public function localize($df)

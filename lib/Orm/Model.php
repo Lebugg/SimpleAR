@@ -359,6 +359,8 @@ abstract class Model
      */
     protected $_currentFilter;
 
+    protected static $_queryBuilder;
+
     /**
      * This array contains the list of declared Table objects.
      *
@@ -1032,10 +1034,6 @@ abstract class Model
             {
                 $get = 'all';
             }
-
-            if (! self::table()->isSimplePrimaryKey && (! isset($id[0]) || ! is_array($id[0]))) {
-                $id = array($id);
-            }
         }
 
         $query = self::query()->setOptions($options);
@@ -1380,6 +1378,27 @@ abstract class Model
         $with && $this->_populateEagerLoad($with);
     }
 
+    public static function boot()
+    {
+        self::setQueryBuilder(new QueryBuilder());
+    }
+
+    public static function setQueryBuilder(QueryBuilder $qb)
+    {
+        self::$_queryBuilder = $qb;
+    }
+
+    /**
+     * Set Table instance for given class name.
+     *
+     * @param string $class The full qualified class name.
+     * @param Table  $table The table instance to set.
+     */
+    public static function setTable($class, Table $table)
+    {
+        self::$_tables[$class] = $table;
+    }
+
     /**
      * Initialize current model class.
      *
@@ -1431,7 +1450,7 @@ abstract class Model
         $table->order       = static::$_orderBy;
         $table->modelBaseName = $modelBaseName;
 
-        self::$_tables[$fqcn] = $table;
+        self::setTable($fqcn, $table);
     }
 
     /**
@@ -1441,7 +1460,10 @@ abstract class Model
      */
     public static function query()
     {
-        return new QueryBuilder(get_called_class());
+        self::$_queryBuilder->reset();
+        self::$_queryBuilder->root(get_called_class());
+
+        return self::$_queryBuilder;
     }
 
     /**

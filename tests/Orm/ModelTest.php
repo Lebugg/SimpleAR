@@ -89,4 +89,57 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $this->assertInstanceOf('SimpleAR\Orm\Table', Article::table());
     }
+
+    public function testFindByPKWithSimplePK()
+    {
+        $t = $this->getMock('SimpleAR\Orm\Table', array(), array('models', 'id', array()));
+        $t->isSimplePrimaryKey = true;
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setTable($m, $t);
+
+        // Expects one().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->exactly(2))->method('one')->will($this->returnValue(true));
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $m::setQueryBuilder($q);
+        $m::findByPK(12);
+        $m::findByPK('12');
+
+        // Expects all().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $q->expects($this->exactly(2))->method('all')->will($this->returnValue(true));
+        $m::setQueryBuilder($q);
+        $m::findByPK(array(1, 2));
+        $m::findByPK(array(1, 2, 3));
+    }
+
+    public function testFindByPKWithCompoundPK()
+    {
+        $t = $this->getMock('SimpleAR\Orm\Table', array(), array('models', 'id', array()));
+        $t->isSimplePrimaryKey = false;
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setTable($m, $t);
+
+        // Expects one().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->exactly(4))->method('one')->will($this->returnValue(true));
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $m::setQueryBuilder($q);
+        $m::findByPK(12);
+        $m::findByPK('12');
+        $m::findByPK(array('12'));
+        $m::findByPK(array(12, 'a'));
+
+        // Expects all().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $q->expects($this->exactly(2))->method('all')->will($this->returnValue(true));
+        $m::setQueryBuilder($q);
+        $m::findByPK(array(array(1, 'a')));
+        $m::findByPK(array(array(1, 'a'), array(2, 'b')));
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+    }
 }
