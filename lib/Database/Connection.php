@@ -167,8 +167,8 @@ class Connection
 
         try
         {
-            $sth = $this->_pdo->prepare($query);
-            $sth->execute((array) $params);
+            $this->_sth = $this->_pdo->prepare($query);
+            $this->_sth->execute((array) $params);
 
             if ($this->_debug)
             {
@@ -195,7 +195,7 @@ class Connection
             throw new DatabaseEx($ex->getMessage(), $query, $ex);
         }
 
-        return $sth;
+        return $this->_sth;
     }
 
     /**
