@@ -142,11 +142,11 @@ class Builder
      */
     public function setOptions(array $options)
     {
-        $q = $this->getQueryOrNewSelect();
+        $this->_query = $this->getQueryOrNewSelect();
 
         foreach ($options as $name => $value)
         {
-            $q->$name($value);
+            $this->_query->$name($value);
         }
 
         return $this;
