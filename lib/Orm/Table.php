@@ -93,7 +93,7 @@ class Table
      */
     public function getPrimaryKey()
     {
-        return (array) $this->primaryKey;
+        return $this->isSimplePrimaryKey ? array('id') : $this->primaryKey;
     }
 
     /**
@@ -107,11 +107,9 @@ class Table
     {
         $columns = $this->columns;
 
-        $pk = (array) $this->primaryKey;
-        $pkCols = (array) $this->primaryKeyColumns;
-        foreach ($pk as $i => $attrName)
+        if ($this->isSimplePrimaryKey)
         {
-            $columns[$attrName] = $pkCols[$i];
+            $columns['id'] = $this->primaryKey;
         }
 
         return $columns;
