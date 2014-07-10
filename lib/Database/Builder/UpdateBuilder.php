@@ -25,6 +25,8 @@ class UpdateBuilder extends WhereBuilder
 
         $joinClause = new JoinClause($this->_table->name,  '');
         $this->_components['updateFrom'] = array($joinClause);
+
+        return $this;
     }
 
     /**
@@ -41,6 +43,8 @@ class UpdateBuilder extends WhereBuilder
      * @param string|array $attribute The attribute name or an array of 
      * attribute/value pairs.
      * @param mixed  $value
+     *
+     * @return $this
      */
     public function set($attribute, $value = null)
     {
@@ -55,6 +59,8 @@ class UpdateBuilder extends WhereBuilder
         {
             $this->_options['set'][$attribute] = $value;
         }
+
+        return $this;
     }
 
     protected function _buildSet(array $sets)
