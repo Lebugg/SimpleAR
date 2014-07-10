@@ -71,6 +71,17 @@ class Builder
     }
 
     /**
+     * Get the root class.
+     *
+     * @return string The current root class.
+     */
+    public function getRoot()
+    {
+        echo $this->_root;
+        return $this->_root;
+    }
+
+    /**
      * Set the root model.
      *
      * @return $this

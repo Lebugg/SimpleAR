@@ -1492,7 +1492,7 @@ abstract class Model
      */
     public static function __callStatic($method, $args)
     {
-        $query = self::query();
+        $query = static::query();
 
         return call_user_func_array(array($query, $method), $args);
     }

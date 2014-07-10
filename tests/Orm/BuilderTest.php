@@ -327,4 +327,15 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
         $this->assertEquals($val, $qb->getQuery()->getValues());
     }
+
+    public function setRoot()
+    {
+        $qb = new QueryBuilder();
+
+        $qb->root('Article');
+        $this->assertEquals('Article', $qb->getRoot());
+
+        $qb->root('Blog');
+        $this->assertEquals('Blog', $qb->getRoot());
+    }
 }

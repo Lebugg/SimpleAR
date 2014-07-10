@@ -142,4 +142,26 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $m::findByPK(array(array(1, 'a'), array(2, 'b')));
         $q = $this->getMock('SimpleAR\Orm\Builder');
     }
+
+    public function testThatCorrectRootIsSetForNewQuery()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('root', 'all'));
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setQueryBuilder($qb);
+
+        $qb->expects($this->exactly(4))->method('root')->withConsecutive(
+            array('Article'),
+            array('Blog'),
+            array('Article'),
+            array('Blog')
+        );
+
+        Article::query();
+        Blog::query();
+
+        // Through __callStatic().
+        Article::all();
+        Blog::all();
+    }
 }
