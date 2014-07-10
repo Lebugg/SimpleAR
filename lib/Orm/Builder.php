@@ -284,6 +284,7 @@ class Builder
     {
         $this->_pendingRow = false;
         $this->_eagerLoad = false;
+        $this->_query = null;
     }
 
     /**
