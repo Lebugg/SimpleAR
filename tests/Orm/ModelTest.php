@@ -14,7 +14,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $stub->foo = 'bar';
         $this->assertEquals($stub->foo, 'bar');
-        
+
         // Test __isset() and __unset().
         $this->assertTrue(isset($stub->foo));
         unset($stub->foo);
@@ -23,11 +23,19 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testIsDirtyFlag()
     {
-        $stub = $this->getMockForAbstractClass('SimpleAR\Orm\Model');
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('insert'));
+        $qb->expects($this->any())->method('insert')->will($this->returnValue(12));
 
-        $this->assertFalse($stub->isDirty());
+        $class = 'Article';
+        $class::setQueryBuilder($qb);
+
+        $stub = new $class();
+
+        $this->assertTrue($stub->isDirty());
         $stub->foo = 'bar';
         $this->assertTrue($stub->isDirty());
+        $stub->save();
+        $this->assertFalse($stub->isDirty());
     }
 
     public function testGetColumns()
@@ -165,5 +173,40 @@ class ModelTest extends PHPUnit_Framework_TestCase
         // Through __callStatic().
         Article::all();
         Blog::all();
+    }
+
+    public function testExistsCallsFind()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findOne'));
+
+        $opt = array('conditions' => array('id' => 12));
+        $qb->expects($this->once())->method('findOne')->with($opt)->will($this->returnValue(true));
+
+        Article::setQueryBuilder($qb);
+        Article::exists(12);
+    }
+
+    public function testExistsByConditionsCallsFind()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findOne'));
+
+        $opt = array('conditions' => array('name' => 'yo!'));
+        $qb->expects($this->once())->method('findOne')->with($opt)->will($this->returnValue(true));
+
+        Article::setQueryBuilder($qb);
+        Article::exists(array('name' => 'yo!'), false);
+    }
+
+    public function testIsConcrete()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('insert'));
+        $qb->expects($this->once())->method('insert')->will($this->returnValue(12));
+        Article::setQueryBuilder($qb);
+
+        $a = new Article();
+        $this->assertFalse($a->isConcrete());
+
+        $a->save();
+        $this->assertTrue($a->isConcrete());
     }
 }

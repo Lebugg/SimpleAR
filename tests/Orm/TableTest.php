@@ -58,4 +58,12 @@ class TableTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(array('title', 'blog_id'), $t->columnRealName(array('title', 'blogId')));
         $this->assertEquals(array('art_id', 'blog_id'), $t->columnRealName(array('id', 'blogId')));
     }
+
+    /**
+     * @expectedException Exception
+     */
+    public function testConstructWithBadTableName()
+    {
+        $t = new Table(array('id'), 'id');
+    }
 }

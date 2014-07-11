@@ -101,7 +101,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
         $article  = $qb->root('Article')->one();
-        $expected = array('id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2);
+        $expected = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
 
         $this->assertInstanceOf('Article', $article);
         $this->assertSame($expected, $article->attributes());
@@ -128,7 +128,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
         $article  = $qb->root('Article')->last();
-        $expected = array('id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2);
+        $expected = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
 
         $this->assertInstanceOf('Article', $article);
         $this->assertSame($expected, $article->attributes());

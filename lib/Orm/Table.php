@@ -13,6 +13,11 @@ class Table
 
     public function __construct($name, $primaryKey, array $columns = array())
     {
+        if (! is_string($name))
+        {
+            throw new Exception('Invalid table name: ' . var_export($name, true));
+        }
+
         $this->name = $name;
 
         /**
@@ -34,6 +39,11 @@ class Table
                 $columns[$value] = $value;
                 unset($columns[$key]);
             }
+        }
+
+        if ($primaryKey === null)
+        {
+            $primaryKey = array('id');
         }
 
         // @deprecated

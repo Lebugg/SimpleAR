@@ -2,28 +2,21 @@
 
 class Blog extends SimpleAR\Orm\Model
 {
-    public static $_relations = array(
+    protected static $_tableName = 'blogs';
+    protected static $_primaryKey = array('id');
+
+    protected static $_columns = array(
+        'name',
+        'description',
+        'created_at',
+    );
+
+    protected static $_relations = array(
         'articles' => array(
             'type'  => 'has_many',
             'model' => 'Article',
         ),
     );
-
-    public static $table;
-    public static function table()
-    {
-        if (self::$table === null)
-        {
-            self::$table = new \SimpleAR\Orm\Table('blogs', 'id', array(
-                'name',
-                'description',
-                'created_at'
-            ));
-            self::$table->modelBaseName = 'Blog';
-        }
-
-        return self::$table;
-    }
 }
 
 class Article extends SimpleAR\Orm\Model
@@ -56,21 +49,15 @@ class Article extends SimpleAR\Orm\Model
 
 class Author extends SimpleAR\Orm\Model
 {
-    public static $table;
-    public static function table()
-    {
-        if (self::$table === null)
-        {
-            self::$table = new \SimpleAR\Orm\Table('authors', 'id', array(
-                'firstName' => 'first_name',
-                'lastName'  => 'last_name',
-                'age',
-            ));
-            self::$table->modelBaseName = 'Author';
-        }
+    protected static $_tableName = 'authors';
 
-        return self::$table;
-    }
+    protected static $_columns = array(
+        'firstName' => 'first_name',
+        'lastName'  => 'last_name',
+        'age',
+    );
 }
 
+Blog::wakeup();
 Article::wakeup();
+Author::wakeup();
