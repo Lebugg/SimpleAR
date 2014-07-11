@@ -1347,6 +1347,8 @@ abstract class Model
 
         // Handle eager loading if needed.
         $with && $this->_populateEagerLoad($with);
+
+        $this->_concrete = true;
     }
 
     public static function boot()

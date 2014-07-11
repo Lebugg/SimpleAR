@@ -208,5 +208,10 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $a->save();
         $this->assertTrue($a->isConcrete());
+
+        $a = new Article();
+        $this->assertFalse($a->isConcrete());
+        $a->populate(array('id' => 12, 'title' => 'Title'));
+        $this->assertTrue($a->isConcrete());
     }
 }
