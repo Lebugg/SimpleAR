@@ -95,6 +95,18 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $stub->x;
     }
 
+    public function testSetter()
+    {
+        $stub = $this->getMock('Blog', array('set_x'));
+
+        $stub->expects($this->exactly(2))
+            ->method('set_x')
+            ->withConsecutive(array(12), array(15));
+
+        $stub->x = 12;
+        $stub->x = 15;
+    }
+
     public function testTablesStorage()
     {
         Article::wakeup();

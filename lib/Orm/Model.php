@@ -818,9 +818,8 @@ abstract class Model
         // Any last words to say?
         $this->_onBeforeDelete();
 
-        $conditions = array_combine(self::table()->getPrimaryKey(), $this->id());
-        $query = self::query()->delete()->conditions($conditions);
-        $count = $query->rowCount();
+        $pk = self::table()->getPrimaryKey();
+        $count = self::query()->delete()->where($pk, $this->id())->rowCount();
         //$count = self::query('delete')->conditions(array('id' => $this->_id))->rowCount();
 
         // Was not here? Weird. Tell user.
