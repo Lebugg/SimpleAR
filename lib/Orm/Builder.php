@@ -135,7 +135,9 @@ class Builder
         if (func_num_args() === 3)
         {
             $hasQuery->count();
-            $mainQuery->whereSub($hasQuery, $op, $value);
+            $mainQuery->selectSub($hasQuery, '#' . $relation);
+            $mainQuery->where(DB::expr('#' . $relation), $op, $value);
+            //$mainQuery->whereSub($hasQuery, $op, $value);
         }
 
         // We don't want anything special. This will be a simple Select 

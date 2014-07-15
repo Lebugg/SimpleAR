@@ -294,15 +294,19 @@ class Query
 
             elseif (is_array($value))
             {
-                if (is_array($value[0]))
+                if (! $value) { continue; }
+
+                elseif (is_array($value[0]))
                 {
                     $res = array_merge($res, call_user_func_array('array_merge', $value));
                 }
+
                 else
                 {
                     $res = array_merge($res, $value);
                 }
             }
+
             else
             {
                 $res[] = $value;

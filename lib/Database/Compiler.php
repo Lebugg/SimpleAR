@@ -122,10 +122,12 @@ abstract class Compiler
             : '?';
     }
 
-    public function column($column, $tablePrefix = '')
+    public function column($column, $tablePrefix = '', $alias = '')
     {
         $tablePrefix = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
-        return $tablePrefix . $this->wrap($column);
+        $alias = $alias ? ' AS ' . $this->wrap($alias) : '';
+
+        return $tablePrefix . $this->wrap($column) . $alias;
     }
 
     /**
@@ -186,6 +188,7 @@ abstract class Compiler
     public function wrap($string)
     {
         if ($string === '*') { return $string; }
+        if ($string instanceof Expression) { return $string->val(); }
 
         return '`' . $string . '`';
     }

@@ -226,4 +226,19 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $a->populate(array('id' => 12, 'title' => 'Title'));
         $this->assertTrue($a->isConcrete());
     }
+
+    public function testPopulateSetNonColumnAttributesToo()
+    {
+        $data = array(
+            'id' => 12,
+            'name' => 'The best blog ever read.',
+            '#articles' => 76,
+        );
+
+        $b = new Blog();
+        $b->populate($data);
+
+        $this->assertEquals('The best blog ever read.', $b->name);
+        $this->assertEquals(76, $b->{'#articles'});
+    }
 }

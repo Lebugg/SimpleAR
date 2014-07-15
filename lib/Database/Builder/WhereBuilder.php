@@ -502,8 +502,9 @@ class WhereBuilder extends Builder
                 //
                 // We check that [0] is a string to be a bit surer that it is a 
                 // condition array.
-                if (isset($value[0], $value[1], $value[2]) && is_string($value[0]))
-                {
+                if (isset($value[0], $value[1], $value[2])
+                    && (is_string($value[0]) || $value[0] instanceof Expression)
+                ) {
                     $wheres[] = $this->_buildCondition($value[0], $value[1], $value[2], $logicalOp);
                 }
 
@@ -561,6 +562,11 @@ class WhereBuilder extends Builder
      */
     protected function _processExtendedAttribute($attribute)
     {
+        if ($attribute instanceof Expression)
+        {
+            return array('', $attribute->val());
+        }
+
         // 1)
         list($relations, $attribute) = $this->separateAttributeFromRelations($attribute);
 
