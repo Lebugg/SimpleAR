@@ -1356,6 +1356,11 @@ abstract class Model
         self::setQueryBuilder(new QueryBuilder());
     }
 
+    /**
+     * Set the QueryBuilder to use.
+     *
+     * @param QueryBuilder $qb The builder.
+     */
     public static function setQueryBuilder(QueryBuilder $qb)
     {
         self::$_queryBuilder = $qb;

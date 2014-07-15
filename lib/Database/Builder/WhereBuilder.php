@@ -76,7 +76,18 @@ class WhereBuilder extends Builder
             list($value, $op) = array($op, '=');
         }
 
-        $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
+        // Handle attribute array.
+        if (is_array($attribute))
+        {
+            foreach ($attribute as $i => $attr)
+            {
+                $this->where($attr, $op, $value[$i], $logicalOp);
+            }
+        }
+        else
+        {
+            $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
+        }
     }
 
     /**
