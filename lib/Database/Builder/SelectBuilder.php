@@ -2,7 +2,9 @@
 
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Builder\WhereBuilder;
+use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Query;
 
 class SelectBuilder extends WhereBuilder
 {
@@ -31,12 +33,25 @@ class SelectBuilder extends WhereBuilder
         return $this;
     }
 
+    /**
+     * Add columns to select.
+     *
+     * @param array $columns The columns to select.
+     * @param bool  $expand  Whether to expand '*' wildcard.
+     */
     public function select(array $columns, $expand = true)
     {
-        $this->_selectColumns('', $columns, $expand);
+        $this->_selectColumns($this->getRootAlias(), $columns, $expand);
     }
 
-            //$c['columns'] = array($this->getRootAlias() => array('columns' => array('*')));
+    public function selectSub(Query $sub, $alias)
+    {
+        $this->addValueToQuery($sub->getValues());
+
+        $subSql = new Expression('(' . $sub->getSql() . ')');
+        $this->_selectColumn($subSql, $alias);
+    }
+
     /**
      * Add an aggregate function to the query (count, avg, sum...).
      *
@@ -90,6 +105,11 @@ class SelectBuilder extends WhereBuilder
         $offset === null || $this->offset($offset);
     }
 
+    /**
+     * Set the offset of the query.
+     *
+     * @param int $offset The offset to set.
+     */
     public function offset($offset)
     {
         $this->_components['offset'] = (int) $offset;
@@ -143,11 +163,25 @@ class SelectBuilder extends WhereBuilder
         if ($expand && $columns === array('*'))
         {
             $columns = $this->getInvolvedTable($tableAlias)->getColumns();
-            // Compiler wants it the other way.
+            // Compiler wants it the other way [<column> => <attribute>].
             $columns = array_flip($columns);
         }
 
         $this->_components['columns'][$tableAlias]['columns'] = $columns;
+    }
+
+    /**
+     * Add a column to select.
+     *
+     * @param string $columns The column to select.
+     * @param string $alias The returned column name.
+     */
+    protected function _selectColumn($column, $alias)
+    {
+        $this->_components['columns'][] = array(
+            'column' => $column,
+            'alias' => $alias,
+        );
     }
 
     protected function _onAfterBuild()
@@ -156,7 +190,6 @@ class SelectBuilder extends WhereBuilder
         $rootAlias = $this->getRootAlias();
 
         if (empty($c['columns'][$rootAlias])
-            && empty($c['columns'][''])
             && empty($c['aggregates'])
         ) {
             $this->_selectColumns($rootAlias, array('*'));

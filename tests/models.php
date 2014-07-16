@@ -1,35 +1,30 @@
 <?php
 
+use \SimpleAR\Orm\Builder as QueryBuilder;
+
 class Blog extends SimpleAR\Orm\Model
 {
-    public static $_relations = array(
+    protected static $_tableName = 'blogs';
+    protected static $_primaryKey = array('id');
+
+    protected static $_columns = array(
+        'name',
+        'description',
+        'created_at',
+    );
+
+    protected static $_relations = array(
         'articles' => array(
             'type'  => 'has_many',
             'model' => 'Article',
         ),
     );
-
-    public static $table;
-    public static function table()
-    {
-        if (self::$table === null)
-        {
-            self::$table = new \SimpleAR\Orm\Table('blogs', 'id', array(
-                'name',
-                'description',
-                'created_at'
-            ));
-            self::$table->modelBaseName = 'Blog';
-        }
-
-        return self::$table;
-    }
 }
 
 class Article extends SimpleAR\Orm\Model
 {
     protected static $_tableName  = 'articles';
-    protected static $_primaryKey = 'id';
+    protected static $_primaryKey = array('id');
 
     public static $_relations = array(
         'author' => array(
@@ -52,25 +47,35 @@ class Article extends SimpleAR\Orm\Model
     protected static $_orderBy = array(
         'title' => 'ASC',
     );
+
+    public static function scope_status(QueryBuilder $qb, $status)
+    {
+        if ($status === 2)
+        {
+            $qb->where('isOnline', true);
+            $qb->where('isValidated', true);
+        }
+
+        return $qb;
+    }
 }
 
 class Author extends SimpleAR\Orm\Model
 {
-    public static $table;
-    public static function table()
-    {
-        if (self::$table === null)
-        {
-            self::$table = new \SimpleAR\Orm\Table('authors', 'id', array(
-                'firstName' => 'first_name',
-                'lastName'  => 'last_name',
-                'age',
-            ));
-            self::$table->modelBaseName = 'Author';
-        }
+    protected static $_tableName = 'authors';
 
-        return self::$table;
+    protected static $_columns = array(
+        'firstName' => 'first_name',
+        'lastName'  => 'last_name',
+        'age',
+    );
+
+    public static function scope_women(QueryBuilder $qb)
+    {
+        return $qb->where('sex', 1);
     }
 }
 
+Blog::wakeup();
 Article::wakeup();
+Author::wakeup();

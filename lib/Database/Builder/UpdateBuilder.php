@@ -25,17 +25,42 @@ class UpdateBuilder extends WhereBuilder
 
         $joinClause = new JoinClause($this->_table->name,  '');
         $this->_components['updateFrom'] = array($joinClause);
+
+        return $this;
     }
 
     /**
      * Add a set clause.
      *
-     * @param string $attribute
+     * Usage:
+     * ------
+     *
+     * There are two ways to use this method:
+     *
+     *  1) `$builder->set('myAttribute', 'myValue');`
+     *  2) `$builder->set(['myAttr' => 'myValue', 'myAttr2' => 'myValue2']);`
+     *
+     * @param string|array $attribute The attribute name or an array of 
+     * attribute/value pairs.
      * @param mixed  $value
+     *
+     * @return $this
      */
-    public function set($attribute, $value)
+    public function set($attribute, $value = null)
     {
-        $this->_options['set'][$attribute] = $value;
+        if (is_array($attribute))
+        {
+            foreach ($attribute as $attr => $val)
+            {
+                $this->_options['set'][$attr] = $val;
+            }
+        }
+        else
+        {
+            $this->_options['set'][$attribute] = $value;
+        }
+
+        return $this;
     }
 
     protected function _buildSet(array $sets)

@@ -71,6 +71,16 @@ class Builder
     }
 
     /**
+     * Get the root class.
+     *
+     * @return string The current root class.
+     */
+    public function getRoot()
+    {
+        return $this->_root;
+    }
+
+    /**
      * Set the root model.
      *
      * @return $this
@@ -85,6 +95,12 @@ class Builder
         return $this;
     }
 
+    public function findOne(array $options)
+    {
+        $this->setOptions($options);
+        return $this->one();
+    }
+
     /**
      * Add a condition that check existence of related model instances for the 
      * root model.
@@ -92,7 +108,7 @@ class Builder
      * @param string $relation The name of the relation to check on.
      * @return $this
      */
-    public function has($relation, $op = null, $value = null)
+    public function has($relation, $op = null, $value = null, \Closure $callback = null)
     {
         $this->_query = $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
@@ -115,10 +131,12 @@ class Builder
         }
 
         // We want a Count sub-query.
-        if (func_num_args() === 3)
+        if (func_num_args() >= 3)
         {
             $hasQuery->count();
-            $mainQuery->whereSub($hasQuery, $op, $value);
+            $mainQuery->selectSub($hasQuery, '#' . $relation);
+            $mainQuery->where(DB::expr('#' . $relation), $op, $value);
+            //$mainQuery->whereSub($hasQuery, $op, $value);
         }
 
         // We don't want anything special. This will be a simple Select 
@@ -127,6 +145,11 @@ class Builder
         {
             $hasQuery->select(array('*'), false);
             $mainQuery->whereExists($hasQuery);
+        }
+
+        if ($callback !== null || ($callback = $op) instanceof \Closure)
+        {
+            $callback($hasQuery);
         }
 
         $mainQuery->getCompiler()->useTableAlias = true;
@@ -142,11 +165,11 @@ class Builder
      */
     public function setOptions(array $options)
     {
-        $q = $this->getQueryOrNewSelect();
+        $this->_query = $this->getQueryOrNewSelect();
 
         foreach ($options as $name => $value)
         {
-            $q->$name($value);
+            $this->_query->$name($value);
         }
 
         return $this;
@@ -284,6 +307,18 @@ class Builder
     {
         $this->_pendingRow = false;
         $this->_eagerLoad = false;
+        $this->_query = null;
+    }
+
+    public function applyScope($scope)
+    {
+        $root = $this->_root;
+        $args = func_get_args();
+
+        // We don't want $scope twice.
+        array_shift($args);
+
+        return $root::applyScope($scope, $this, $args);
     }
 
     /**
@@ -382,6 +417,11 @@ class Builder
     public function getConnection()
     {
         return $this->_connection = ($this->_connection ?: DB::connection());
+    }
+
+    protected function _applyScope($modelClass, $scope, array $args)
+    {
+        return $modelClass::applyScope($scope, $this, $args);
     }
 
     /**

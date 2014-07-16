@@ -213,4 +213,16 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($where, $components['where']);
         $this->assertEquals($val, $b->getValues());
     }
+
+    public function testWhereMethodWithArrayParameters()
+    {
+        $b = new WhereBuilder();
+        $b->root('Article');
+        $b->where(array('id'), array(12));
+
+        $where[] = new SimpleCond('_', 'id', '=', 12);
+        $components = $b->build();
+
+        $this->assertEquals($where, $components['where']);
+    }
 }

@@ -37,7 +37,7 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 	die('SimpleAR requires PHP 5.3 or higher.');
 }
 
-define('PHP_SIMPLEAR_VERSION_ID', '1.2.2');
+define('PHP_SIMPLEAR_VERSION_ID', '1.2.3');
 
 require __DIR__ . '/Config.php';
 require __DIR__ . '/Orm/Table.php';
@@ -60,6 +60,7 @@ use \SimpleAR\Database;
 use \SimpleAR\Database\Connection;
 use \SimpleAR\DateTime;
 use \SimpleAR\Facades\Facade;
+use \SimpleAR\Orm\Model;
 
 class SimpleAR
 {
@@ -105,6 +106,9 @@ class SimpleAR
         // lightweight and not-as-clean implementation.
         // Facades are located in lib/Facades/.
         Facade::bind($sar);
+
+        // Boot model class. It will load its dependency.
+        Model::boot();
     }
 
     public function localize($df)

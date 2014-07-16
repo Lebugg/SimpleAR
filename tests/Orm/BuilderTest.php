@@ -101,7 +101,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
         $article  = $qb->root('Article')->one();
-        $expected = array('id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2);
+        $expected = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
 
         $this->assertInstanceOf('Article', $article);
         $this->assertSame($expected, $article->attributes());
@@ -128,7 +128,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
         $article  = $qb->root('Article')->last();
-        $expected = array('id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2);
+        $expected = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
 
         $this->assertInstanceOf('Article', $article);
         $this->assertSame($expected, $article->attributes());
@@ -309,7 +309,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->root('Blog')->has('articles')->select(array('*'), false);
 
-        $sql = 'SELECT * FROM `blogs` `_` WHERE EXISTS (SELECT * FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`)';
+        $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE EXISTS (SELECT `__`.* FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`)';
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
     }
 
@@ -320,11 +320,40 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
-        $qb->root('Blog')->has('articles', '>', 3)->select(array('*'), false);
+        $qb->root('Blog')->has('articles', '>', 3);
 
-        $sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
+        //$sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
+        $sql = 'SELECT (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) AS `#articles`,`_`.`name` AS `name`,`_`.`description` AS `description`,`_`.`created_at` AS `created_at`,`_`.`id` AS `id` FROM `blogs` `_` WHERE `#articles` > ?';
         $val[] = 3;
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
         $this->assertEquals($val, $qb->getQuery()->getValues());
+    }
+
+    public function testSetRoot()
+    {
+        $qb = new QueryBuilder();
+
+        $qb->root('Article');
+        $this->assertEquals('Article', $qb->getRoot());
+
+        $qb->root('Blog');
+        $this->assertEquals('Blog', $qb->getRoot());
+    }
+
+    public function testWhereCallsScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->once())->method('__call')->with('where', array('sex', 1));
+
+        $qb->root('Author')->applyScope('women');
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->exactly(2))->method('__call')
+            ->withConsecutive(
+                array('where', array('isOnline', true)),
+                array('where', array('isValidated', true))
+            )->will($this->returnValue($qb));
+
+        $qb->root('Article')->applyScope('status', 2);
     }
 }

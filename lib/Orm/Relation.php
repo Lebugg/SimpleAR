@@ -228,15 +228,13 @@ abstract class Relation
         $this->cm = new \StdClass();
         $this->cm->class     = $cmClass;
         $this->cm->t         = $cmClass::table();
-        $this->cm->table     = $this->cm->t->name;
-        $this->cm->alias     = $this->cm->t->alias;
+        //$this->cm->table     = $this->cm->t->name;
 
         $this->lm = new \StdClass();
         $this->lm->class = $s = $a['model'] . Cfg::get('modelClassSuffix');
         $this->lm->t     = $s::table();
-        $this->lm->table = $this->lm->t->name;
-        $this->lm->alias = $this->lm->t->alias;
-        $this->lm->pk    = $this->lm->t->primaryKey;
+        //$this->lm->table = $this->lm->t->name;
+        //$this->lm->pk    = $this->lm->t->primaryKey;
 
         if (isset($a['on_delete_cascade'])) { $this->onDeleteCascade = $a['on_delete_cascade']; }
         if (isset($a['filter']))            { $this->filter          = $a['filter']; }
@@ -244,13 +242,13 @@ abstract class Relation
 		if (isset($a['order']))				{ $this->order           = $a['order']; }
     }
 
-    public function deleteLinkedModel($value)
-    {
-        $query = new Query\Delete($this->lm->class);
-        $query->conditions(array($this->lm->attribute => $value))
-            ->run();
-    }
-
+    // public function deleteLinkedModel($value)
+    // {
+    //     $query = new Query\Delete($this->lm->class);
+    //     $query->conditions(array($this->lm->attribute => $value))
+    //         ->run();
+    // }
+    //
     /**
      * Create a Relation instance.
      *
@@ -263,7 +261,7 @@ abstract class Relation
      */
     public static function forge($name, $config, $cmClass)
     {
-        $relationClass = 'SimpleAR\\Orm\\Relation\\' . self::$_typeToClass[$config['type']];
+        $relationClass = 'SimpleAR\Orm\Relation\\' . self::$_typeToClass[$config['type']];
 
         $relation = new $relationClass($config, $cmClass);
         $relation->name = $name;
@@ -330,24 +328,5 @@ abstract class Relation
         }
 
         return $res;
-    }
-
-    public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
-    {
-		return $this->_buildJoin($joinType, $cmAlias, $this->lm->table, $lmAlias, $this->cm->column, $this->lm->column);
-    }
-
-    public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
-    {
-        return $this->joinLinkedModel($cmAlias, $lmAlias, $joinType);
-    }
-
-    protected function _buildJoin($joinType, $aliasA, $tableB, $aliasB, $colA, $colB)
-    {
-        $qAliasA = DB::quote($aliasA); $qColA   = DB::quote($colA);
-        $qTableB = DB::quote($tableB); $qAliasB = DB::quote($aliasB); $qColB   = DB::quote($colB);
-
-		return ' ' . $joinType . ' JOIN ' . $qTableB . ' ' . $qAliasB
-            . ' ON (' . $qAliasA . '.' . $qColA . ' = ' .  $qAliasB . '.' .  $qColB . ')';
     }
 }

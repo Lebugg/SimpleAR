@@ -4,6 +4,7 @@ error_reporting(E_ALL | E_STRICT);
 
 use \SimpleAR\Facades\DB;
 use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Orm\Table;
 
 class ModelTest extends PHPUnit_Framework_TestCase
 {
@@ -13,7 +14,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $stub->foo = 'bar';
         $this->assertEquals($stub->foo, 'bar');
-        
+
         // Test __isset() and __unset().
         $this->assertTrue(isset($stub->foo));
         unset($stub->foo);
@@ -22,17 +23,28 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testIsDirtyFlag()
     {
-        $stub = $this->getMockForAbstractClass('SimpleAR\Orm\Model');
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('insert'));
+        $qb->expects($this->any())->method('insert')->will($this->returnValue(12));
 
-        $this->assertFalse($stub->isDirty());
+        $class = 'Article';
+        $class::setQueryBuilder($qb);
+
+        $stub = new $class();
+
+        $this->assertTrue($stub->isDirty());
         $stub->foo = 'bar';
         $this->assertTrue($stub->isDirty());
+        $stub->save();
+        $this->assertFalse($stub->isDirty());
     }
 
     public function testGetColumns()
     {
-        $expected = array('name', 'description', 'created_at');
+        $expected = array('name', 'description', 'created_at', 'id');
         $this->assertEquals($expected, array_values(Blog::columns()));
+
+        $expected = array('blog_id', 'author_id', 'title', 'created_at', 'id');
+        $this->assertEquals($expected, array_values(Article::columns()));
     }
 
     /**
@@ -83,10 +95,176 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $stub->x;
     }
 
+    public function testSetter()
+    {
+        $stub = $this->getMock('Blog', array('set_x'));
+
+        $stub->expects($this->exactly(2))
+            ->method('set_x')
+            ->withConsecutive(array(12), array(15));
+
+        $stub->x = 12;
+        $stub->x = 15;
+    }
+
     public function testTablesStorage()
     {
         Article::wakeup();
 
         $this->assertInstanceOf('SimpleAR\Orm\Table', Article::table());
+    }
+
+    public function testFindByPKWithSimplePK()
+    {
+        $t = new Table('models', array('id'));
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setTable($m, $t);
+
+        // Expects one().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->exactly(2))->method('one')->will($this->returnValue(true));
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $m::setQueryBuilder($q);
+        $m::findByPK(12);
+        $m::findByPK('12');
+
+        // Expects all().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $q->expects($this->exactly(2))->method('all')->will($this->returnValue(true));
+        $m::setQueryBuilder($q);
+        $m::findByPK(array(1, 2));
+        $m::findByPK(array(1, 2, 3));
+    }
+
+    public function testFindByPKWithCompoundPK()
+    {
+        $t = new Table('models', array('a1', 'a2'));
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setTable($m, $t);
+
+        // Expects one().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->exactly(4))->method('one')->will($this->returnValue(true));
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $m::setQueryBuilder($q);
+        $m::findByPK(12);
+        $m::findByPK('12');
+        $m::findByPK(array('12'));
+        $m::findByPK(array(12, 'a'));
+
+        // Expects all().
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+        $q->expects($this->any())->method('setOptions')->will($this->returnValue($q));
+        $q->expects($this->exactly(2))->method('all')->will($this->returnValue(true));
+        $m::setQueryBuilder($q);
+        $m::findByPK(array(array(1, 'a')));
+        $m::findByPK(array(array(1, 'a'), array(2, 'b')));
+        $q = $this->getMock('SimpleAR\Orm\Builder');
+    }
+
+    public function testThatCorrectRootIsSetForNewQuery()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('root', 'all'));
+
+        $m = 'SimpleAR\Orm\Model';
+        $m::setQueryBuilder($qb);
+
+        $qb->expects($this->exactly(4))->method('root')->withConsecutive(
+            array('Article'),
+            array('Blog'),
+            array('Article'),
+            array('Blog')
+        );
+
+        Article::query();
+        Blog::query();
+
+        // Through __callStatic().
+        Article::all();
+        Blog::all();
+    }
+
+    public function testExistsCallsFind()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findOne'));
+
+        $opt = array('conditions' => array('id' => 12));
+        $qb->expects($this->once())->method('findOne')->with($opt)->will($this->returnValue(true));
+
+        Article::setQueryBuilder($qb);
+        Article::exists(12);
+    }
+
+    public function testExistsByConditionsCallsFind()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findOne'));
+
+        $opt = array('conditions' => array('name' => 'yo!'));
+        $qb->expects($this->once())->method('findOne')->with($opt)->will($this->returnValue(true));
+
+        Article::setQueryBuilder($qb);
+        Article::exists(array('name' => 'yo!'), false);
+    }
+
+    public function testIsConcrete()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('insert'));
+        $qb->expects($this->once())->method('insert')->will($this->returnValue(12));
+        Article::setQueryBuilder($qb);
+
+        $a = new Article();
+        $this->assertFalse($a->isConcrete());
+
+        $a->save();
+        $this->assertTrue($a->isConcrete());
+
+        $a = new Article();
+        $this->assertFalse($a->isConcrete());
+        $a->populate(array('id' => 12, 'title' => 'Title'));
+        $this->assertTrue($a->isConcrete());
+    }
+
+    public function testPopulateSetNonColumnAttributesToo()
+    {
+        $data = array(
+            'id' => 12,
+            'name' => 'The best blog ever read.',
+            '#articles' => 76,
+        );
+
+        $b = new Blog();
+        $b->populate($data);
+
+        $this->assertEquals('The best blog ever read.', $b->name);
+        $this->assertEquals(76, $b->{'#articles'});
+    }
+
+    public function testHasScope()
+    {
+        $this->assertTrue(Author::hasScope('women'));
+        $this->assertFalse(Author::hasScope('men'));
+    }
+
+    public function testScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->once())->method('__call')
+            ->with('where', array('sex', 1))->will($this->returnValue($qb));
+
+        Author::setQueryBuilder($qb);
+        Author::women();
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->exactly(2))->method('__call')
+            ->withConsecutive(
+                array('where', array('isOnline', true)),
+                array('where', array('isValidated', true))
+            )->will($this->returnValue($qb));
+
+        Article::setQueryBuilder($qb);
+        Article::status(2);
     }
 }

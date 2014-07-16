@@ -265,9 +265,17 @@ class Query
         return strpos($sql, ' WHERE ') !== false;
     }
 
+    /**
+     * Execute the SQL query.
+     *
+     * @param string $sql The SQL query.
+     * @param array  $values The values to bind to query.
+     *
+     * @see \SimpleAR\Database\Connection::query()
+     */
     public function executeQuery($sql, array $values)
     {
-        return $this->getConnection()->query($sql, $values);
+        $this->getConnection()->query($sql, $values);
     }
 
     /**
@@ -286,15 +294,19 @@ class Query
 
             elseif (is_array($value))
             {
-                if (is_array($value[0]))
+                if (! $value) { continue; }
+
+                elseif (is_array($value[0]))
                 {
                     $res = array_merge($res, call_user_func_array('array_merge', $value));
                 }
+
                 else
                 {
                     $res = array_merge($res, $value);
                 }
             }
+
             else
             {
                 $res[] = $value;

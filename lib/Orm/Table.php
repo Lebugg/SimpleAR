@@ -6,21 +6,19 @@ class Table
 {
     public $name;
     public $primaryKey;
-    public $primaryKeyColumns;
     public $columns;
     public $orderBy;
     public $conditions = array();
     public $modelBaseName;
 
-	// Constructed.
-	public $alias;
-    public $isSimplePrimaryKey;
-
-    public function __construct($name, $primaryKey, $columns)
+    public function __construct($name, $primaryKey, array $columns = array())
     {
-        $this->name       = $name;
-        $this->primaryKey = $primaryKey;
-        $this->columns    = $columns;
+        if (! is_string($name))
+        {
+            throw new Exception('Invalid table name: ' . var_export($name, true));
+        }
+
+        $this->name = $name;
 
         /**
          * Allows $_columns declaration like:
@@ -38,15 +36,36 @@ class Table
         {
             if (is_int($key))
             {
-                $this->columns[$value] = $value;
-                unset($this->columns[$key]);
+                $columns[$value] = $value;
+                unset($columns[$key]);
             }
         }
 
-		$this->alias		      = '_' . strtolower($name);
-        $this->isSimplePrimaryKey = is_string($primaryKey);
+        if ($primaryKey === null)
+        {
+            $primaryKey = array('id');
+        }
 
-        $this->primaryKeyColumns  = $this->isSimplePrimaryKey ? $this->primaryKey : $this->columnRealName($this->primaryKey);
+        // @deprecated
+        if (is_string($primaryKey))
+        {
+            $columns['id'] = $primaryKey;
+            $primaryKey = array('id');
+        }
+        // Right way.
+        else
+        {
+            foreach ($primaryKey as $attr)
+            {
+                if (! isset($columns[$attr]))
+                {
+                    $columns[$attr] = $attr;
+                }
+            }
+        }
+
+        $this->columns = $columns;
+        $this->primaryKey = $primaryKey;
     }
 
     /**
@@ -61,27 +80,21 @@ class Table
     {
         if (! $key) { return $key; }
 
-        $res = array();
-        foreach ((array) $key as $key)
+        $keys = (array) $key;
+        $res  = array();
+
+        foreach ($keys as $key)
         {
-            if (! isset($this->columns[$key]) && $key !== 'id')
+            if (! isset($this->columns[$key]))
             {
                 throw new Exception('Attribute "' . $key . '" does not exist for model "' .  $this->modelBaseName . '".');
             }
 
-            $res[] = $key === 'id'
-                ? $this->primaryKeyColumns
-                : $this->columns[$key]
-                ;
+            $res[] = $this->columns[$key];
         }
 
         // Return a string if only one element.
         return isset($res[1]) ? $res : $res[0];
-    }
-
-    public function hasAttribute($s)
-    {
-        return $s == 'id' || (isset($this->columns[$s]) || array_key_exists($this->columns[$s]));
     }
 
     /**
@@ -93,7 +106,7 @@ class Table
      */
     public function getPrimaryKey()
     {
-        return (array) $this->primaryKey;
+        return $this->primaryKey;
     }
 
     /**
@@ -105,15 +118,16 @@ class Table
      */
     public function getColumns()
     {
-        $columns = $this->columns;
+        return $this->columns;
+    }
 
-        $pk = (array) $this->primaryKey;
-        $pkCols = (array) $this->primaryKeyColumns;
-        foreach ($pk as $i => $attrName)
-        {
-            $columns[$attrName] = $pkCols[$i];
-        }
-
-        return $columns;
+    /**
+     * Check whether primary key is a compound key.
+     *
+     * @return bool True if primary key is compound, false otherwise.
+     */
+    public function hasCompoundPK()
+    {
+        return count($this->primaryKey) > 1;
     }
 }

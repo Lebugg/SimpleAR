@@ -226,21 +226,41 @@ class BaseCompiler extends Compiler
         $sql = array();
         foreach ($columns as $tableAlias => $data)
         {
-            $columns     = $data['columns'];
-            $tableAlias  = $this->useTableAlias ? $tableAlias : '';
-            $resultAlias = $this->useResultAlias ? $data['resultAlias'] : '';
+            if (is_string($tableAlias))
+            {
+                $columns     = $data['columns'];
+                $tableAlias  = $this->useTableAlias ? $tableAlias : '';
+                $resultAlias = $this->useResultAlias ? $data['resultAlias'] : '';
 
-            $sql[] = $this->columnize($columns, $tableAlias, $resultAlias);
+                $sql[] = $this->columnize($columns, $tableAlias, $resultAlias);
+            }
+
+            else
+            {
+                $sql[] = $this->column($data['column'], '', $data['alias']);
+            }
         }
 
         return implode(',', $sql);
     }
 
+    /**
+     * Compile a FROM clause of a SELECT statement.
+     *
+     * @param array $from An array of JoinClause.
+     * @return string SQL
+     */
     protected function _compileFrom($from)
     {
         return 'FROM ' . $this->_compileJoins($from);
     }
 
+    /**
+     * Compile an ORDER BY clause.
+     *
+     * @param array $orderBys A list of attributes to order on.
+     * @return string SQL
+     */
     protected function _compileOrderBy(array $orderBys)
     {
         foreach ($orderBys as $item)
@@ -253,6 +273,12 @@ class BaseCompiler extends Compiler
         return 'ORDER BY ' . implode(',', $sql);
     }
 
+    /**
+     * Compile the GROUP BY clause of a SELECT statement.
+     *
+     * @param array $groups A list of columns to group on.
+     * @return string SQL
+     */
     protected function _compileGroupBy(array $groups)
     {
         foreach ($groups as $g)
@@ -264,11 +290,23 @@ class BaseCompiler extends Compiler
         return 'GROUP BY ' . implode(',', $sql);
     }
 
+    /**
+     * Compile a LIMIT clause of a SELECT statement.
+     *
+     * @param int $limit The limit.
+     * @return string SQL
+     */
     protected function _compileLimit($limit)
     {
         return 'LIMIT ' . $limit;
     }
 
+    /**
+     * Compile the OFFSET clause of a SELECT statement.
+     *
+     * @param int $offset The offset.
+     * @return string SQL
+     */
     protected function _compileOffset($offset)
     {
         return 'OFFSET ' . $offset;
