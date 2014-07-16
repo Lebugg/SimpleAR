@@ -1350,6 +1350,21 @@ abstract class Model
         $this->_concrete = true;
     }
 
+    public static function applyScope($scope, QueryBuilder $qb, array $args)
+    {
+        $fn = 'scope_' . $scope;
+        array_unshift($args, $qb);
+
+        return call_user_func_array(array(get_called_class(), $fn), $args);
+    }
+
+    public static function hasScope($scope)
+    {
+        $fn = 'scope_' . $scope;
+
+        return method_exists(get_called_class(), $fn);
+    }
+
     public static function boot()
     {
         self::setQueryBuilder(new QueryBuilder());
@@ -1470,6 +1485,12 @@ abstract class Model
     public static function __callStatic($method, $args)
     {
         $query = static::query();
+
+        // Check if model has a scope of this name.
+        if (static::hasScope($method))
+        {
+            return static::applyScope($method, $query, $args);
+        }
 
         return call_user_func_array(array($query, $method), $args);
     }

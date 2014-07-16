@@ -241,4 +241,30 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('The best blog ever read.', $b->name);
         $this->assertEquals(76, $b->{'#articles'});
     }
+
+    public function testHasScope()
+    {
+        $this->assertTrue(Author::hasScope('women'));
+        $this->assertFalse(Author::hasScope('men'));
+    }
+
+    public function testScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->once())->method('__call')
+            ->with('where', array('sex', 1))->will($this->returnValue($qb));
+
+        Author::setQueryBuilder($qb);
+        Author::women();
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->exactly(2))->method('__call')
+            ->withConsecutive(
+                array('where', array('isOnline', true)),
+                array('where', array('isValidated', true))
+            )->will($this->returnValue($qb));
+
+        Article::setQueryBuilder($qb);
+        Article::status(2);
+    }
 }

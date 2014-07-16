@@ -1,5 +1,7 @@
 <?php
 
+use \SimpleAR\Orm\Builder as QueryBuilder;
+
 class Blog extends SimpleAR\Orm\Model
 {
     protected static $_tableName = 'blogs';
@@ -45,6 +47,17 @@ class Article extends SimpleAR\Orm\Model
     protected static $_orderBy = array(
         'title' => 'ASC',
     );
+
+    public static function scope_status(QueryBuilder $qb, $status)
+    {
+        if ($status === 2)
+        {
+            $qb->where('isOnline', true);
+            $qb->where('isValidated', true);
+        }
+
+        return $qb;
+    }
 }
 
 class Author extends SimpleAR\Orm\Model
@@ -56,6 +69,11 @@ class Author extends SimpleAR\Orm\Model
         'lastName'  => 'last_name',
         'age',
     );
+
+    public static function scope_women(QueryBuilder $qb)
+    {
+        return $qb->where('sex', 1);
+    }
 }
 
 Blog::wakeup();

@@ -329,7 +329,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($val, $qb->getQuery()->getValues());
     }
 
-    public function setRoot()
+    public function testSetRoot()
     {
         $qb = new QueryBuilder();
 
@@ -338,5 +338,22 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->root('Blog');
         $this->assertEquals('Blog', $qb->getRoot());
+    }
+
+    public function testWhereCallsScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->once())->method('__call')->with('where', array('sex', 1));
+
+        $qb->root('Author')->applyScope('women');
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('__call'));
+        $qb->expects($this->exactly(2))->method('__call')
+            ->withConsecutive(
+                array('where', array('isOnline', true)),
+                array('where', array('isValidated', true))
+            )->will($this->returnValue($qb));
+
+        $qb->root('Article')->applyScope('status', 2);
     }
 }

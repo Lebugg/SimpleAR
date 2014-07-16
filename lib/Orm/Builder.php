@@ -77,7 +77,6 @@ class Builder
      */
     public function getRoot()
     {
-        echo $this->_root;
         return $this->_root;
     }
 
@@ -109,7 +108,7 @@ class Builder
      * @param string $relation The name of the relation to check on.
      * @return $this
      */
-    public function has($relation, $op = null, $value = null)
+    public function has($relation, $op = null, $value = null, \Closure $callback = null)
     {
         $this->_query = $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
@@ -132,7 +131,7 @@ class Builder
         }
 
         // We want a Count sub-query.
-        if (func_num_args() === 3)
+        if (func_num_args() >= 3)
         {
             $hasQuery->count();
             $mainQuery->selectSub($hasQuery, '#' . $relation);
@@ -146,6 +145,11 @@ class Builder
         {
             $hasQuery->select(array('*'), false);
             $mainQuery->whereExists($hasQuery);
+        }
+
+        if ($callback !== null || ($callback = $op) instanceof \Closure)
+        {
+            $callback($hasQuery);
         }
 
         $mainQuery->getCompiler()->useTableAlias = true;
@@ -306,6 +310,17 @@ class Builder
         $this->_query = null;
     }
 
+    public function applyScope($scope)
+    {
+        $root = $this->_root;
+        $args = func_get_args();
+
+        // We don't want $scope twice.
+        array_shift($args);
+
+        return $root::applyScope($scope, $this, $args);
+    }
+
     /**
      * Redirect method calls.
      *
@@ -402,6 +417,11 @@ class Builder
     public function getConnection()
     {
         return $this->_connection = ($this->_connection ?: DB::connection());
+    }
+
+    protected function _applyScope($modelClass, $scope, array $args)
+    {
+        return $modelClass::applyScope($scope, $this, $args);
     }
 
     /**
