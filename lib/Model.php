@@ -2246,7 +2246,7 @@ abstract class Model
             //
             // - a Model instance array (HasMany or ManyMany relations);
             // - a Model instance ID array (HasMany or ManyMany relations).
-            if (isset(static::$_relations[$key]))
+            if (isset(static::$_relations[$key]) && ($value || is_array($value)))
             {
                 $relation = static::relation($key);
 

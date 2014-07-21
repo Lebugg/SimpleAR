@@ -13,7 +13,7 @@ class Count extends Select
 {
     protected static $_options = array('filter', 'conditions', 'has', 'group_by');
 
-    protected $_filter = array('COUNT(*)');
+    protected $_filter = array();
 
     /**
      * The components of the query.
@@ -41,5 +41,18 @@ class Count extends Select
     public function res()
     {
         return $this->_sth->fetch(\PDO::FETCH_COLUMN);
+    }
+
+    protected function _compile()
+    {
+        // Here we go? Let's check that we are selecting some columns.
+        if (! $this->_filter)
+        {
+            $alias = '`' . $this->_context->rootTableAlias . '`';
+            $col   = $alias . '.id';
+            $this->_filter = array('COUNT(DISTINCT ' . $col . ')');
+        }
+
+        return parent::_compile();
     }
 }
