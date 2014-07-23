@@ -5,19 +5,19 @@ use \SimpleAR\Facades\Cfg;
 
 class BelongsTo extends Relation
 {
-    protected function __construct($a, $cmClass)
+    public function setInformation(array $info)
     {
-        parent::__construct($a, $cmClass);
+        parent::setInformation($info);
 
-        $this->cm->attribute = isset($a['key_from'])
-            ? $a['key_from']
+        $this->cm->attribute = isset($info['key_from'])
+            ? $info['key_from']
             : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName);
             ;
 
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         //$this->cm->pk        = $this->cm->t->primaryKey;
 
-        $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
+        $this->lm->attribute = isset($info['key_to']) ? $info['key_to'] : 'id';
         $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
     }
 }

@@ -7,37 +7,39 @@ class ManyMany extends Relation
 {
     public $jm;
 
-    protected function __construct($a, $cmClass)
-    {
-        parent::__construct($a, $cmClass);
+    protected $_toMany = true;
 
-        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+    public function setInformation(array $info)
+    {
+        parent::setInformation($info);
+
+        $this->cm->attribute = isset($info['key_from']) ? $info['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         //$this->cm->pk        = $this->cm->t->primaryKey;
 
-        $this->lm->attribute = isset($a['key_to']) ? $a['key_to'] : 'id';
+        $this->lm->attribute = isset($info['key_to']) ? $info['key_to'] : 'id';
         $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
         //$this->lm->pk        = $this->lm->t->primaryKey;
 
         $this->jm = new \StdClass();
 
-        if (isset($a['join_model']))
+        if (isset($info['join_model']))
         {
-            $this->jm->class = $s = $a['join_model'] . Cfg::get('modelClassSuffix');
+            $this->jm->class = $s = $info['join_model'] . Cfg::get('modelClassSuffix');
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
             $this->jm->from  =
-            $this->jm->t->columnRealName(isset($a['join_from']) ?
-            $a['join_from'] : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName));
-            $this->jm->to    = $this->jm->t->columnRealName(isset($a['join_to'])
-            ? $a['join_to']   : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName));
+            $this->jm->t->columnRealName(isset($info['join_from']) ?
+            $info['join_from'] : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName));
+            $this->jm->to    = $this->jm->t->columnRealName(isset($info['join_to'])
+            ? $info['join_to']   : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName));
         }
         else
         {
             $this->jm->class = null;
-            $this->jm->table = isset($a['join_table']) ? $a['join_table'] : $this->cm->table . '_' . $this->lm->table;
-            $this->jm->from  = isset($a['join_from'])  ? $a['join_from']  : (strtolower($this->cm->t->name) . '_id');
-            $this->jm->to    = isset($a['join_to'])    ? $a['join_to']    : (strtolower($this->lm->t->name) . '_id');
+            $this->jm->table = isset($info['join_table']) ? $info['join_table'] : $this->cm->table . '_' . $this->lm->table;
+            $this->jm->from  = isset($info['join_from'])  ? $info['join_from']  : (strtolower($this->cm->t->name) . '_id');
+            $this->jm->to    = isset($info['join_to'])    ? $info['join_to']    : (strtolower($this->lm->t->name) . '_id');
         }
 
         //$this->jm->alias = '_' . strtolower($this->jm->table);
