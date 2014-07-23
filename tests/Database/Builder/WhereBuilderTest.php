@@ -72,6 +72,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
     public function testSimpleCondition()
     {
+        // One
         $options = array(
             'root' => 'Article',
             'conditions' => array(
@@ -86,6 +87,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertArrayHasKey('where', $components);
         $this->assertEquals($expected, $components['where']);
 
+        // Two
         $options = array(
             'root' => 'Article',
             'conditions' => array(
@@ -100,6 +102,26 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $expected = array();
         $expected[] = new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
         $expected[] = new SimpleCond('_', array('title'), '=', 'Essays', 'AND');
+        $this->assertCount(2, $components['where']);
+        $this->assertEquals($expected, $components['where']);
+    }
+
+    public function testSimpleConditionWithNullValues()
+    {
+        $options = array(
+            'root' => 'Article',
+            'conditions' => array(
+                array('id', '!=', null),
+                'title' => null,
+            ),
+        );
+
+        $b = new WhereBuilder();
+        $components = $b->build($options);
+
+        $expected = array();
+        $expected[] = new SimpleCond('_', array('id'), '!=', null, 'AND');
+        $expected[] = new SimpleCond('_', array('title'), '=', null, 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
     }
