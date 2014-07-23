@@ -13,9 +13,5 @@
         <testsuite name="All">
             <directory>./tests/</directory>
         </testsuite>
-        <testsuite name="No_Model">
-            <directory>./tests/</directory>
-            <exclude>./tests/ModelTest.php</exclude>
-        </testsuite>
     </testsuites>
 </phpunit>
