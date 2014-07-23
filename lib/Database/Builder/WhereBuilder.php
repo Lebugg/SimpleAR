@@ -502,7 +502,7 @@ class WhereBuilder extends Builder
                 //
                 // We check that [0] is a string to be a bit surer that it is a 
                 // condition array.
-                if (isset($value[0], $value[1], $value[2])
+                if (isset($value[0], $value[1]) && (isset($value[2]) || array_key_exists(2, $value))
                     && (is_string($value[0]) || $value[0] instanceof Expression)
                 ) {
                     $wheres[] = $this->_buildCondition($value[0], $value[1], $value[2], $logicalOp);

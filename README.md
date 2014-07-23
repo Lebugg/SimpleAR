@@ -5,33 +5,23 @@ I know, you may say: “why another PHP ORM? There are so many of them!”. And 
 would agree, but I've been looking for an ORM that would fit my needs and I
 haven't found it. So I've written one.
 
-### Pluses
-* Ultra light weight;
-* Simple but efficient code;
-* Well documented;
-* Easily configurable;
-* And soon, a good documentation!
-
-### Minuses
-* Find a great name for this project!
-
 Features
 --------
 
-### Classic features of any good ORM
+### Classic features of any ORM
 
 * CRUD manipulation:
     * **Create**:
    
         ```php
-        $o = new Class(<attributes>);
-        $o->save();
+        $object = new Class(<attributes>);
+        $object->save();
         ```
         
         *or*
         
         ```php
-        $o = Class::create(<attributes>);
+        $object = Class::create(<attributes>);
         ```
         
     * **Read**:
@@ -41,20 +31,20 @@ Features
         ```
             
         (and its derivated: `Class::findByPK()`, `Class::all()`,
-        `Class::first()`, `Class::last()`)
+        `Class::first()`, `Class::last()`, `Class::one()`)
 
     * **Update**:
 
         ```php
-        $o->myAttr = $myValue;
-        $o->save();
+        $object->myAttr = $myValue;
+        $obeect->save();
         ```
             
         *or*
                 
         ```php
-        $o->modify(<attributes>)
-        $o->save();
+        $object->set(<attributes>)
+        $object->save();
         ```
             
         for several attributes in a row.
@@ -62,7 +52,7 @@ Features
     * **Delete**:
     
         ```php
-        $o->delete();
+        $object->delete();
         ```
             
         *or*
@@ -119,7 +109,7 @@ complex searches.
 * Order your result by a related model's attribute:
     
     ```php
-    'order_by' => array('company/director/last_name' => 'ASC'),
+    'order_by' => 'company/director/last_name',
     ```
 
 * Order your result by a `COUNT`:
@@ -137,7 +127,7 @@ very clean way your schema.
 change columns' names for a more fitting ones.
 
     ```php
-    protected static $_aColumns = array(
+    protected static $_columns = array(
         'first_name', // Column is named "first_name" and it is a good one.
         'last_name',
         'age' => 'years_since_birth', // Column "years_since_birth" of
@@ -165,6 +155,7 @@ meaningful):
 * Optional count getters;
 * Model attributes filters: an easy way to manage attributes you want to
 retrieve from DB;
+* Scopes;
 
 Requirements
 ------------
@@ -183,8 +174,8 @@ folder sounds good, for example).
     ```php
     include 'libraries/SimpleAR/SimpleAR.php';
     
-    $oCfg = new SimpleAR\Config();
-    $oCfg->dsn = array(
+    $cfg = new SimpleAR\Config();
+    $cfg->dsn = array(
         'driver'   => DB_DRIVER,
         'host'     => DB_HOST,
         'name'     => DB_NAME,
@@ -193,9 +184,10 @@ folder sounds good, for example).
     );
     
     // Note trailing slash.
-    $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
+    $cfg->modelDirectory  = 'path/to/any/directory_you_want/'; // You can pass
+                                                               // an array too.
     
-    SimpleAR\init($oCfg);
+    $app = new SimpleAR($config);
     ```
 
 3. No, there is no third step; It's done!
@@ -227,10 +219,6 @@ All of them are describe in documentation.
 Documentation
 -------------
 
-A PHPDoc generated documentation can be found
-[here](https://github.com/Lebugg/SimpleAR/blob/master/doc/index.html
-"Documentation").
-
 ### Create a Model class ###
 
 #### Database settings ####
@@ -258,24 +246,25 @@ You can still explicitly set your values:
 class User extends SimpleAR\Model
 {
     // Database table name.
-    protected $_sTableName = 'users';
+    protected static $_tableName = 'users';
 
     // Table primary key.
-    protected $_mPrimaryKey = 'id';
+    protected static $_primaryKey = array('id');
 }
 ```
 
 ##### Set columns #####
 
-If you don't specify them, columns will be retrieved thanks to a `SHOW COLUMNS` query. I recommend
-to specify them, it will save one database query for each loaded model:
+If you don't specify them, columns will be retrieved thanks to a `SHOW COLUMNS`
+query. I recommend to specify them, it will save one database query for each
+loaded model:
 
 ```php
 class User extends SimpleAR\Model
 {
     ...
 
-    protected $_aColumns = array(
+    protected $_columns = array(
         'last_name',
         'first_name',
         'age',
@@ -290,7 +279,7 @@ class User extends SimpleAR\Model
 {
     ...
 
-    protected $_aColumns = array(
+    protected $_columns = array(
         'last_name',
         'first_name',
         // “age” will be used for “years_since_birth” column.
