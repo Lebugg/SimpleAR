@@ -267,4 +267,24 @@ class ModelTest extends PHPUnit_Framework_TestCase
         Article::setQueryBuilder($qb);
         Article::status(2);
     }
+
+    public function testLoadRelation()
+    {
+        $articles = array(
+            new Article,
+            new Article,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
+        $qb->expects($this->once())->method('findMany')->will($this->returnValue($articles));
+        Blog::setQueryBuilder($qb);
+
+        $blog = new Blog();
+        $blog->populate(array('id' => 12)); // In order to be concrete.
+        $blog->load('articles');
+
+        $attributes = $blog->attributes();
+        $this->assertArrayHasKey('articles', $attributes);
+        $this->assertEquals($articles, $attributes['articles']);
+    }
 }

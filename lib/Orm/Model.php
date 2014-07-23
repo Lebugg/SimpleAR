@@ -487,7 +487,7 @@ abstract class Model
         // So, it would return it right above.
         if (isset(static::$_relations[$s]))
         {
-            $this->_loadLinkedModel($s);
+            $this->_loadRelation($s);
 
             if (method_exists($this, 'get_' . $s))
             {
@@ -1129,12 +1129,11 @@ abstract class Model
      * Manually load linked model(s). Useful to refresh relationships.
      *
      * @param string $relation The relation to load.
-     *
-     * @return void
+     * @return null|Model|array
      */
     public function load($relation, array $options = array())
     {
-        $this->_loadLinkedModel($relation, $options);
+        $this->_loadRelation($relation, $options);
 
         return $this->$relation;
     }
@@ -2119,7 +2118,7 @@ abstract class Model
      *
      * @return Model|array|null
      */
-    private function _loadLinkedModel($relationName, array $localOptions = array())
+    private function _loadRelation($relationName, array $localOptions = array())
     {
         $relation = static::relation($relationName);
 
@@ -2130,66 +2129,73 @@ abstract class Model
         // instance's ID.
         if (! $this->isConcrete() && ! $relation instanceof Relation\BelongsTo)
         {
-            if ($relation instanceof Relation\HasOne)
-            {
-                return null;
-            }
-            else // HasMany || ManyMany
-            {
-                return array();
-            }
+            $value = $relation->isToMany() ? array() : null;
+            $this->_attr($relationName, $value);
+
+            return $value;
         }
 
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
-        $res	  = null;
-		$class = $relation->lm->class;
+		$lmClass = $relation->lm->class;
 
         $options['order_by'] = $relation->order;
         $options['filter']   = $relation->filter;
 
-        if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
-        {
-            $options['conditions'] = array_merge(
-                $relation->conditions,
-                array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
-                $class::getGlobalConditions()
-            );
-
-            $options = array_merge($options, $localOptions);
-
-            $res = $class::first($options);
-        }
-        elseif ($relation instanceof Relation\HasMany)
-        {
-            $options['conditions'] = array_merge(
-                $relation->conditions,
-                array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
-                $class::getGlobalConditions()
-            );
-
-            $options = array_merge($options, $localOptions);
-
-            $res = $class::all($options);
-        }
-        else // ManyMany
+        $lmAttributePrefix = '';
+        if ($relation instanceof Relation\ManyMany)
         {
 			$reversed = $relation->reverse();
+			$lmClass::relation($reversed->name, $reversed);
 
-			$class::relation($reversed->name, $reversed);
-
-			$options['conditions'] = array_merge(
-				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute)),
-                $class::getGlobalConditions()
-			);
-
-            $options = array_merge($options, $localOptions);
-
-			$res = $class::all($options);
+            $lmAttributePrefix = $reversed->name . '/';
+            $relation = $reversed;
         }
 
+        $options['conditions'] = array_merge(
+            $relation->conditions,
+            array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
+            $lmClass::getGlobalConditions()
+        );
+
+        $options = array_merge($options, $localOptions);
+        $fnFind = $relation->isToMany() ? 'findMany' : 'findOne';
+        $res = self::query()->$fnFind($options);
+
         $this->_attr($relationName, $res);
+        return $res;
+
+        // if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
+        // {
+        //
+        //     $options = array_merge($options, $localOptions);
+        //     $res = self::query()->findOne($options);
+        // }
+        // elseif ($relation instanceof Relation\HasMany)
+        // {
+        //     $options['conditions'] = array_merge(
+        //         $relation->conditions,
+        //         array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
+        //         $lmClass::getGlobalConditions()
+        //     );
+        //
+        //     $options = array_merge($options, $localOptions);
+        //     $res = self::query()->findMany($options);
+        // }
+        // else // ManyMany
+        // {
+		// 	$reversed = $relation->reverse();
+		// 	$lmClass::relation($reversed->name, $reversed);
+        //
+		// 	$options['conditions'] = array_merge(
+		// 		$reversed->conditions,
+		// 		array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute)),
+        //         $lmClass::getGlobalConditions()
+		// 	);
+        //
+        //     $options = array_merge($options, $localOptions);
+        //     $res = self::query()->findMany($options);
+        // }
     }
 
     /**
