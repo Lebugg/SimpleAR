@@ -5,16 +5,18 @@ use \SimpleAR\Facades\Cfg;
 
 class HasMany extends Relation
 {
-    protected function __construct($a, $cmClass)
+    protected $_toMany = true;
+
+    public function setInformation(array $info)
     {
-        parent::__construct($a, $cmClass);
-        
-        $this->cm->attribute = isset($a['key_from']) ? $a['key_from'] : 'id';
+        parent::setInformation($info);
+
+        $this->cm->attribute = isset($info['key_from']) ? $info['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
         //$this->cm->pk        = $this->cm->t->primaryKey;
 
-        $this->lm->attribute = (isset($a['key_to']))
-            ? $a['key_to']
+        $this->lm->attribute = (isset($info['key_to']))
+            ? $info['key_to']
             : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName);
             ;
 
