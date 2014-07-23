@@ -218,28 +218,61 @@ abstract class Relation
     );
 
     /**
+     * True if cardinality is *-to-many, false otherwise.
+     *
+     * @see isToMany() Getter.
+     *
+     * @var bool
+     */
+    protected $_toMany = false;
+
+    /**
      * Constructor.
      *
-     * @param array  $a         The relation definition array define in the current model.
-     * @param string $cmClass  The Current Model (CM). This is the Model that defines the relation.
+     * @param array  $info The relation definition array define in the current model.
+     * @param string $cmClass The Current Model (CM). This is the Model that defines the relation.
      */
-    protected function __construct($a, $cmClass)
+    public function __construct(array $info = array(), $cmClass = '')
+    {
+        $cmClass && $this->setCmClass($cmClass);
+        $info    && $this->setInformation($info);
+    }
+
+    public function setCmClass($cmClass)
     {
         $this->cm = new \StdClass();
         $this->cm->class     = $cmClass;
         $this->cm->t         = $cmClass::table();
         //$this->cm->table     = $this->cm->t->name;
+    }
 
+    public function setInformation(array $info)
+    {
         $this->lm = new \StdClass();
-        $this->lm->class = $s = $a['model'] . Cfg::get('modelClassSuffix');
+        $this->lm->class = $s = $info['model'] . Cfg::get('modelClassSuffix');
         $this->lm->t     = $s::table();
         //$this->lm->table = $this->lm->t->name;
         //$this->lm->pk    = $this->lm->t->primaryKey;
 
-        if (isset($a['on_delete_cascade'])) { $this->onDeleteCascade = $a['on_delete_cascade']; }
-        if (isset($a['filter']))            { $this->filter          = $a['filter']; }
-		if (isset($a['conditions']))		{ $this->conditions      = $a['conditions']; }
-		if (isset($a['order']))				{ $this->order           = $a['order']; }
+        foreach (array('filter', 'conditions', 'order') as $item)
+        {
+            if (isset($info[$item]))
+            {
+                $this->$item = $info[$item];
+            }
+        }
+    }
+
+    /**
+     * Is the cardinality *-to-many?
+     *
+     * @return bool True if the cardinality is *-to-many, false otherwise.
+     *
+     * @see $_toMany
+     */
+    public function isToMany()
+    {
+        return $this->_toMany;
     }
 
     // public function deleteLinkedModel($value)
