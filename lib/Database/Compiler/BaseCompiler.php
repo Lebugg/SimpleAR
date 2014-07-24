@@ -484,13 +484,19 @@ class BaseCompiler extends Compiler
      */
     protected function _compileCondition(WhereClause $where)
     {
-        $fn  = '_where' . $where->type;
+        $not = $where->not ? 'Not' : '';
+        $fn  = '_where' . $not . $where->type;
         $sql = $this->$fn($where);
 
-        $logicalOp = $where->logicalOp;
-        $not       = $where->not ? ' NOT ' : ' ';
+        // Sometimes, the _where* function returns nothing because it has 
+        // decided that there is no need for a condition.
+        // @see _whereIn()
+        //if (! $sql) { return ''; }
 
-        $sql = $logicalOp . $not . $sql;
+        $logicalOp = $where->logicalOp;
+        //$not       = $where->not ? ' NOT ' : ' ';
+
+        $sql = $logicalOp . ' ' . $sql;
         return $sql;
     }
 
@@ -512,6 +518,11 @@ class BaseCompiler extends Compiler
         return "$col $op $val";
     }
 
+    protected function _whereNotBasic(WhereClause $where)
+    {
+        return 'NOT ' . $this->_whereBasic($where);
+    }
+
     /**
      * Compile a WHERE clause over two columns.
      *
@@ -529,6 +540,11 @@ class BaseCompiler extends Compiler
         return "$lCol $op $rCol";
     }
 
+    protected function _whereNotAttribute(WhereClause $where)
+    {
+        return 'NOT ' . $this->_whereAttribute($where);
+    }
+
     /**
      * Compile an EXISTS clause.
      *
@@ -540,6 +556,73 @@ class BaseCompiler extends Compiler
         return 'EXISTS (' . $this->compileSelect($where->query) . ')';
     }
 
+    /**
+     * Compile an EXISTS clause.
+     *
+     * @param Condition\Exists $where
+     * @return string SQL
+     */
+    protected function _whereNotExists(WhereClause $where)
+    {
+        return 'NOT ' . $this->_whereExists($where);
+    }
+
+    /**
+     * Compile an IN clause.
+     *
+     * The condition value can be the following:
+     *
+     *  * A Query instance to compile an IN `(<subquery>)` clause;
+     *  * An array of values;
+     *  * A falsy value. In this case, condition is replaced with `TRUE` or `FALSE`.
+     *
+     * The falsy value handling brings the following behaviours:
+     *
+     *  * `IN ()` means false;
+     *  * `NOT IN ()` means true.
+     *
+     * This is arbitrary behaviour, since IN empty array is not allowed by SQL 
+     * standard. See these discussions for further thoughts on it:
+     *
+     * @see http://bugs.mysql.com/bug.php?id=12474
+     * @see http://stackoverflow.com/a/12946338/2119117
+     * @see http://forumsarchive.laravel.io/viewtopic.php?id=3252
+     *
+     * @param Condition\In $where
+     * @return string SQL
+     */
+    protected function _whereIn(WhereClause $where)
+    {
+        // If empty value is passed, we replace condition as said
+        // in flower box.
+        if (! $where->value) { return 'FALSE'; }
+
+        $sql = $where->value instanceof Query
+            ? '(' . $this->compileSelect($where->value) . ')'
+            : $this->parameterize($where->value);
+
+        $alias = $this->useTableAlias ? $where->tableAlias : '';
+        $col   = $this->columnize($where->column, $alias);
+
+        return "$col IN $sql";
+    }
+
+    protected function _whereNotIn(WhereClause $where)
+    {
+        // If empty value is passed, we replace condition as said
+        // in flower box.
+        if (! $where->value) { return 'TRUE'; }
+
+        $sql = $where->value instanceof Query
+            ? '(' . $this->compileSelect($where->value) . ')'
+            : $this->parameterize($where->value);
+
+        $alias = $this->useTableAlias ? $where->tableAlias : '';
+        $col   = $this->columnize($where->column, $alias);
+
+        return "$col NOT IN $sql";
+    }
+
     protected function _whereSub(WhereClause $where)
     {
         $sub = '(' . $this->compileSelect($where->query) . ')';
@@ -547,6 +630,11 @@ class BaseCompiler extends Compiler
         $val = $this->parameterize($where->value);
 
         return "$sub $op $val";
+    }
+
+    protected function _whereNotSub(WhereClause $where)
+    {
+        return 'NOT ' . $this->_whereSub($where);
     }
 
     /**
@@ -560,6 +648,16 @@ class BaseCompiler extends Compiler
         return '(' . $this->_compileConditions($where->nested) . ')';
     }
 
+    /**
+     * Compile an nested where clause in negative form.
+     *
+     * @param Condition\Nested $where
+     * @return string SQL
+     */
+    protected function _whereNotNested(WhereClause $where)
+    {
+        return 'NOT ' . $this->_whereNested($where);
+    }
     /**
      * Get appropriate operator for the given WhereClause.
      *
