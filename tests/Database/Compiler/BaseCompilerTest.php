@@ -7,6 +7,7 @@ use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Condition\Simple as SimpleCond;
 use \SimpleAR\Database\Condition\Nested as NestedCond;
 use \SimpleAR\Database\Condition\Exists as ExistsCond;
+use \SimpleAR\Database\Condition\In as InCond;
 use \SimpleAR\Database\Condition\Attribute as AttrCond;
 
 use \SimpleAR\Facades\DB;
@@ -379,5 +380,41 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $val = array();
 
         $this->assertEquals($sql, $c->compile($q, 'select'));
+    }
+
+    public function testIn()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $q->components['from'] = array(new JoinClause('articles'));
+
+        $where = new InCond('', 'author_id', array(1, 2));
+        $q->components['where'] = array($where);
+        $expected = 'SELECT * FROM `articles` WHERE `author_id` IN (?,?)';
+        $this->assertEquals($expected, $c->compileSelect($q));
+
+        $where->not = true;
+        $expected = 'SELECT * FROM `articles` WHERE `author_id` NOT IN (?,?)';
+        $this->assertEquals($expected, $c->compileSelect($q));
+    }
+
+    public function testInWithEmptyArray()
+    {
+        $q = new Query();
+        $c = new BaseCompiler();
+
+        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $q->components['from'] = array(new JoinClause('articles'));
+
+        $where = new InCond('', 'author_id', array());
+        $q->components['where'] = array($where);
+        $expected = 'SELECT * FROM `articles` WHERE FALSE';
+        $this->assertEquals($expected, $c->compileSelect($q));
+
+        $where->not = true;
+        $expected = 'SELECT * FROM `articles` WHERE TRUE';
+        $this->assertEquals($expected, $c->compileSelect($q));
     }
 }
