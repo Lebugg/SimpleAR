@@ -1,7 +1,5 @@
 <?php namespace SimpleAR\Database;
 
-require __DIR__ . '/Compiler/InsertCompiler.php';
-
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
 
