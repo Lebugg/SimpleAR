@@ -261,4 +261,25 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($where, $components['where']);
     }
+
+    // public function testOperatorArrayficationChangesConditionType()
+    // {
+    //     $b = new WhereBuilder;
+    //     $b->root('Article');
+    //     $b->where('id', '=', array(1, 2, 3));
+    //
+    //     $where[] = new InCond('_', 'id', array(1, 2, 3));
+    //     $components = $b->build();
+    //     $this->assertEquals($where, $components['where']);
+    //     $this->assertFalse($components['where'][0]->not);
+    //
+    //     $b = new WhereBuilder;
+    //     $b->root('Article');
+    //     $b->where('id', '!=', array(1, 2, 3));
+    //
+    //     $where[] = new InCond('_', 'id', array(1, 2, 3));
+    //     $components = $b->build();
+    //     $this->assertEquals($where, $components['where']);
+    //     $this->assertTrue($components['where'][0]->not);
+    // }
 }
