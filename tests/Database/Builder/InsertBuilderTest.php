@@ -5,22 +5,9 @@ use \SimpleAR\Database\Compiler\BaseCompiler;
 
 class InsertBuilderTest extends PHPUnit_Framework_TestCase
 {
-    private $_builder;
-    private $_compiler;
-    private $_conn;
-
-    public function setUp()
-    {
-        global $sar;
-
-        $this->_builder = new InsertBuilder();
-        $this->_compiler = new BaseCompiler();
-        $this->_conn = $sar->db->connection();
-    }
-
     public function testBuildWithoutUsingModel()
     {
-        $builder = $this->_builder;
+        $builder = new InsertBuilder();
 
         $options = array(
             'fields' => array(
@@ -41,7 +28,7 @@ class InsertBuilderTest extends PHPUnit_Framework_TestCase
 
     public function testBuildUsingModel()
     {
-        $builder = $this->_builder;
+        $builder = new InsertBuilder();
 
         $table = Article::table();
         $builder->setRootModel('Article');

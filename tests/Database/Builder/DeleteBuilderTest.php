@@ -5,23 +5,9 @@ use \SimpleAR\Database\Compiler\BaseCompiler;
 
 class DeleteBuilderTest extends PHPUnit_Framework_TestCase
 {
-    private $_builder;
-    private $_compiler;
-    private $_conn;
-
-    public function setUp()
-    {
-        global $sar;
-
-        $this->_builder = new DeleteBuilder();
-        $this->_compiler = new BaseCompiler();
-        $this->_conn = $sar->db->connection();
-    }
-
     public function testRootOption()
     {
-        $builder = $this->_builder;
-        //$query  = $this->getMock('\SimpleAR\Database\Query', array(), array($builder, $this->_compiler, $this->_conn));
+        $builder = new DeleteBuilder();
 
         // Using model
         $options = array(

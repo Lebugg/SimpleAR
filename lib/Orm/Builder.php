@@ -406,7 +406,7 @@ class Builder
      */
     public function getCompiler()
     {
-        return $this->_compiler = ($this->_compiler ?: DB::compiler());
+        return $this->_compiler = ($this->_compiler ?: DB::getCompiler());
     }
 
     /**
@@ -416,7 +416,7 @@ class Builder
      */
     public function getConnection()
     {
-        return $this->_connection = ($this->_connection ?: DB::connection());
+        return $this->_connection = ($this->_connection ?: DB::getConnection());
     }
 
     protected function _applyScope($modelClass, $scope, array $args)

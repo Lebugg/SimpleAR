@@ -2,6 +2,7 @@
 
 use \SimpleAR\Config;
 use \SimpleAR\Exception\Database as DatabaseEx;
+use \SimpleAR\Database\Compiler\BaseCompiler;
 
 /**
  * This class abstracts a database connection.
@@ -76,6 +77,13 @@ class Connection
      * @var array
      */
     private $_queries = array();
+
+    /**
+     * The Compiler to use with this connection.
+     *
+     * @var Compiler
+     */
+    protected $_compiler;
 
     /**
      * Constructor.
@@ -280,4 +288,59 @@ class Connection
     {
         return $this->_sth->fetch(\PDO::FETCH_COLUMN, $index);
     }
+
+    /**
+     * Set the compiler according to database driver.
+     *
+     * If no adequate compiler is found for the driver, default compiler is 
+     * used.
+     *
+     * @see setCompiler()
+     * @see setDefaultCompiler()
+     */
+    public function chooseCompiler()
+    {
+        $specificCompiler = ucfirst($this->getDriver()) . 'Compiler';
+        $specificCompiler = 'SimpleAR\Database\Compiler\\' . $specificCompiler;
+
+        if (class_exists($specificCompiler)) {
+            $this->setCompiler(new $specificCompiler);
+        } else {
+            $this->setDefaultCompiler();
+        }
+    }
+
+    /**
+     * Return the Compiler instance of this connection.
+     *
+     * @return Connection
+     */
+    public function getCompiler()
+    {
+        $this->_compiler || $this->chooseCompiler();
+
+        return $this->_compiler;
+    }
+
+    /**
+     * Set the compiler.
+     *
+     * @param Compiler $compiler
+     */
+    public function setCompiler(Compiler $compiler)
+    {
+        $this->_compiler = $compiler;
+    }
+
+    /**
+     * Set default compiler.
+     *
+     * @see setCompiler()
+     * @see Database\Compiler\BaseCompiler
+     */
+    public function setDefaultCompiler()
+    {
+        $this->setCompiler(new BaseCompiler);
+    }
+
 }
