@@ -93,7 +93,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($options);
 
         $expected = array();
-        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '=', 'val' => [12, 15, 16], 'logic' => 'AND', 'not' => false];
+        $expected[] = ['type' => 'In', 'table' => '_', 'cols' => ['author_id'], 'val' => [12, 15, 16], 'logic' => 'AND', 'not' => false];
         //new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
         $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => 'Essays', 'logic' => 'AND', 'not' => false];
         //$expected[] = new SimpleCond('_', array('title'), '=', 'Essays', 'AND');
@@ -144,7 +144,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['blog_id'], 'op' => '=', 'val' => 15, 'logic' => 'OR', 'not' => false];
         // $expected[] = new SimpleCond('_', array('blog_id'), '=', 15, 'OR');
 
-        $nested[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '!=', 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
+        $nested[] = ['type' => 'In', 'table' => '_', 'cols' => ['author_id'], 'val' => [12,15,16], 'logic' => 'AND', 'not' => true];
         //$nested[] = new SimpleCond('_', array('author_id'), '!=', array(12, 15, 16), 'AND');
         $nested[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => 'Alice in Wonderland', 'logic' => 'AND', 'not' => false];
         //$nested[] = new SimpleCond('_', array('title'), '=', 'Alice in Wonderland', 'AND');
@@ -196,8 +196,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         //$expected[] = new SimpleCond('_', 'name', '=', 'Glob', 'AND');
         $expected[] = ['type' => 'Basic', 'table' => 'articles', 'cols' => ['title'], 'op' => 'LIKE', 'val' => '%beer%', 'logic' => 'AND', 'not' => false];
         //$expected[] = new SimpleCond('articles', array('title'), 'LIKE', '%beer%', 'AND');
-        $nested[] = ['type' => 'Basic', 'table' => 'articles.author', 'cols' => ['id'], 'op' => '=', 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
-        $nested[] = ['type' => 'Basic', 'table' => 'articles.author', 'cols' => ['first_name'], 'op' => '=', 'val' => ['John'], 'logic' => 'OR', 'not' => false];
+        $nested[] = ['type' => 'In', 'table' => 'articles.author', 'cols' => ['id'], 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
+        $nested[] = ['type' => 'In', 'table' => 'articles.author', 'cols' => ['first_name'], 'val' => ['John'], 'logic' => 'OR', 'not' => false];
         $expected[] = ['type' => 'Nested', 'nested' => $nested, 'logic' => 'AND', 'not' => false];
         // $expected[] = new NestedCond(array(
         //     new SimpleCond('articles.author', array('id'), '=', array(12,15,16), 'AND'),
@@ -258,24 +258,24 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($where, $components['where']);
     }
 
-    // public function testOperatorArrayficationChangesConditionType()
-    // {
-    //     $b = new WhereBuilder;
-    //     $b->root('Article');
-    //     $b->where('id', '=', array(1, 2, 3));
-    //
-    //     $where[] = new InCond('_', 'id', array(1, 2, 3));
-    //     $components = $b->build();
-    //     $this->assertEquals($where, $components['where']);
-    //     $this->assertFalse($components['where'][0]->not);
-    //
-    //     $b = new WhereBuilder;
-    //     $b->root('Article');
-    //     $b->where('id', '!=', array(1, 2, 3));
-    //
-    //     $where[] = new InCond('_', 'id', array(1, 2, 3));
-    //     $components = $b->build();
-    //     $this->assertEquals($where, $components['where']);
-    //     $this->assertTrue($components['where'][0]->not);
-    // }
+    public function testOperatorArrayficationChangesConditionType()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->where('id', '=', array(1, 2, 3));
+
+        $where[] = ['type' => 'In', 'table' => '_', 'cols' => ['id'], 'val' => [1,2,3], 'logic' => 'AND', 'not' => false];
+        $components = $b->build();
+        $this->assertEquals($where, $components['where']);
+        $this->assertFalse($components['where'][0]['not']);
+
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->where('id', '!=', array(1, 2, 3));
+
+        $where = array();
+        $where[] = ['type' => 'In', 'table' => '_', 'cols' => ['id'], 'val' => [1,2,3], 'logic' => 'AND', 'not' => true];
+        $components = $b->build();
+        $this->assertEquals($where, $components['where']);
+    }
 }

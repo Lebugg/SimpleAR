@@ -93,13 +93,18 @@ class WhereBuilder extends Builder
         }
         else
         {
+            // Maybe user wants a IN condition?
+            if (is_array($val) && in_array($op, array('=', '!=')))
+            {
+                $this->whereIn($attribute, $val, $logic, $op === '!=');
+                return;
+            }
+
             list($table, $cols) = $this->_processExtendedAttribute($attribute);
 
             $type = 'Basic';
             $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
-            $this->_components['where'][] = $cond;
-            $this->addValueToQuery($val, 'where');
-            //$this->_options['conditions'][] = array($attribute, $op, $val, $logic);
+            $this->_addWhere($cond, $val);
         }
     }
 
@@ -125,7 +130,7 @@ class WhereBuilder extends Builder
         $cond = compact('type', 'lTable', 'lCols', 'op', 'rTable', 'rCols', 'logic');
         //$cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logic);
 
-        $this->_components['where'][] = $cond;
+        $this->_addWhere($cond);
     }
 
     /**
@@ -140,11 +145,10 @@ class WhereBuilder extends Builder
         //$cond = new SubQueryCond($q, $op, $value, $logic);
         $subqueryValues = $query->getValues();
         $subqueryValues && $this->addValueToQuery($subqueryValues, 'where');
-        $this->addValueToQuery($val, 'where');
 
         $type = 'Sub';
         $cond = compact('type', 'query', 'op', 'val', 'logic');
-        $this->_components['where'][] = $cond;
+        $this->_addWhere($cond, $val);
     }
 
     /**
@@ -156,10 +160,29 @@ class WhereBuilder extends Builder
     public function whereExists(Query $query, $logic = 'AND')
     {
         $type = 'Exists';
-        $this->_components['where'][] = compact('type', 'query', 'logic');
+        $cond = compact('type', 'query', 'logic');
+
+        $this->_addWhere($cond);
         $this->addValueToQuery($query->getComponentValues());
 
         return $this;
+    }
+
+    /**
+     * Add a Where In clause to the query.
+     *
+     * @param string $attribute The extended attribute.
+     * @param mixed  $val The condition value.
+     * @param string $logic The logical operator.
+     * @param bool   $not Turn it into a NOT IN clause?
+     */
+    public function whereIn($attribute, $val, $logic = 'AND', $not = false)
+    {
+        list($table, $cols) = $this->_processExtendedAttribute($attribute);
+
+        $type = 'In';
+        $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
+        $this->_addWhere($cond, $val);
     }
 
     /**
@@ -471,6 +494,19 @@ class WhereBuilder extends Builder
         }
 
         $this->_joinClauses[$toJoinAlias] = $jc;
+    }
+
+    /**
+     * Add a condition to the list of conditions.
+     *
+     * @param array $cond The condition array
+     * @param mixed $val  The condition's value. It will be add to query's 
+     * values list.
+     */
+    protected function _addWhere(array $cond, $val = null)
+    {
+        $this->_components['where'][] = $cond;
+        $val && $this->addValueToQuery($val, 'where');
     }
 
     /**
