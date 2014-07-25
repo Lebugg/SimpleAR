@@ -12,16 +12,12 @@ use \SimpleAR\Facades\DB;
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
     private $_builder;
-    private $_compiler;
-    private $_conn;
 
     public function setUp()
     {
         global $sar;
 
         $this->_builder = new WhereBuilder();
-        $this->_compiler = new BaseCompiler();
-        $this->_conn = $sar->db->connection();
     }
 
     public function testQueryOptionRelationSeparator()

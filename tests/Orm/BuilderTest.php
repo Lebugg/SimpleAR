@@ -13,8 +13,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         global $sar;
         $b = new QueryBuilder();
 
-        $this->assertEquals($sar->db->compiler(), $b->getCompiler());
-        $this->assertEquals($sar->db->connection(), $b->getConnection());
+        $this->assertEquals($sar->db->getCompiler(), $b->getCompiler());
+        $this->assertEquals($sar->db->getConnection(), $b->getConnection());
     }
 
     public function testInsert()

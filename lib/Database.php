@@ -17,62 +17,9 @@ class Database
 {
     private $_connection;
 
-    public function __construct(Connection $conn)
+    public function __construct(Connection $conn = null)
     {
-        $this->setConnection($conn);
-        $this->chooseCompiler();
-    }
-
-    /**
-     * Set the compiler according to database driver.
-     *
-     * If no adequate compiler is found for the driver, default compiler is 
-     * used.
-     *
-     * @see setCompiler()
-     * @see setDefaultCompiler()
-     */
-    public function chooseCompiler()
-    {
-        $specificCompiler = ucfirst($this->_connection->getDriver()) . 'Compiler';
-        $specificCompiler = 'SimpleAR\Database\Compiler\\' . $specificCompiler;
-
-        if (class_exists($specificCompiler)) {
-            $this->setCompiler(new $specificCompiler);
-        } else {
-            $this->setDefaultCompiler();
-        }
-    }
-
-    /**
-     * Set the connecton.
-     *
-     * @param Connection $conn
-     */
-    public function setConnection(Connection $conn)
-    {
-        $this->_connection = $conn;
-    }
-
-    /**
-     * Set the compiler.
-     *
-     * @param Compiler $compiler
-     */
-    public function setCompiler(Compiler $compiler)
-    {
-        $this->_compiler = $compiler;
-    }
-
-    /**
-     * Set default compiler.
-     *
-     * @see setCompiler()
-     * @see Database\Compiler\BaseCompiler
-     */
-    public function setDefaultCompiler()
-    {
-        $this->setCompiler(new BaseCompiler);
+        $conn && $this->setConnection($conn);
     }
 
     /**
@@ -91,9 +38,19 @@ class Database
      *
      * @var Connection
      */
-    public function connection()
+    public function getConnection()
     {
         return $this->_connection;
+    }
+
+    /**
+     * Set the connecton.
+     *
+     * @param Connection $conn
+     */
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
     }
 
     /**
@@ -101,9 +58,9 @@ class Database
      *
      * @var Compiler
      */
-    public function compiler()
+    public function getCompiler()
     {
-        return $this->_compiler;
+        return $this->getConnection()->getCompiler();
     }
 
     /**
