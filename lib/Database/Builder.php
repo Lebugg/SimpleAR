@@ -208,14 +208,29 @@ class Builder
     /**
      * Add query value to value list.
      *
+     * If $component is not given, it expects $value to be an array of 
+     * components' values.
+     *
      * @param mixed $value The value to add to the value list.
+     * @param string $component The component type ('set', 'where'...).
+     *
      * @return void
      */
-    public function addValueToQuery($value)
+    public function addValueToQuery($value, $component = '')
     {
-        if (! $value instanceof Expression)
+        if ($component)
         {
-            $this->_values[] = $value;
+            if (! $value instanceof Expression)
+            {
+                $this->_values[$component][] = $value;
+            }
+        }
+        else
+        {
+            foreach ($value as $component => $values)
+            {
+                $this->addValueToQuery($values, $component);
+            }
         }
     }
 

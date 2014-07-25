@@ -5,7 +5,6 @@
  * It handles subclasses and Condition class includes.
  */
 
-require __DIR__ . '/Condition.php';
 require __DIR__ . '/Builder.php';
 require __DIR__ . '/Compiler.php';
 require __DIR__ . '/JoinClause.php';
@@ -16,6 +15,8 @@ use \SimpleAR\Exception;
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Compiler;
 use \SimpleAR\Database\Connection;
+// To be removed as soon as getCompiler() does not use DB.
+use \SimpleAR\Facades\DB;
 
 /**
  * This class is the superclass of all SQL queries.
@@ -32,7 +33,8 @@ class Query
      *
      * @var array
      */
-    public $components = array();
+    protected $_components = array();
+    protected $_componentValues;
 
     /**
      * Is this query class critical?
@@ -97,6 +99,18 @@ class Query
      */
     protected $_connection;
 
+    /**
+     * The query type: Select, Update, Delete, Insert.
+     *
+     * It corresponds to the builder type. It is set at the same time as the
+     * builder.
+     *
+     * @var string
+     *
+     * @see setBuilder()
+     */
+    protected $_type;
+
     public function __construct(Builder $builder = null,
         Compiler $compiler = null,
         Connection $conn = null,
@@ -132,22 +146,96 @@ class Query
      */
     public function getValues()
     {
-        $this->_built || $this->build();
+        //$this->_built || $this->build();
+        $this->_compiled || $this->compile();
 
-        $val = $this->_builder->getValues();
-        $val = $this->prepareValuesForExecution($val);
-
-        return $val;
+        // $val = $this->_builder->getValues();
+        // $val = $this->prepareValuesForExecution($val);
+        return $this->_values;
     }
 
+    /**
+     * Return query components.
+     *
+     * @return array
+     */
+    public function getComponents()
+    {
+        return $this->_components;
+    }
+
+    /**
+     * Set a component.
+     *
+     * @param string $type The component type/name.
+     * @param mixed  $value The component's value.
+     */
+    public function setComponent($type, $value)
+    {
+        $this->_components[$type] = $value;
+    }
+
+    /**
+     * Return query components' values.
+     *
+     * Component values are different from plain values because they are grouped 
+     * by component.
+     *
+     * Example:
+     * --------
+     *
+     * For an Update query, $q->set('field', 1)->where('id' => 2);
+     *
+     * Plain values: [1, 2].
+     * Component values: ['set' => [1], 'where' => [2]].
+     *
+     * It prevents values order to be mixed up.
+     *
+     * @return array
+     */
+    public function getComponentValues()
+    {
+        // Component values are given by Builder.
+        $this->_built || $this->build();
+
+        return $this->_componentValues;
+    }
+
+    /**
+     * Return the query's type.
+     *
+     * Query's type depends on the used builder's type. It is set in 
+     * setBuilder().
+     *
+     * @return string The query type.
+     *
+     * @see setBuilder()
+     * @see $_type
+     */
+    public function getType()
+    {
+        return $this->_type;
+    }
+
+    /**
+     * Get the query builder.
+     *
+     * @return Builder
+     */
     public function getBuilder()
     {
         return $this->_builder;
     }
 
-    public function setBuilder(Builder $b)
+    /**
+     * Set the query builder.
+     *
+     * @param Builder $builder
+     */
+    public function setBuilder(Builder $builder)
     {
-        $this->_builder = $b;
+        $this->_builder = $builder;
+        $this->_type = $builder->type;
     }
 
     /**
@@ -157,7 +245,8 @@ class Query
      */
     public function getCompiler()
     {
-        return $this->_compiler;
+        // Te be change. We *have* to use Connections.
+        return $this->_compiler = ($this->_compiler ?: DB::compiler());
     }
 
     /**
@@ -215,7 +304,10 @@ class Query
      */
 	public function build()
     {
-        $this->components = $this->getBuilder()->build();
+        $builder = $this->getBuilder();
+        $this->_components = $builder->build();
+        $this->_componentValues = $builder->getValues();
+
         $this->_built = true;
 
         return $this;
@@ -234,14 +326,16 @@ class Query
      */
     protected function compile()
     {
-        if (! $this->_built)
-        {
-            throw new Exception('Cannot compile query: it is not built.');
-        }
+        // if (! $this->_built)
+        // {
+        //     throw new Exception('Cannot compile query: it is not built.');
+        // }
+        $this->_built || $this->build();
 
         //$compiler->useTablePrefix = $this->_useAlias;
 
-        $this->_sql = $this->getCompiler()->compile($this, $this->getBuilder()->type);
+        list($this->_sql, $this->_values) = $this->getCompiler()->compile($this);
+
         $this->_compiled = true;
     }
 
@@ -256,7 +350,8 @@ class Query
         }
 
         // At last, execute the query.
-        $this->executeQuery($sql, $this->getValues());
+        $values = $this->prepareValuesForExecution($this->getValues());
+        $this->executeQuery($sql, $values);
         $this->_executed = true;
     }
 

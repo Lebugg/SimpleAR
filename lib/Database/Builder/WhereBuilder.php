@@ -1,11 +1,11 @@
 <?php namespace SimpleAR\Database\Builder;
 
 use \SimpleAR\Database\Builder;
-use \SimpleAR\Database\Condition\Exists as ExistsCond;
-use \SimpleAR\Database\Condition\Nested as NestedCond;
-use \SimpleAR\Database\Condition\Simple as SimpleCond;
-use \SimpleAR\Database\Condition\Attribute as AttrCond;
-use \SimpleAR\Database\Condition\SubQuery as SubQueryCond;
+// use \SimpleAR\Database\Condition\Exists as ExistsCond;
+// use \SimpleAR\Database\Condition\Nested as NestedCond;
+// use \SimpleAR\Database\Condition\Simple as SimpleCond;
+// use \SimpleAR\Database\Condition\Attribute as AttrCond;
+// use \SimpleAR\Database\Condition\SubQuery as SubQueryCond;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
@@ -64,29 +64,42 @@ class WhereBuilder extends Builder
      * Add a condition.
      *
      * @param string $attribute
-     * @param mixed  $value
+     * @param mixed  $val
      * @param mixed  $op
      *
      * @return void
      */
-    public function where($attribute, $op = null, $value = null, $logicalOp = 'AND')
+    public function where($attribute, $op = null, $val = null, $logic = 'AND', $not = false)
     {
+        // It allows short form: `$builder->where('attribute', 'myVal');`
         if (func_num_args() === 2)
         {
-            list($value, $op) = array($op, '=');
+            list($val, $op) = array($op, '=');
         }
 
-        // Handle attribute array.
+        // Default operator is '='.
+        if ($op === null)
+        {
+            $op = '=';
+        }
+
+        // Allow user to set a bunch of attributes in one line.
         if (is_array($attribute))
         {
             foreach ($attribute as $i => $attr)
             {
-                $this->where($attr, $op, $value[$i], $logicalOp);
+                $this->where($attr, $op, $val[$i], $logic);
             }
         }
         else
         {
-            $this->_options['conditions'][] = array($attribute, $op, $value, $logicalOp);
+            list($table, $cols) = $this->_processExtendedAttribute($attribute);
+
+            $type = 'Basic';
+            $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
+            $this->_components['where'][] = $cond;
+            $this->addValueToQuery($val, 'where');
+            //$this->_options['conditions'][] = array($attribute, $op, $val, $logic);
         }
     }
 
@@ -96,19 +109,21 @@ class WhereBuilder extends Builder
      * @param string $leftAttr An extended attribute string.
      * @param string $op A conditional operator.
      * @param string $rightAttr An extended attribute string.
-     * @param string $logicalOp The logical operator (AND, OR).
+     * @param string $logic The logical operator (AND, OR).
      */
-    public function whereAttr($leftAttr, $op = null, $rightAttr = null, $logicalOp = 'AND')
+    public function whereAttr($leftAttr, $op = null, $rightAttr = null, $logic = 'AND')
     {
         if (func_num_args() === 2)
         {
             list($rightAttr, $op) = array($op, '=');
         }
 
-        list($leftAlias, $leftCols)   = $this->_processExtendedAttribute($leftAttr);
-        list($rightAlias, $rightCols) = $this->_processExtendedAttribute($rightAttr);
+        list($lTable, $lCols) = $this->_processExtendedAttribute($leftAttr);
+        list($rTable, $rCols) = $this->_processExtendedAttribute($rightAttr);
 
-        $cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logicalOp);
+        $type = 'Attribute';
+        $cond = compact('type', 'lTable', 'lCols', 'op', 'rTable', 'rCols', 'logic');
+        //$cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logic);
 
         $this->_components['where'][] = $cond;
     }
@@ -120,13 +135,15 @@ class WhereBuilder extends Builder
      * @param string $op The condition operator.
      * @param mixed  $value The condition value.
      */
-    public function whereSub(Query $q, $op = null, $value = null, $logicalOp = 'AND')
+    public function whereSub(Query $query, $op = null, $val = null, $logic = 'AND')
     {
-        $cond = new SubQueryCond($q, $op, $value, $logicalOp);
-        $val = $q->getValues();
-        $val && $this->addValueToQuery($val);
-        $this->addValueToQuery($value);
+        //$cond = new SubQueryCond($q, $op, $value, $logic);
+        $subqueryValues = $query->getValues();
+        $subqueryValues && $this->addValueToQuery($subqueryValues, 'where');
+        $this->addValueToQuery($val, 'where');
 
+        $type = 'Sub';
+        $cond = compact('type', 'query', 'op', 'val', 'logic');
         $this->_components['where'][] = $cond;
     }
 
@@ -136,10 +153,11 @@ class WhereBuilder extends Builder
      * @param Query $q The Select sub-query.
      * @return $this
      */
-    public function whereExists(Query $q)
+    public function whereExists(Query $query, $logic = 'AND')
     {
-        $this->_components['where'][] = new ExistsCond($q);
-        $this->addValueToQuery($q->getValues());
+        $type = 'Exists';
+        $this->_components['where'][] = compact('type', 'query', 'logic');
+        $this->addValueToQuery($query->getComponentValues());
 
         return $this;
     }
@@ -465,10 +483,10 @@ class WhereBuilder extends Builder
      * @return array An array of Condition constructed out of given raw 
      * conditions.
      */
-    public function parseConditionArray(array $conditions, $defaultOp = 'AND')
+    public function parseConditionArray(array $conditions, $defaultLogic = 'AND')
     {
-        $wheres    = array();
-        $logicalOp = $defaultOp;
+        $wheres = array();
+        $logic  = $defaultLogic;
 
         foreach ($conditions as $key => $value)
         {
@@ -477,7 +495,7 @@ class WhereBuilder extends Builder
             // $key: <attribute> ; $value: <value>
             if (is_string($key))
             {
-                $wheres[] = $this->_buildCondition($key, null, $value, $logicalOp);
+                $this->where($key, null, $value, $logic);
             }
 
             // What can we get, otherwise?
@@ -486,13 +504,13 @@ class WhereBuilder extends Builder
             // Firstable, an easy guess: a logical operator: 'AND' or 'OR'.
             elseif ($value === 'AND' || $value === 'OR')
             {
-                $logicalOp = $value; continue;
+                $logic = $value; continue;
             }
 
             // Secondly, the whole condition can be an Expression.
             elseif ($value instanceof Expression)
             {
-                $wheres[] = $this->_buildCondition(null, null, $value, $logicalOp);
+                $this->where(null, null, $value, $logic);
             }
 
             elseif (is_array($value))
@@ -505,7 +523,7 @@ class WhereBuilder extends Builder
                 if (isset($value[0], $value[1]) && (isset($value[2]) || array_key_exists(2, $value))
                     && (is_string($value[0]) || $value[0] instanceof Expression)
                 ) {
-                    $wheres[] = $this->_buildCondition($value[0], $value[1], $value[2], $logicalOp);
+                    $wheres[] = $this->where($value[0], $value[1], $value[2], $logic);
                 }
 
                 // This is (at least, we suppose this is) a condition group. 
@@ -513,7 +531,7 @@ class WhereBuilder extends Builder
                 // parenthesis.
                 else
                 {
-                    $wheres[] = $this->_buildConditionGroup($value, $logicalOp);
+                    $this->_buildConditionGroup($value, $logic);
                 }
             }
 
@@ -524,7 +542,7 @@ class WhereBuilder extends Builder
             }
 
             // Reset logical operator to its default value.
-            $logicalOp = $defaultOp;
+            $logic = $defaultLogic;
         }
 
         return $wheres;
@@ -564,7 +582,7 @@ class WhereBuilder extends Builder
     {
         if ($attribute instanceof Expression)
         {
-            return array('', $attribute->val());
+            return array('', (array) $attribute->val());
         }
 
         // 1)
@@ -591,16 +609,7 @@ class WhereBuilder extends Builder
      */
     protected function _buildConditions(array $conditions)
     {
-        $wheres = $this->parseConditionArray($conditions);
-
-        if (! empty($this->_components['where']))
-        {
-            $this->_components['where'] = array_merge($this->_components['where'], $wheres);
-        }
-        else
-        {
-            $this->_components['where'] = $wheres;
-        }
+        $this->parseConditionArray($conditions);
     }
 
     /**
@@ -619,7 +628,7 @@ class WhereBuilder extends Builder
      * @param string $attribute The complete attribute string.
      * @param string $operator  The condition operator to use ('=', '<='...).
      * @param mixed  $value
-     * @param string $logicalOp The logical operator to use to link this 
+     * @param string $logic The logical operator to use to link this 
      * condition to the previous one ('AND', 'OR').
      *
      * @param string $findAName @TODO Flag to tell whether to do a 'any' or a 
@@ -627,30 +636,48 @@ class WhereBuilder extends Builder
      *
      * @return Condition
      */
-    protected function _buildCondition($attribute, $operator, $value, $logicalOp, $findAName = 'any')
-    {
-        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
-
-        $cond = new SimpleCond($tableAlias, $columns, $operator, $value, $logicalOp);
-        $this->addValueToQuery($value);
-
-        return $cond;
-    }
+    // protected function _buildCondition($attribute, $op, $val, $logic, $findAName = 'any')
+    // {
+    //     list($table, $cols) = $this->_processExtendedAttribute($attribute);
+    //
+    //     $type = 'Basic';
+    //     $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic');
+    //     //$cond = new SimpleCond($tableAlias, $columns, $operator, $value, $logic);
+    //     $this->addValueToQuery($val, 'where');
+    //
+    //     return $cond;
+    // }
 
     /**
      * Build a condition group (i.e. a nested condition).
      *
      * @param array  $conditions The nested raw conditions.
-     * @param string $logicalOp The logical operator to use to link this 
+     * @param string $logic The logical operator to use to link this 
      * condition to the previous one ('AND', 'OR').
      */
-    protected function _buildConditionGroup(array $conditions, $logicalOp)
+    protected function _buildConditionGroup(array $conditions, $logic, $not = false)
     {
+        // where() method updates $_components['where'] without 
+        // returning anything. In order to construct the nested 
+        // conditions. We are going to bufferize it.
+        $components = &$this->_components;
+        $currentWhere = isset($components['where']) ? $components['where'] : array();
+        unset($components['where']);
+
         // $conditions is an array of raw conditions. We need to parse them 
         // before create the nested condition.
-        $conditions = $this->parseConditionArray($conditions);
+        $this->parseConditionArray($conditions);
 
-        $cond = new NestedCond($conditions, $logicalOp);
+        // Now, nested conditions are in $_components['where'].
+        // We have to construct our nested condition and restore components.
+        $nested = $this->_components['where'];
+        $type = 'Nested';
+        $cond = compact('type', 'nested', 'logic', 'not');
+
+        $currentWhere[] = $cond;
+        $this->_components['where'] = $currentWhere;
+
+        //$cond = new NestedCond($conditions, $logic);
 
         return $cond;
     }

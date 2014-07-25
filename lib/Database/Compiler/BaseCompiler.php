@@ -4,7 +4,7 @@ use \SimpleAR\Database\Compiler;
 
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\JoinClause;
-use \SimpleAR\Database\Condition as WhereClause;
+//use \SimpleAR\Database\Condition as WhereClause;
 
 /**
  * This is the base SQL compiler.
@@ -68,67 +68,67 @@ class BaseCompiler extends Compiler
         '!=' => 'NOT IN',
     );
 
-    public function compileInsert(Query $q)
+    public function compileInsert(array $components)
     {
-        $components = $this->components['insert'];
-        $sql = $this->_compileComponents($q, $components);
+        $availableComponents = $this->components['insert'];
+        $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'INSERT ' . $this->_concatenate($sql);
 
         return $sql;
     }
 
-    public function compileSelect(Query $q)
+    public function compileSelect(array $components)
     {
-        $components = $this->components['select'];
+        $availableComponents = $this->components['select'];
 
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (count($q->components['from']) > 1)
+        if (count($components['from']) > 1)
         {
             $this->useTableAlias = true;
         }
 
-        $sql = $this->_compileComponents($q, $components);
+        $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'SELECT ' . $this->_concatenate($sql);
 
         return $sql;
     }
 
-    public function compileUpdate(Query $q)
+    public function compileUpdate(array $components)
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (count($q->components['updateFrom']) > 1)
+        if (count($components['updateFrom']) > 1)
         {
             $this->useTableAlias = true;
         }
 
-        $components = $this->components['update'];
-        $sql = $this->_compileComponents($q, $components);
+        $availableComponents = $this->components['update'];
+        $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'UPDATE ' . $this->_concatenate($sql);
 
         return $sql;
     }
 
-    public function compileDelete(Query $q)
+    public function compileDelete(array $components)
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (! empty($q->components['using']))
+        if (! empty($components['using']))
         {
             $this->useTableAlias = true;
         }
 
-        $components = $this->components['delete'];
-        $sql = $this->_compileComponents($q, $components);
+        $availableComponents = $this->components['delete'];
+        $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'DELETE ' . $this->_concatenate($sql);
 
         return $sql;
     }
 
-    public function compileWhere(Query $q)
+    public function compileWhere(array $components)
     {
-        return $this->_compileWhere($q->components['where']);
+        return $this->_compileWhere($components['where']);
     }
 
     /**
@@ -450,6 +450,12 @@ class BaseCompiler extends Compiler
         return 'USING ' . $this->_compileJoins($using);
     }
 
+    /**
+     * Compile a complete WHERE clause.
+     *
+     * @param array $wheres An array of conditions.
+     * @return string SQL
+     */
     protected function _compileWhere(array $wheres)
     {
         return 'WHERE ' . $this->_compileConditions($wheres);
@@ -479,21 +485,20 @@ class BaseCompiler extends Compiler
     /**
      * Compile a WHERE clause.
      *
-     * @param WhereClause $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _compileCondition(WhereClause $where)
+    protected function _compileCondition(array $where)
     {
-        $not = $where->not ? 'Not' : '';
-        $fn  = '_where' . $not . $where->type;
+        $not = empty($where['not']) ? '' : 'Not';
+        $fn  = '_where' . $not . $where['type'];
         $sql = $this->$fn($where);
 
         // Sometimes, the _where* function returns nothing because it has 
         // decided that there is no need for a condition.
         // @see _whereIn()
         //if (! $sql) { return ''; }
-
-        $logicalOp = $where->logicalOp;
+        $logicalOp = $where['logic'];
         //$not       = $where->not ? ' NOT ' : ' ';
 
         $sql = $logicalOp . ' ' . $sql;
@@ -505,20 +510,20 @@ class BaseCompiler extends Compiler
      *
      * "Basic" means this condition format: <column> <operator> <value>
      *
-     * @param WhereClause $where
+     * @param array $where
      * @return SQL
      */
-    protected function _whereBasic(WhereClause $where)
+    protected function _whereBasic(array $where)
     {
-        $alias = $this->useTableAlias ? $where->tableAlias : '';
-        $col = $this->columnize($where->column, $alias);
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col = $this->columnize($where['cols'], $alias);
         $op  = $this->_getWhereOperator($where);
-        $val = $this->parameterize($where->value);
+        $val = $this->parameterize($where['val']);
 
         return "$col $op $val";
     }
 
-    protected function _whereNotBasic(WhereClause $where)
+    protected function _whereNotBasic(array $where)
     {
         return 'NOT ' . $this->_whereBasic($where);
     }
@@ -528,19 +533,19 @@ class BaseCompiler extends Compiler
      *
      * "Attribute" means this condition format: <column> <operator> <column>
      *
-     * @param WhereClause $where
+     * @param array $where
      * @return SQL
      */
-    protected function _whereAttribute(WhereClause $where)
+    protected function _whereAttribute(array $where)
     {
-        $lCol = $this->columnize($where->lCol, $this->useTableAlias ? $where->lAlias : '');
-        $rCol = $this->columnize($where->rCol, $this->useTableAlias ? $where->rAlias : '');
+        $lCol = $this->columnize($where['lCols'], $this->useTableAlias ? $where['lTable'] : '');
+        $rCol = $this->columnize($where['rCols'], $this->useTableAlias ? $where['rTable'] : '');
         $op  = $this->_getWhereOperator($where);
 
         return "$lCol $op $rCol";
     }
 
-    protected function _whereNotAttribute(WhereClause $where)
+    protected function _whereNotAttribute(array $where)
     {
         return 'NOT ' . $this->_whereAttribute($where);
     }
@@ -548,21 +553,21 @@ class BaseCompiler extends Compiler
     /**
      * Compile an EXISTS clause.
      *
-     * @param Condition\Exists $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _whereExists(WhereClause $where)
+    protected function _whereExists(array $where)
     {
-        return 'EXISTS (' . $this->compileSelect($where->query) . ')';
+        return 'EXISTS (' . $this->compileSelect($where['query']->getComponents()) . ')';
     }
 
     /**
      * Compile an EXISTS clause.
      *
-     * @param Condition\Exists $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _whereNotExists(WhereClause $where)
+    protected function _whereNotExists(array $where)
     {
         return 'NOT ' . $this->_whereExists($where);
     }
@@ -588,51 +593,51 @@ class BaseCompiler extends Compiler
      * @see http://stackoverflow.com/a/12946338/2119117
      * @see http://forumsarchive.laravel.io/viewtopic.php?id=3252
      *
-     * @param Condition\In $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _whereIn(WhereClause $where)
+    protected function _whereIn(array $where)
     {
         // If empty value is passed, we replace condition as said
         // in flower box.
-        if (! $where->value) { return 'FALSE'; }
+        if (! $where['val']) { return 'FALSE'; }
 
-        $sql = $where->value instanceof Query
-            ? '(' . $this->compileSelect($where->value) . ')'
-            : $this->parameterize($where->value);
+        $sql = $where['val'] instanceof Query
+            ? '(' . $this->compileSelect($where['val']) . ')'
+            : $this->parameterize($where['val']);
 
-        $alias = $this->useTableAlias ? $where->tableAlias : '';
-        $col   = $this->columnize($where->column, $alias);
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col   = $this->columnize($where['cols'], $alias);
 
         return "$col IN $sql";
     }
 
-    protected function _whereNotIn(WhereClause $where)
+    protected function _whereNotIn(array $where)
     {
         // If empty value is passed, we replace condition as said
         // in flower box.
-        if (! $where->value) { return 'TRUE'; }
+        if (! $where['val']) { return 'TRUE'; }
 
-        $sql = $where->value instanceof Query
-            ? '(' . $this->compileSelect($where->value) . ')'
-            : $this->parameterize($where->value);
+        $sql = $where['val'] instanceof Query
+            ? '(' . $this->compileSelect($where['val']) . ')'
+            : $this->parameterize($where['val']);
 
-        $alias = $this->useTableAlias ? $where->tableAlias : '';
-        $col   = $this->columnize($where->column, $alias);
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col   = $this->columnize($where['cols'], $alias);
 
         return "$col NOT IN $sql";
     }
 
-    protected function _whereSub(WhereClause $where)
+    protected function _whereSub(array $where)
     {
-        $sub = '(' . $this->compileSelect($where->query) . ')';
+        $sub = '(' . $this->compileSelect($where['query']) . ')';
         $op  = $this->_getWhereOperator($where);
-        $val = $this->parameterize($where->value);
+        $val = $this->parameterize($where['val']);
 
         return "$sub $op $val";
     }
 
-    protected function _whereNotSub(WhereClause $where)
+    protected function _whereNotSub(array $where)
     {
         return 'NOT ' . $this->_whereSub($where);
     }
@@ -640,26 +645,27 @@ class BaseCompiler extends Compiler
     /**
      * Compile an nested where clause.
      *
-     * @param Condition\Nested $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _whereNested(WhereClause $where)
+    protected function _whereNested(array $where)
     {
-        return '(' . $this->_compileConditions($where->nested) . ')';
+        return '(' . $this->_compileConditions($where['nested']) . ')';
     }
 
     /**
      * Compile an nested where clause in negative form.
      *
-     * @param Condition\Nested $where
+     * @param array $where
      * @return string SQL
      */
-    protected function _whereNotNested(WhereClause $where)
+    protected function _whereNotNested(array $where)
     {
         return 'NOT ' . $this->_whereNested($where);
     }
+
     /**
-     * Get appropriate operator for the given WhereClause.
+     * Get appropriate operator for the given condition.
      *
      * Sometimes, the conditional operator the user chose is not fitting for the 
      * values type. Thus, we need to use a more appropriate one.
@@ -673,18 +679,18 @@ class BaseCompiler extends Compiler
      *
      * We cannot use '=' operator, but 'IN' operator.
      *
-     * @param WhereClause $where
+     * @param array $where
      */
-    protected function _getWhereOperator(WhereClause $where)
+    protected function _getWhereOperator(array $where)
     {
-        $op = $where->operator;
+        $op = $where['op'];
 
-        if (! isset($where->value))
+        if (! isset($where['val']))
         {
             return $op;
         }
 
-        $val = $where->value;
+        $val = $where['val'];
 
         // Do we need to arrayfy this operator?
         if (is_array($val) && isset($this->operatorsArrayfy[$op]))

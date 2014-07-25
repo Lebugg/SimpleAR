@@ -4,10 +4,6 @@ use \SimpleAR\Database\Builder\WhereBuilder;
 use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Query;
-use \SimpleAR\Database\Condition\Simple as SimpleCond;
-use \SimpleAR\Database\Condition\Nested as NestedCond;
-use \SimpleAR\Database\Condition\Exists as ExistsCond;
-use \SimpleAR\Database\Condition\Attribute as AttrCond;
 use \SimpleAR\Database\JoinClause;
 
 use \SimpleAR\Facades\Cfg;
@@ -83,7 +79,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b = new WhereBuilder();
         $components = $b->build($options);
 
-        $expected = array(new SimpleCond('_', array('author_id'), '=', 12));
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
+        //new SimpleCond('_', array('author_id'), '=', 12));
         $this->assertArrayHasKey('where', $components);
         $this->assertEquals($expected, $components['where']);
 
@@ -100,8 +97,10 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($options);
 
         $expected = array();
-        $expected[] = new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
-        $expected[] = new SimpleCond('_', array('title'), '=', 'Essays', 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '=', 'val' => [12, 15, 16], 'logic' => 'AND', 'not' => false];
+        //new SimpleCond('_', array('author_id'), '=', array(12, 15, 16), 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => 'Essays', 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('_', array('title'), '=', 'Essays', 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
     }
@@ -120,8 +119,10 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($options);
 
         $expected = array();
-        $expected[] = new SimpleCond('_', array('id'), '!=', null, 'AND');
-        $expected[] = new SimpleCond('_', array('title'), '=', null, 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['id'], 'op' => '!=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('_', array('id'), '!=', null, 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('_', array('title'), '=', null, 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
     }
@@ -142,12 +143,17 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components =$this->_builder->build($options);
 
-        $expected[] = new SimpleCond('_', array('author_id'), '=', 12, 'AND');
-        $expected[] = new SimpleCond('_', array('blog_id'), '=', 15, 'OR');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('_', array('author_id'), '=', 12, 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['blog_id'], 'op' => '=', 'val' => 15, 'logic' => 'OR', 'not' => false];
+        // $expected[] = new SimpleCond('_', array('blog_id'), '=', 15, 'OR');
 
-        $nested[] = new SimpleCond('_', array('author_id'), '!=', array(12, 15, 16), 'AND');
-        $nested[] = new SimpleCond('_', array('title'), '=', 'Alice in Wonderland', 'AND');
-        $expected[] = new NestedCond($nested, 'OR');
+        $nested[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['author_id'], 'op' => '!=', 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
+        //$nested[] = new SimpleCond('_', array('author_id'), '!=', array(12, 15, 16), 'AND');
+        $nested[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => 'Alice in Wonderland', 'logic' => 'AND', 'not' => false];
+        //$nested[] = new SimpleCond('_', array('title'), '=', 'Alice in Wonderland', 'AND');
+        $expected[] = ['type' => 'Nested', 'nested' => $nested, 'logic' => 'OR', 'not' => false];
+        //$expected[] = new NestedCond($nested, 'OR');
 
         $this->assertCount(3, $components['where']);
         $this->assertEquals($expected, $components['where']);
@@ -190,12 +196,17 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build($opts);
 
-        $expected[] = new SimpleCond('_', 'name', '=', 'Glob', 'AND');
-        $expected[] = new SimpleCond('articles', array('title'), 'LIKE', '%beer%', 'AND');
-        $expected[] = new NestedCond(array(
-            new SimpleCond('articles.author', array('id'), '=', array(12,15,16), 'AND'),
-            new SimpleCond('articles.author', array('first_name'), '=', array('John'), 'OR'),
-        ), 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['name'], 'op' => '=', 'val' => 'Glob', 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('_', 'name', '=', 'Glob', 'AND');
+        $expected[] = ['type' => 'Basic', 'table' => 'articles', 'cols' => ['title'], 'op' => 'LIKE', 'val' => '%beer%', 'logic' => 'AND', 'not' => false];
+        //$expected[] = new SimpleCond('articles', array('title'), 'LIKE', '%beer%', 'AND');
+        $nested[] = ['type' => 'Basic', 'table' => 'articles.author', 'cols' => ['id'], 'op' => '=', 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
+        $nested[] = ['type' => 'Basic', 'table' => 'articles.author', 'cols' => ['first_name'], 'op' => '=', 'val' => ['John'], 'logic' => 'OR', 'not' => false];
+        $expected[] = ['type' => 'Nested', 'nested' => $nested, 'logic' => 'AND', 'not' => false];
+        // $expected[] = new NestedCond(array(
+        //     new SimpleCond('articles.author', array('id'), '=', array(12,15,16), 'AND'),
+        //     new SimpleCond('articles.author', array('first_name'), '=', array('John'), 'OR'),
+        // ), 'AND');
 
         $this->assertEquals($expected, $components['where']);
     }
@@ -209,7 +220,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
 
-        $where[] = new AttrCond('__', 'blog_id', '=', '_', 'id', 'AND');
+        $where[] = ['type' => 'Attribute', 'lTable' => '__', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
+        //$where[] = new AttrCond('__', 'blog_id', '=', '_', 'id', 'AND');
 
         $this->assertEquals($where, $components['where']);
     }
@@ -228,9 +240,10 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
 
-        $where[] = new ExistsCond($subQuery);
+        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND'];
+        //$where[] = new ExistsCond($subQuery);
         // There is a sub array because Builders do not flatten value array.
-        $val[] = array('Article 1');
+        $val['where'] = array(array('Article 1'));
 
         $this->assertEquals($where, $components['where']);
         $this->assertEquals($val, $b->getValues());
@@ -242,7 +255,8 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Article');
         $b->where(array('id'), array(12));
 
-        $where[] = new SimpleCond('_', 'id', '=', 12);
+        $where[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['id'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
+        //$where[] = new SimpleCond('_', 'id', '=', 12);
         $components = $b->build();
 
         $this->assertEquals($where, $components['where']);
