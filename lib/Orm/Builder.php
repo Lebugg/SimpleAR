@@ -101,6 +101,12 @@ class Builder
         return $this->one();
     }
 
+    public function findMany(array $options)
+    {
+        $this->setOptions($options);
+        return $this->all();
+    }
+
     /**
      * Add a condition that check existence of related model instances for the 
      * root model.

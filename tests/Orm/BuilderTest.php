@@ -356,4 +356,17 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->root('Article')->applyScope('status', 2);
     }
+
+    public function testFindMany()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('setOptions', 'all'));
+
+        $options = array('conditions' => array(
+            'id' => 12,
+        ));
+
+        $qb->expects($this->once())->method('setOptions')->with($options);
+        $qb->expects($this->once())->method('all');
+        $qb->findMany($options);
+    }
 }
