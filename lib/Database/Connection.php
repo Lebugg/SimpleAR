@@ -113,7 +113,7 @@ class Connection
 
         try
         {
-            $this->_pdo = new \PDO($dsn, $a['user'], $a['password'], $options);
+            $this->setPDO(new \PDO($dsn, $a['user'], $a['password'], $options));
         }
         catch (\PDOException $ex)
 		{
@@ -123,6 +123,11 @@ class Connection
         $this->_database = $a['name'];
         $this->_driver   = $a['driver'];
         $this->_debug    = $config->debug;
+    }
+
+    public function setPDO(\PDO $pdo)
+    {
+        $this->_pdo = $pdo;
     }
 
     /**
@@ -178,24 +183,7 @@ class Connection
             $this->_sth = $this->_pdo->prepare($query);
             $this->_sth->execute((array) $params);
 
-            if ($this->_debug)
-            {
-                $queryDebug  = $query;
-                $paramsDebug = $params;
-
-                //$s = str_replace(array_pad(array(), count($params), '?'), $params, $query);
-                $queryDebug = preg_replace_callback( '/\?/', function( $match) use( &$paramsDebug) {
-                    if (!is_array($paramsDebug)) {
-                        $paramsDebug = array($paramsDebug);
-                    }
-                    return var_export(array_shift($paramsDebug), true);
-                }, $queryDebug);
-
-                $this->_queries[] = array(
-                    'sql'  => $queryDebug,
-                    'time' => (microtime(TRUE) - $time) * 1000,
-                );
-            }
+            $this->_debug && $this->logQuery($query, $params, (microtime(TRUE) - $time));
 
         }
         catch (\PDOException $ex)
@@ -204,6 +192,25 @@ class Connection
         }
 
         return $this->_sth;
+    }
+
+    public function logQuery($query, array $params, $time)
+    {
+        $queryDebug  = $query;
+        $paramsDebug = $params;
+
+        //$s = str_replace(array_pad(array(), count($params), '?'), $params, $query);
+        $queryDebug = preg_replace_callback( '/\?/', function( $match) use( &$paramsDebug) {
+            if (!is_array($paramsDebug)) {
+                $paramsDebug = array($paramsDebug);
+            }
+            return var_export(array_shift($paramsDebug), true);
+        }, $queryDebug);
+
+        $this->_queries[] = array(
+            'sql'  => $queryDebug,
+            'time' => $time / 1000,
+        );
     }
 
     /**
