@@ -33,28 +33,85 @@ abstract class Compiler
         'delete' => array(),
     );
 
-    public function compile(Query $query, $type)
+    /**
+     * Compile an Query.
+     *
+     * @param Query $query The query to compile.
+     * @return [string $sql, array $values]
+     */
+    public function compile(Query $query)
     {
-        $fn  = 'compile' . ucfirst($type);
-        $sql = $this->$fn($query);
+        $type = $query->getType();
 
-        return $sql;
+        $sql = $this->compileComponents($query->getComponents(), $type);
+        $val = $this->compileValues($query->getComponentValues(), $type);
+
+        return array($sql, $val);
     }
 
-    protected function _compileComponents(Query $query, array $components)
+    /**
+     * Compile components.
+     *
+     * This is the entry point of the compiler.
+     *
+     * @param array $components The query components to compile.
+     * @param array $values The values associated to components.
+     * @param string $type The query type.
+     */
+    public function compileComponents(array $components, $type)
+    {
+        $fn  = 'compile' . ucfirst($type);
+        return $this->$fn($components);
+    }
+
+    protected function _compileComponents(array $availableComponents, array $actualComponents)
     {
         $sql = array();
+        $val = array();
 
-        foreach ($components as $component)
+        foreach ($availableComponents as $component)
         {
-            if (isset($query->components[$component]))
+            if (isset($actualComponents[$component]))
             {
                 $fn = '_compile' . ucfirst($component);
-                $sql[$component] = $this->$fn($query->components[$component]);
+                $sql[$component] = $this->$fn($actualComponents[$component]);
+
             }
         }
 
         return $sql;
+    }
+
+    /**
+     * Compile query values in well-sorted array.
+     *
+     * It transforms values grouped by component type into a plain value array 
+     * ordered according to query component order (@see $components).
+     *
+     * Example:
+     * --------
+     *
+     * $values: ['where' => [1, 2, 3], 'set' => ['Value to set']].
+     * Return: ['Value to set', 1, 2, 3].
+     *
+     * @param array $values Component values to sort.
+     * @return array Compiled values.
+     *
+     * @see \SimpleAR\Database\Query::getComponentValues()
+     */
+    public function compileValues(array $values, $type)
+    {
+        $components = $this->components[$type];
+        $val = array();
+        foreach($this->components[$type] as $component)
+        {
+            if (isset($values[$component]))
+            {
+                $val = $val ? array_merge($val, $values[$component]) : $values[$component];
+            }
+        }
+
+        return $val;
     }
 
     protected function _concatenate(array $components)

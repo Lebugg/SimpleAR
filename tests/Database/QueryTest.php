@@ -30,7 +30,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         $builder->expects($this->once())->method('build');
         $builder->expects($this->once())->method('getValues')->will($this->returnValue(array()));
-        $compiler->expects($this->once())->method('compile');
+        $compiler->expects($this->once())->method('compile')->will($this->returnValue(array('SQL', array())));
         $conn->expects($this->once())->method('query');
 
         $query->run();

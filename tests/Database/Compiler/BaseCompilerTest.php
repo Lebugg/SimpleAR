@@ -4,11 +4,11 @@ use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\JoinClause;
 
-use \SimpleAR\Database\Condition\Simple as SimpleCond;
-use \SimpleAR\Database\Condition\Nested as NestedCond;
-use \SimpleAR\Database\Condition\Exists as ExistsCond;
-use \SimpleAR\Database\Condition\In as InCond;
-use \SimpleAR\Database\Condition\Attribute as AttrCond;
+// use \SimpleAR\Database\Condition\Simple as SimpleCond;
+// use \SimpleAR\Database\Condition\Nested as NestedCond;
+// use \SimpleAR\Database\Condition\Exists as ExistsCond;
+// use \SimpleAR\Database\Condition\In as InCond;
+// use \SimpleAR\Database\Condition\Attribute as AttrCond;
 
 use \SimpleAR\Facades\DB;
 
@@ -16,76 +16,72 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 {
     public function testCompileInsertWithAllComponents()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
 
-        $query->components['into'] = 'articles';
-        $query->components['insertColumns'] = array('blog_id', 'title');
-        $query->components['values']  = array(12, 'Awesome!');
+        $components['into'] = 'articles';
+        $components['insertColumns'] = array('blog_id', 'title');
+        $components['values']  = array(12, 'Awesome!');
 
         $expectedSql = 'INSERT INTO `articles` (`blog_id`,`title`) VALUES(?,?)';
-        $resultSql   = $compiler->compileInsert($query);
+        $resultSql = $compiler->compileInsert($components);
 
         $this->assertEquals($expectedSql, $resultSql);
     }
 
     public function testCompileInsertValuesWithArrayOfTuples()
     {
-        $query = new Query();
         $compiler = new BaseCompiler();
 
-        $query->components['into'] = 'articles';
-        $query->components['insertColumns'] = array('blog_id', 'title');
-        $query->components['values']  = array(array(12, 'Awesome!'), array(1, 'Cool'), array(5, 'Yes'));
+        $components['into'] = 'articles';
+        $components['insertColumns'] = array('blog_id', 'title');
+        $components['values']  = array(array(12, 'Awesome!'), array(1, 'Cool'), array(5, 'Yes'));
 
         $expectedSql = 'INSERT INTO `articles` (`blog_id`,`title`) VALUES(?,?),(?,?),(?,?)';
-        $resultSql   = $compiler->compileInsert($query);
+        $resultSql = $compiler->compileInsert($components);
 
         $this->assertEquals($expectedSql, $resultSql);
     }
 
     public function testSelectBasic()
     {
-        $query = new Query();
         $compiler = new BaseCompiler();
 
-        $query->components['from'] = array(new JoinClause('articles'));
+        $components['from'] = array(new JoinClause('articles'));
 
         // "*" symbol for all columns.
         $cols = array('a' => array('columns' => array('*')));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT * FROM `articles`';
-        $result   = $compiler->compileSelect($query);
+        $result = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
 
         // For one particular column.
         $cols = array('a' => array('columns' => array('id')));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT `id` FROM `articles`';
-        $result   = $compiler->compileSelect($query);
+        $result = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
 
         // Several columns.
         $cols = array('a' => array('columns' => array('id', 'author_id' => 'authorId', 'title')));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT `id`,`author_id` AS `authorId`,`title` FROM `articles`';
-        $result   = $compiler->compileSelect($query);
+        $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
 
     public function notestSelectBasicWithTableAlias()
     {
-        $query = new Query();
         $compiler = new BaseCompiler();
         //$compiler->useTableAlias = true;
 
-        $query->components['from'] = array(new JoinClause('articles', 'a'));
+        $components['from'] = array(new JoinClause('articles', 'a'));
 
         // "*" symbol for all columns.
         $cols = array('a' => array('columns' => array('*'), 'resultAlias' => ''));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT `a`.* FROM `articles` `a`';
-        $result   = $compiler->compileSelect($query);
+        $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
 
         // Several columns.
@@ -93,228 +89,225 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
             'columns' => array('id', 'author_id' => 'authorId', 'title'),
             'resultAlias' => '_',
         ));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT `a`.`id`,`a`.`author_id` AS `authorId`,`a`.`title` FROM `articles` `a`';
-        $result   = $compiler->compileSelect($query);
+        $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
 
     public function testSelectBasicWithResultAlias()
     {
-        $query = new Query();
         $compiler = new BaseCompiler();
         //$compiler->useTableAlias = true;
         $compiler->useResultAlias = true;
 
-        $query->components['from'] = array(new JoinClause('articles', 'a'));
+        $components['from'] = array(new JoinClause('articles', 'a'));
 
         // Several columns.
         $cols = array('a' => array(
             'columns' => array('id', 'author_id' => 'authorId', 'title'),
             'resultAlias' => '_'
         ));
-        $query->components['columns'] = $cols;
+        $components['columns'] = $cols;
         $expected = 'SELECT `id` AS `_.id`,`author_id` AS `_.authorId`,`title` AS `_.title` FROM `articles`';
-        $result   = $compiler->compileSelect($query);
+        $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
     public function testCompileDelete()
     {
-        $query = new Query();
         $compiler = new BaseCompiler();
 
-        $query->components['deleteFrom'] = 'articles'; 
+        $components['deleteFrom'] = 'articles'; 
         $expectedSql = 'DELETE FROM `articles`';
-        $resultSql   = $compiler->compileDelete($query);
+        $resultSql   = $compiler->compileDelete($components);
 
         $query = new Query();
 
-        $query->components['deleteFrom'] = 'articles';
-        $query->components['using'] = array(new JoinClause('articles'));
+        $components['deleteFrom'] = 'articles';
+        $components['using'] = array(new JoinClause('articles'));
         //$compiler->useTableAlias = true;
 
         $expectedSql = 'DELETE FROM `articles` USING `articles` `articles`';
-        $resultSql   = $compiler->compileDelete($query);
+        $resultSql   = $compiler->compileDelete($components);
 
         $this->assertEquals($expectedSql, $resultSql);
 
         $query = new Query();
 
         // Without ON clause.
-        $query->components['deleteFrom'] = array('articles', 'users');
-        $query->components['using'] = array(new JoinClause('articles'), new JoinClause('users'));
+        $components['deleteFrom'] = array('articles', 'users');
+        $components['using'] = array(new JoinClause('articles'), new JoinClause('users'));
 
         $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` `articles` INNER JOIN `users` `users`';
-        $resultSql   = $compiler->compileDelete($query);
+        $resultSql   = $compiler->compileDelete($components);
 
         // With ON clause.
-        $query->components['deleteFrom'] = array('articles', 'users');
+        $components['deleteFrom'] = array('articles', 'users');
         $joins[] = new JoinClause('articles');
         $joins[] = (new JoinClause('users'))->on('articles', 'user_id', 'users', 'id');
-        $query->components['using'] = $joins;
+        $components['using'] = $joins;
 
         $expectedSql = 'DELETE FROM `articles`,`users` USING `articles` `articles` INNER JOIN `users` `users` ON `articles`.`user_id` = `users`.`id`';
-        $resultSql   = $compiler->compileDelete($query);
+        $resultSql   = $compiler->compileDelete($components);
 
         $this->assertEquals($expectedSql, $resultSql);
     }
 
     public function testCompileDeleteOnSeveralTablesWithAlias()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
         //$compiler->useTableAlias = true;
 
         // Without ON clause.
-        $query->components['deleteFrom'] = array('a', 'u');
-        $query->components['using'] = array(new JoinClause('articles', 'a'), new JoinClause('users', 'u'));
+        $components['deleteFrom'] = array('a', 'u');
+        $components['using'] = array(new JoinClause('articles', 'a'), new JoinClause('users', 'u'));
 
         $expected = 'DELETE FROM `a`,`u` USING `articles` `a` INNER JOIN `users` `u`';
-        $result   = $compiler->compileDelete($query);
+        $result   = $compiler->compileDelete($components);
 
         $this->assertEquals($expected, $result);
 
         // With ON clause.
-        $query->components['deleteFrom'] = array('a', 'u');
+        $components['deleteFrom'] = array('a', 'u');
         $joins[] = new JoinClause('articles', 'a');
         $joins[] = (new JoinClause('users', 'u'))->on('a', 'user_id', 'u', 'id');
-        $query->components['using'] = $joins;
+        $components['using'] = $joins;
 
         $expected = 'DELETE FROM `a`,`u` USING `articles` `a` INNER JOIN `users` `u` ON `a`.`user_id` = `u`.`id`';
-        $result   = $compiler->compileDelete($query);
+        $result   = $compiler->compileDelete($components);
 
         $this->assertEquals($expected, $result);
     }
 
     public function testCompileWhereBasic()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
 
-        $where = new SimpleCond('a', 'author_id', '=', 12);
-        $query->components['where'] = array($where);
+        $where = ['type' => 'Basic', 'table' => 'a', 'cols' => ['author_id'], 'op' => '=', 'val' => 12, 'logic' => 'AND'];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        $components['where'] = array($where);
 
         $expected = 'WHERE `author_id` = ?';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
     }
 
     public function testCompileWhereBasics()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
 
-        $wheres[] = new SimpleCond('a', 'author_id', '=', 12);
-        $wheres[] = new SimpleCond('a', 'title', '=' , 'Das Kapital');
-        $query->components['where'] = $wheres;
+        $where[] = ['type' => 'Basic', 'table' => 'a', 'cols' => ['author_id'], 'op' => '=', 'val' => 12, 'logic' => 'AND'];
+        //$where[] = new SimpleCond('a', 'author_id', '=', 12);
+        $where[] = ['type' => 'Basic', 'table' => 'a', 'cols' => ['title'], 'op' => '=', 'val' => 'Das Kapital', 'logic' => 'AND'];
+        //$where[] = new SimpleCond('a', 'title', '=' , 'Das Kapital');
+        $components['where'] = $where;
 
         $expected = 'WHERE `author_id` = ? AND `title` = ?';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
 
-        $wheres = array();
-        $wheres[] = new SimpleCond('a', 'author_id', '=', 12);
-        $wheres[] = new SimpleCond('a', 'author_id', '=' , 99, 'OR');
-        $wheres[] = new SimpleCond('a', 'author_id', '=' , 1, 'OR');
-        $query->components['where'] = $wheres;
+        $w[] = ['type' => 'Basic', 'table' => 'a', 'cols' => ['author_id'], 'op' => '=', 'val' => 12, 'logic' => 'AND'];
+        //$w[] = new SimpleCond('a', 'author_id', '=', 12);
+        $w[] = ['type' => 'Basic', 'table' => 'a', 'cols' => ['author_id'], 'op' => '=', 'val' => 99, 'logic' => 'OR'];
+        //$w[] = new SimpleCond('a', 'author_id', '=' , 99, 'OR');
+        $w[] = ['type' => 'Basic', 'table' => 'a', 'cols' => ['author_id'], 'op' => '=', 'val' => 1, 'logic' => 'OR'];
+        //$w[] = new SimpleCond('a', 'author_id', '=' , 1, 'OR');
+        $components['where'] = $w;
         $expected = 'WHERE `author_id` = ? OR `author_id` = ? OR `author_id` = ?';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
 
-        $where = new SimpleCond('a', 'author_id', 'IN', array(12, 99, 1));
-        $query->components['where'] = array($where);
+        $w = ['type' => 'In', 'table' => 'a', 'cols' => ['author_id'], 'val' => [12, 99, 1], 'logic' => 'AND'];
+        //$where = new SimpleCond('a', 'author_id', 'IN', array(12, 99, 1));
+        $components['where'] = array($w);
         $expected = 'WHERE `author_id` IN (?,?,?)';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
     }
 
     public function testCompileWhereExists()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
 
         $select = new Query();
-        $select->components['columns'] = array('a' => array('columns' => array('id')));
-        $select->components['from'] = array(new JoinClause('articles'));
+        $select->setComponent('columns', array('a' => array('columns' => array('id'))));
+        $select->setComponent('from', array(new JoinClause('articles')));
 
-        $where = new ExistsCond($select);
-        $query->components['where'] = array($where);
+        $where = ['type' => 'Exists', 'query' => $select, 'logic' => 'AND'];
+        //$where = new ExistsCond($select);
+        $components['where'] = array($where);
 
         $expected = 'WHERE EXISTS (SELECT `id` FROM `articles`)';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
     }
 
     public function testCompileWhereAttribute()
     {
-        $query    = new Query();
         $compiler = new BaseCompiler();
 
-        $where = new AttrCond('a', 'author_id', '=', 'b', 'id');
-        $query->components['where'] = array($where);
+        $w = ['type' => 'Attribute', 'lTable' => 'a', 'lCols' => ['author_id'], 'op' => '=', 'rTable' => 'b', 'rCols' => ['id'], 'logic' => 'AND'];
+        //$where = new AttrCond('a', 'author_id', '=', 'b', 'id');
+        $components['where'] = array($w);
 
         $expected = 'WHERE `author_id` = `id`';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
 
         $compiler->useTableAlias = true;
         $expected = 'WHERE `a`.`author_id` = `b`.`id`';
-        $result   = $compiler->compileWhere($query);
+        $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
     }
 
     public function testCompileAggregates()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
         $agg[] = array('columns' => array('*'), 'function' => 'COUNT', 'tableAlias' => '', 'resultAlias' => '');
         $agg[] = array('columns' => array('*'), 'function' => 'COUNT', 'tableAlias' => 'articles', 'resultAlias' => '#articles');
         $agg[] = array('columns' => array('views'), 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views');
 
-        $q->components['from'] = array(new JoinClause('articles'));
-        $q->components['aggregates'] = $agg;
+        $components['from'] = array(new JoinClause('articles'));
+        $components['aggregates'] = $agg;
 
         $expected = 'SELECT COUNT(*),COUNT(`articles`.*) AS `#articles`,SUM(`articles`.`views`) AS `#views` FROM `articles`';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testCompileLimit()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
-        $q->components['from'] = array(new JoinClause('articles'));
-        $q->components['limit'] = 5;
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+        $components['limit'] = 5;
 
         $expected = 'SELECT * FROM `articles` LIMIT 5';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testOffset()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
-        $q->components['from'] = array(new JoinClause('articles'));
-        $q->components['offset'] = 12;
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+        $components['offset'] = 12;
 
         $expected = 'SELECT * FROM `articles` OFFSET 12';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testOrderBy()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
-        $q->components['from'] = $jc;
-        $q->components['orderBy'] = array(
+        $components['from'] = $jc;
+        $components['orderBy'] = array(
             array(
                 'tableAlias' => 'author',
                 'column' => 'last_name',
@@ -329,7 +322,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $expected = 'SELECT * FROM `articles` `_` INNER JOIN `authors` `author` ON `_`.`author_id` = `author`.`id` ' .
             'ORDER BY `author`.`last_name` ASC,`_`.`created_at` DESC';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testGroupBy()
@@ -337,11 +330,11 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
+        $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
-        $q->components['from'] = $jc;
-        $q->components['groupBy'] = array(
+        $components['from'] = $jc;
+        $components['groupBy'] = array(
             array(
                 'tableAlias' => 'author',
                 'column' => 'last_name',
@@ -354,13 +347,11 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $expected = 'SELECT * FROM `articles` `_` INNER JOIN `authors` `author` ON `_`.`author_id` = `author`.`id` ' .
             'GROUP BY `author`.`last_name`,`_`.`created_at`';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testWith()
     {
-        $q = new Query();
-
         $jc = array(
             (new JoinClause('blogs', '_')),
             (new JoinClause('articles', 'articles', JoinClause::LEFT))->on('_', 'id', 'articles', 'blog_id')
@@ -371,50 +362,52 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
             'articles' => array('columns' => array('*'))
         );
 
-        $q->components['from'] = $jc;
-        $q->components['columns'] = $columns;
+        $components['from'] = $jc;
+        $components['columns'] = $columns;
 
         $c = new BaseCompiler();
 
         $sql = 'SELECT `_`.*,`articles`.* FROM `blogs` `_` LEFT JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id`';
         $val = array();
 
-        $this->assertEquals($sql, $c->compile($q, 'select'));
+        $this->assertEquals($sql, $c->compileSelect($components));
     }
 
     public function testIn()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
-        $q->components['from'] = array(new JoinClause('articles'));
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
 
-        $where = new InCond('', 'author_id', array(1, 2));
-        $q->components['where'] = array($where);
+        $w = ['type' => 'In', 'table' => '', 'cols' => ['author_id'], 'val' => [1, 2], 'logic' => 'AND'];
+        //$where = new InCond('', 'author_id', array(1, 2));
+        $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE `author_id` IN (?,?)';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
 
-        $where->not = true;
+        $w['not'] = true;
+        $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE `author_id` NOT IN (?,?)';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 
     public function testInWithEmptyArray()
     {
-        $q = new Query();
         $c = new BaseCompiler();
 
-        $q->components['columns'] = array('' => array('columns' => array('*')));
-        $q->components['from'] = array(new JoinClause('articles'));
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
 
-        $where = new InCond('', 'author_id', array());
-        $q->components['where'] = array($where);
+        $w = ['type' => 'In', 'table' => '', 'cols' => ['author_id'], 'val' => [], 'logic' => 'AND'];
+        //$where = new InCond('', 'author_id', array());
+        $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE FALSE';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
 
-        $where->not = true;
+        $w['not'] = true;
+        $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE TRUE';
-        $this->assertEquals($expected, $c->compileSelect($q));
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 }

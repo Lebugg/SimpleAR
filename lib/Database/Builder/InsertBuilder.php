@@ -12,19 +12,6 @@ class InsertBuilder extends Builder
         'values',
     );
 
-    public function getValues()
-    {
-        $values = $this->_components['values'];
-
-        if (is_array($values[0]))
-        {
-            // We also need to flatten value array.
-            return call_user_func_array('array_merge', $values);
-        }
-
-        return $values;
-    }
-
     public function useRootModel($class)
     {
         parent::useRootModel($class);
@@ -52,5 +39,6 @@ class InsertBuilder extends Builder
     protected function _buildValues(array $values)
     {
         $this->_components['values'] = $values;
+        $this->addValueToQuery($values, 'values');
     }
 }

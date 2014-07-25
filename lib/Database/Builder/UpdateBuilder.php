@@ -75,7 +75,7 @@ class UpdateBuilder extends WhereBuilder
             $this->_components['set'][] = compact('tableAlias', 'column', 'value');
 
             // One other task to do: move value over one place.
-            $this->addValueToQuery($value);
+            $this->addValueToQuery($value, 'set');
         }
     }
 }
