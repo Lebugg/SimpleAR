@@ -734,30 +734,10 @@ class BaseCompiler extends Compiler
      */
     protected function _compileSetPart(array $set)
     {
-        $prefix = $this->_getPrefix($set['tableAlias']);
+        $prefix = $this->useTableAlias ? $set['tableAlias'] : '';
         $left  = $this->column($set['column'], $prefix);
         $right = $this->parameterize($set['value']);
 
         return $left . ' = ' . $right;
-    }
-
-    /**
-     * Get correct table prefix.
-     *
-     * It can return:
-     *
-     *  * The table alias;
-     *  * The table name;
-     *  * The empty string: ''.
-     */
-    protected function _getPrefix($tableAlias)
-    {
-        if ($this->useTableAlias)
-        {
-            return $tableAlias;
-        }
-
-        // return $this->getInvolvedTable($tableAlias)->name;
-        return '';
     }
 }
