@@ -140,4 +140,20 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $query->run();
     }
 
+    public function testFalsyConditionValues()
+    {
+        $conn = $this->getMock('SimpleAR\Database\Connection');
+        $query = new Query(new SelectBuilder(), new BaseCompiler(), $conn);
+        $query->root('Author')
+            ->select(array('*'), false)
+            ->conditions(array(
+                'age' => 0
+            ));
+
+        $sql = 'SELECT * FROM `authors` WHERE `age` = ?';
+        $val = array(0);
+        $conn->expects($this->once())->method('query')->with($sql, $val);
+
+        $query->run();
+    }
 }

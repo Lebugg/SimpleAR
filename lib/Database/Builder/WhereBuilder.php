@@ -500,13 +500,18 @@ class WhereBuilder extends Builder
      * Add a condition to the list of conditions.
      *
      * @param array $cond The condition array
-     * @param mixed $val  The condition's value. It will be add to query's 
-     * values list.
+     *
+     * There is no second optional argument in order to allow function caller to
+     * pass a null value.
      */
-    protected function _addWhere(array $cond, $val = null)
+    protected function _addWhere(array $cond)
     {
         $this->_components['where'][] = $cond;
-        $val && $this->addValueToQuery($val, 'where');
+
+        if (func_num_args() > 1)
+        {
+            $this->addValueToQuery(func_get_arg(1), 'where');
+        }
     }
 
     /**
