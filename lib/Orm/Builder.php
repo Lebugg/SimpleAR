@@ -184,7 +184,7 @@ class Builder
     public function delete($root = '')
     {
         $query = $this->newQuery(new DeleteBuilder);
-        $root && $query->root($root);
+        $query->root($root ?: $this->_root);
 
         $query->setCriticalQuery();
 

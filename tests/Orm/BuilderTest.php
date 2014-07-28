@@ -68,6 +68,14 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->delete('Article')->where('id', 12)->run();
     }
 
+    public function testDeleteSetRootIfRootHasBeenCalled()
+    {
+        $qb = new QueryBuilder;
+        $query = $qb->root('Article')->delete();
+
+        $this->assertEquals('Article', $query->getBuilder()->getRootModel());
+    }
+
     public function testUpdate()
     {
         $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
