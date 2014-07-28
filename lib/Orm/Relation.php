@@ -243,7 +243,7 @@ abstract class Relation
         $this->cm = new \StdClass();
         $this->cm->class     = $cmClass;
         $this->cm->t         = $cmClass::table();
-        //$this->cm->table     = $this->cm->t->name;
+        $this->cm->table     = $this->cm->t->name;
     }
 
     public function setInformation(array $info)
@@ -251,7 +251,7 @@ abstract class Relation
         $this->lm = new \StdClass();
         $this->lm->class = $s = $info['model'] . Cfg::get('modelClassSuffix');
         $this->lm->t     = $s::table();
-        //$this->lm->table = $this->lm->t->name;
+        $this->lm->table = $this->lm->t->name;
         //$this->lm->pk    = $this->lm->t->primaryKey;
 
         foreach (array('filter', 'conditions', 'order') as $item)

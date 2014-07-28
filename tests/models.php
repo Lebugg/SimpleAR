@@ -35,6 +35,10 @@ class Article extends SimpleAR\Orm\Model
             'type'  => 'belongs_to',
             'model' => 'Blog',
         ),
+        'readers' => array(
+            'type' => 'many_many',
+            'model' => 'User'
+        ),
     );
 
     protected static $_columns = array(
@@ -76,6 +80,17 @@ class Author extends SimpleAR\Orm\Model
     }
 }
 
+class User extends SimpleAR\Orm\Model
+{
+    protected static $_tableName = 'users';
+
+    protected static $_columns = array(
+        'firstName',
+        'lastName',
+    );
+}
+
 Blog::wakeup();
 Article::wakeup();
 Author::wakeup();
+User::wakeup();

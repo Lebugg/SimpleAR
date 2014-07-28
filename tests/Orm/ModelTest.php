@@ -287,4 +287,24 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertArrayHasKey('articles', $attributes);
         $this->assertEquals($articles, $attributes['articles']);
     }
+
+    public function testLoadRelationManyMany()
+    {
+        $users = array(
+            new User,
+            new User,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
+        $qb->expects($this->once())->method('findMany')->will($this->returnValue($users));
+        Article::setQueryBuilder($qb);
+
+        $article = new Article();
+        $article->populate(array('id' => 12)); // In order to be concrete.
+        $article->load('readers');
+
+        $attributes = $article->attributes();
+        $this->assertArrayHasKey('readers', $attributes);
+        $this->assertEquals($users, $attributes['readers']);
+    }
 }
