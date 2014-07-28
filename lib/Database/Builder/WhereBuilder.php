@@ -626,6 +626,12 @@ class WhereBuilder extends Builder
             return array('', (array) $attribute->val());
         }
 
+        // We don't use model? Can't do nothing for you.
+        if (! $this->_useModel)
+        {
+            return array('', (array) $attribute);
+        }
+
         // 1)
         list($relations, $attribute) = $this->separateAttributeFromRelations($attribute);
 

@@ -278,4 +278,17 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
         $this->assertEquals($where, $components['where']);
     }
+
+    public function testSimpleConditionWithoutUsingModel()
+    {
+        $b = new WhereBuilder;
+        $b->root('USERS');
+        $b->where('firstName', 'Jean');
+
+        $expected = ['root' => 'USERS', 'where' => [
+            ['type' => 'Basic', 'table' => '', 'cols' => ['firstName'], 'op' => '=', 'val' => 'Jean', 'logic' => 'AND', 'not' => false],
+        ]];
+
+        $this->assertEquals($expected, $b->build());
+    }
 }
