@@ -314,6 +314,7 @@ class Builder
         $this->_pendingRow = false;
         $this->_eagerLoad = false;
         $this->_query = null;
+        $this->_noRowToFetch = false;
     }
 
     public function applyScope($scope)
@@ -528,6 +529,7 @@ class Builder
     {
         $res = false;
 
+        // It saves superfluous call to Connection instance.
         if (! $this->_noRowToFetch)
         {
             $res = $this->_query->getConnection()->getNextRow($next);
