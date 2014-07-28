@@ -1257,7 +1257,7 @@ abstract class Model
             array_combine((array) $relation->jm->to,   $lmId)
         );
 
-        self::query()->deleteFrom($relation->jm->table)
+        self::query()->delete($relation->jm->table)
             ->conditions($conditions)
             ->run();
     }
@@ -2334,7 +2334,9 @@ abstract class Model
                     //      2) Insert new rows.
 
                     // Remove all rows from join table. (Easier this way.)
-                    self::query()->delete()->where((array) $relation->jm->from, $this->id())->run();
+                    self::query()->delete($relation->jm->table)
+                        ->where((array) $relation->jm->from, $this->id())
+                        ->run();
 
                     $values = array();
                     // Array cast allows user not to bother to necessarily set an array.
