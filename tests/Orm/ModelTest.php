@@ -306,5 +306,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $attributes = $article->attributes();
         $this->assertArrayHasKey('readers', $attributes);
         $this->assertEquals($users, $attributes['readers']);
+
+        $relation = Article::relation('readers');
+        $reversed = User::relation('readers_r');
+        $this->assertInstanceOf('SimpleAR\Orm\Relation\ManyMany', $reversed);
+        $this->assertEquals($relation->reverse(), $reversed);
+
     }
 }

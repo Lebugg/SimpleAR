@@ -2160,7 +2160,7 @@ abstract class Model
 
         $options = array_merge($options, $localOptions);
         $fnFind = $relation->isToMany() ? 'findMany' : 'findOne';
-        $res = self::query()->$fnFind($options);
+        $res = $lmClass::query()->$fnFind($options);
 
         $this->_attr($relationName, $res);
         return $res;
