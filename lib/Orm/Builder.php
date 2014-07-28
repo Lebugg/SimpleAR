@@ -116,7 +116,7 @@ class Builder
      */
     public function has($relation, $op = null, $value = null, \Closure $callback = null)
     {
-        $this->_query = $mainQuery = $this->getQueryOrNewSelect();
+        $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
 
         $model = $this->_root;
@@ -171,11 +171,11 @@ class Builder
      */
     public function setOptions(array $options)
     {
-        $this->_query = $this->getQueryOrNewSelect();
+        $q = $this->getQueryOrNewSelect();
 
         foreach ($options as $name => $value)
         {
-            $this->_query->$name($value);
+            $q->$name($value);
         }
 
         return $this;
@@ -242,7 +242,7 @@ class Builder
      */
     public function one()
     {
-        $this->_query = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->run();
 
         return $this->_fetchModelInstance();
     }
@@ -265,7 +265,7 @@ class Builder
      */
     public function last()
     {
-        $this->_query = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->run();
 
         return $this->_fetchModelInstance(false);
     }
@@ -281,7 +281,7 @@ class Builder
      */
     public function all()
     {
-        $this->_query = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
@@ -399,10 +399,10 @@ class Builder
      */
     public function getQueryOrNewSelect()
     {
-        $q = $this->getQuery() ?: $this->newQuery(new SelectBuilder);
-        $this->_root && $q->root($this->_root);
+        $this->_query = $this->getQuery() ?: $this->newQuery(new SelectBuilder);
+        $this->_root && $this->_query->root($this->_root);
 
-        return $q;
+        return $this->_query;
     }
 
     /**

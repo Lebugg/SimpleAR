@@ -168,8 +168,19 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $conn->expects($this->once())->method('query')->with($sql, array());
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
-
         $this->assertEquals(12, $qb->root('Article')->count());
+
+        // With values to bind.
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getColumn'));
+
+        $sql = 'SELECT COUNT(*) FROM `articles` WHERE `title` = ?';
+        $conn->expects($this->once())->method('getColumn')->with(0)->will($this->returnValue(12));
+        $conn->expects($this->once())->method('query')->with($sql, array('Yo'));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $this->assertEquals(12, $qb->root('Article')->where('title', 'Yo')->count());
     }
 
     public function testModelConstructWithEagerLoad()
