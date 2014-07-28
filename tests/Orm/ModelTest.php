@@ -311,6 +311,29 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $reversed = User::relation('readers_r');
         $this->assertInstanceOf('SimpleAR\Orm\Relation\ManyMany', $reversed);
         $this->assertEquals($relation->reverse(), $reversed);
+    }
 
+    public function testAll()
+    {
+        $expected = [new Article, new Article];
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($expected));
+        Article::setQueryBuilder($qb);
+
+        $res = Article::all();
+        $this->assertEquals($expected, $res);
+    }
+
+    public function testSearch()
+    {
+        $articles = [new Article, new Article];
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('count', 'all'));
+        $qb->expects($this->once())->method('count')->will($this->returnValue(2));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($articles));
+        Article::setQueryBuilder($qb);
+
+        $res = Article::search([], 1, 10);
+        $expected = ['count' => 2, 'rows' => $articles];
+        $this->assertEquals($expected, $res);
     }
 }
