@@ -409,7 +409,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testUpdate()
     {
         $c = new BaseCompiler();
-        $c->useTableAlias = false;
         $components['updateFrom'] = [new JoinClause('articles', '_')];
         $components['set'] = [[
             'tableAlias' => '_',
@@ -418,18 +417,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         ]];
 
         $sql = 'UPDATE `articles` SET `title` = ?';
-        $this->assertEquals($sql, $c->compileUpdate($components));
-
-        $c = new BaseCompiler();
-        $c->useTableAlias = true;
-        $components['updateFrom'] = [new JoinClause('articles', '_')];
-        $components['set'] = [[
-            'tableAlias' => '_',
-            'column' => 'title',
-            'value' => 'Yo',
-        ]];
-
-        $sql = 'UPDATE `articles` `_` SET `_`.`title` = ?';
         $this->assertEquals($sql, $c->compileUpdate($components));
     }
 }

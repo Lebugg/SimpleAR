@@ -12,13 +12,16 @@ abstract class Compiler
      * raw table name given in constructor. In this case, we would not be able to
      * use many features like process query on linked models.
      *
-     * Property's value is set when starting the compilation step. Each public 
-     * compile can decide whether to use table alias or not depending on number 
+     * Property's value is set when starting the compilation step. Each public
+     * compile can decide whether to use table alias or not depending on number
      * of used tables or things like that.
+     *
+     * If $useTableAlias is null when compilation starts, the compiler will 
+     * decide himself whether to use table aliases or not.
      *
      * @var bool
      */
-    public $useTableAlias = false;
+    public $useTableAlias = null;
 
     public $useResultAlias = false;
 

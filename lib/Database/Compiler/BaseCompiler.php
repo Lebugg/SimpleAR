@@ -70,6 +70,8 @@ class BaseCompiler extends Compiler
 
     public function compileInsert(array $components)
     {
+        $this->useTableAlias = false;
+
         $availableComponents = $this->components['insert'];
         $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'INSERT ' . $this->_concatenate($sql);
@@ -98,10 +100,7 @@ class BaseCompiler extends Compiler
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (count($components['updateFrom']) > 1)
-        {
-            $this->useTableAlias = true;
-        }
+        $this->useTableAlias = count($components['updateFrom']) > 1;
 
         $availableComponents = $this->components['update'];
         $sql = $this->_compileComponents($availableComponents, $components);
@@ -114,10 +113,7 @@ class BaseCompiler extends Compiler
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (! empty($components['using']))
-        {
-            $this->useTableAlias = true;
-        }
+        $this->useTableAlias = ! empty($components['using']);
 
         $availableComponents = $this->components['delete'];
         $sql = $this->_compileComponents($availableComponents, $components);
