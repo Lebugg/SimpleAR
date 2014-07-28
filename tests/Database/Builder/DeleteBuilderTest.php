@@ -26,4 +26,13 @@ class DeleteBuilderTest extends PHPUnit_Framework_TestCase
         $components = $builder->build($options);
         $this->assertEquals('articles', $components['deleteFrom']);
     }
+
+    public function testRootUseTableNameAndNotTableAlias()
+    {
+        $b = new DeleteBuilder;
+        $b->root('User');
+
+        $components = $b->build();
+        $this->assertEquals('USERS', $components['deleteFrom']);
+    }
 }

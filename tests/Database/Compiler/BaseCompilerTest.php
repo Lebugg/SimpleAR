@@ -107,6 +107,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
+
     public function testCompileDelete()
     {
         $compiler = new BaseCompiler();

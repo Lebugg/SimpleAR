@@ -82,7 +82,7 @@ class Author extends SimpleAR\Orm\Model
 
 class User extends SimpleAR\Orm\Model
 {
-    protected static $_tableName = 'users';
+    protected static $_tableName = 'USERS';
 
     protected static $_columns = array(
         'firstName',
