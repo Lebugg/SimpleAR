@@ -1270,7 +1270,7 @@ abstract class Model
      */
     public function save()
     {
-        if ($this->_dirty)
+        if ($this->_dirty || ! $this->isConcrete())
         {
             ($this->isConcrete() && $this->_update()) || $this->_insert();
             $this->_dirty = false;

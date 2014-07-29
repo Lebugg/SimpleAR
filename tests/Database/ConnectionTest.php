@@ -10,7 +10,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
 
         $expected = [[
             'sql' => "SELECT * FROM a WHERE b = 'value'",
-            'time' => 12
+            'time' => '12,000,000.00'
         ]];
 
         $sql = "SELECT * FROM a WHERE b = ?";

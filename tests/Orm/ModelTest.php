@@ -31,7 +31,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $stub = new $class();
 
-        $this->assertTrue($stub->isDirty());
+        $this->assertFalse($stub->isDirty());
         $stub->foo = 'bar';
         $this->assertTrue($stub->isDirty());
         $stub->save();
