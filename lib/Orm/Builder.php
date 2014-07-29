@@ -323,7 +323,7 @@ class Builder
         $args = func_get_args();
 
         // We don't want $scope twice.
-        array_shift($args);
+        unset($args[0]);
 
         return $root::applyScope($scope, $this, $args);
     }
