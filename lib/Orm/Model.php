@@ -340,7 +340,7 @@ abstract class Model
      *
      * @var bool
      */
-    protected $_dirty = true;
+    protected $_dirty = false;
 
     /**
      * Does the object exist?
@@ -1340,7 +1340,7 @@ abstract class Model
         // Populating is easy: just call __set() on each key-value pair.
         foreach ($data as $key => $value)
         {
-            $this->$key = $value;
+            $this->_attributes[$key] = $value;
         }
 
         // Handle eager loading if needed.
