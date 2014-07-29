@@ -264,7 +264,7 @@ class User extends SimpleAR\Model
 {
     ...
 
-    protected $_columns = array(
+    protected static $_columns = array(
         'last_name',
         'first_name',
         'age',
@@ -279,7 +279,7 @@ class User extends SimpleAR\Model
 {
     ...
 
-    protected $_columns = array(
+    protected static $_columns = array(
         'last_name',
         'first_name',
         // “age” will be used for “years_since_birth” column.
