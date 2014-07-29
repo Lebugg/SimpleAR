@@ -115,9 +115,9 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($options);
 
         $expected = array();
-        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['id'], 'op' => '!=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        $expected[] = ['type' => 'Null', 'table' => '_', 'cols' => ['id'], 'logic' => 'AND', 'not' => true];
         //$expected[] = new SimpleCond('_', array('id'), '!=', null, 'AND');
-        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        $expected[] = ['type' => 'Null', 'table' => '_', 'cols' => ['title'], 'logic' => 'AND', 'not' => false];
         //$expected[] = new SimpleCond('_', array('title'), '=', null, 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);

@@ -259,7 +259,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     {
         $c = new BaseCompiler();
 
-        $where = ['type' => 'Basic', 'table' => '', 'cols' => ['author_id'], 'op' => '=', 'val' => null, 'logic' => 'AND'];
+        $where = ['type' => 'Null', 'table' => '', 'cols' => ['author_id'], 'val' => null, 'logic' => 'AND', 'not' => false];
         //$where = new SimpleCond('a', 'author_id', '=', 12);
         $components['where'] = array($where);
 
@@ -267,7 +267,8 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $result   = $c->compileWhere($components);
         $this->assertEquals($expected, $result);
 
-        $where = ['type' => 'Basic', 'table' => '', 'cols' => ['author_id'], 'op' => '!=', 'val' => null, 'logic' => 'AND'];
+        $where = ['type' => 'Null', 'table' => '', 'cols' => ['author_id'], 'val' => null, 'logic' => 'AND', 'not' => true];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
         //$where = new SimpleCond('a', 'author_id', '=', 12);
         $components['where'] = array($where);
 

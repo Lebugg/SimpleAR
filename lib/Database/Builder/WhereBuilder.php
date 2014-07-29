@@ -93,6 +93,13 @@ class WhereBuilder extends Builder
                 return;
             }
 
+            // User wants a WHERE NULL condition.
+            if ($val === null)
+            {
+                $this->whereNull($attribute, $logic, $op === '!=');
+                return;
+            }
+
             list($table, $cols) = $this->_processExtendedAttribute($attribute);
 
             $type = 'Basic';
@@ -176,6 +183,32 @@ class WhereBuilder extends Builder
         $type = 'In';
         $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+    }
+
+    /**
+     * Add a WHERE NULL clause to the query.
+     *
+     * @param string $attribute The extended attribute.
+     * @param string $logic The logical operator.
+     */
+    public function whereNull($attribute, $logic = 'AND', $not = false)
+    {
+        list($table, $cols) = $this->_processExtendedAttribute($attribute);
+
+        $type = 'Null';
+        $cond = compact('type', 'table', 'cols', 'logic', 'not');
+        $this->_addWhere($cond);
+    }
+
+    /**
+     * Add a WHERE NOT NULL clause to the query.
+     *
+     * @param string $attribute The extended attribute.
+     * @param string $logic The logical operator.
+     */
+    public function whereNotNull($attribute, $logic)
+    {
+        $this->whereNull($attributes, $logic, true);
     }
 
     /**

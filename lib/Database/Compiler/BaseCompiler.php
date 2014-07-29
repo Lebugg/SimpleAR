@@ -535,14 +535,28 @@ class BaseCompiler extends Compiler
      * @param array $where
      * @return SQL
      */
-    protected function _whereIsNull(array $where)
+    protected function _whereNull(array $where)
     {
         $alias = $this->useTableAlias ? $where['table'] : '';
         $col = $this->columnize($where['cols'], $alias);
-        $val = $where['op'] === '=' ? 'IS NULL' : 'IS NOT NULL';
 
-        return "$col $val";
+        return "$col IS NULL";
     }
+
+    /**
+     * Compile an IS NOT NULL clause.
+     *
+     * @param array $where
+     * @return SQL
+     */
+    protected function _whereNotNull(array $where)
+    {
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col = $this->columnize($where['cols'], $alias);
+
+        return "$col IS NOT NULL";
+    }
+
 
     /**
      * Compile a WHERE clause over two columns.
