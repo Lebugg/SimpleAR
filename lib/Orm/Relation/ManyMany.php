@@ -37,8 +37,14 @@ class ManyMany extends Relation
         {
             $this->jm->class = null;
             $this->jm->table = isset($info['join_table']) ? $info['join_table'] : $this->cm->table . '_' . $this->lm->table;
-            $this->jm->from  = isset($info['join_from'])  ? $info['join_from']  : (strtolower($this->cm->t->modelBaseName) . '_id');
-            $this->jm->to    = isset($info['join_to'])    ? $info['join_to']    : (strtolower($this->lm->t->modelBaseName) . '_id');
+
+            $this->jm->from  = isset($info['join_from'])
+                ? $info['join_from']
+                : (decamelize($this->cm->t->modelBaseName) . '_id');
+
+            $this->jm->to = isset($info['join_to'])
+                ? $info['join_to']
+                : (decamelize($this->lm->t->modelBaseName) . '_id');
         }
 
         //$this->jm->alias = '_' . strtolower($this->jm->table);
