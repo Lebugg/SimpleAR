@@ -118,18 +118,29 @@ class SelectBuilder extends WhereBuilder
     /**
      * Eager load another table.
      *
-     * If if you give a deep relation to eager load, columns of every middle 
+     * If you give a deep relation to eager load, columns of every middle
      * tables will be selected. For example, if you do:
      *
      *  `$builder->with('articles/author')`
      *
      * authors' *and* articles' columns will be selected.
      *
-     * @param string $relation The model relation name relative to the root
-     * model.
+     * @param string|array $relation The model relation name relative to the root
+     * model *or* an array of relation names.
      */
     public function with($relation)
     {
+        // Handle multiple relations.
+        if (is_array($relation))
+        {
+            foreach ($relation as $rel)
+            {
+                $this->with($rel);
+            }
+
+            return $this;
+        }
+
         // We have two things to do:
         //  1) Include related table;
         //  2) Select related table columns.
