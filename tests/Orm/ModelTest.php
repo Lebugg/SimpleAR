@@ -2,6 +2,7 @@
 date_default_timezone_set('Europe/Paris');
 error_reporting(E_ALL | E_STRICT);
 
+use \SimpleAR\DateTime;
 use \SimpleAR\Facades\DB;
 use \SimpleAR\Facades\Cfg;
 use \SimpleAR\Orm\Table;
@@ -357,5 +358,16 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         // Reset.
         Article::table()->primaryKey = ['id'];
+    }
+
+    public function testDateAttributesConversion()
+    {
+        $a = new Article;
+        $a->dateCreation = '2014-06-12';
+
+        $a->convertDateAttributesToObject();
+
+        $exp = new DateTime('2014-06-12');
+        $this->assertEquals($exp, $a->dateCreation);
     }
 }

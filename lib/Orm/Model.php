@@ -5,15 +5,14 @@
  * @author Damien Launay
  */
 
-use \SimpleAR\Orm\Table;
-use \SimpleAR\Orm\Builder as QueryBuilder;
-
-use \SimpleAR\Facades\DB;
-use \SimpleAR\Facades\Cfg;
-
+use \SimpleAR\DateTime;
 use \SimpleAR\Exception\Database as DatabaseEx;
 use \SimpleAR\Exception\RecordNotFound;
 use \SimpleAR\Exception;
+use \SimpleAR\Facades\DB;
+use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Orm\Table;
+use \SimpleAR\Orm\Builder as QueryBuilder;
 
 /**
  * This class is the super class of all models.
@@ -1342,9 +1341,34 @@ abstract class Model
             $this->_attributes[$key] = $value;
         }
 
+        Cfg::get('convertDateToObject') && $this->convertDateAttributesToObject();
         $with && $this->_populateEagerLoad($with);
 
         $this->_concrete = true;
+    }
+
+    public function convertDateAttributesToObject()
+    {
+        foreach ($this->_attributes as $key => &$value)
+        {
+            // We test that is a string because setters might have been
+            // called from within _hydrate() so we cannot be sure of what
+            // $value is.
+            //
+            // strpos call <=> $key.startsWith('date')
+            if (is_string($value) && strpos($key, 'date') === 0)
+            {
+                // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
+                // cause strange values.
+                // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
+                $value =  $value === '0000-00-00'
+                    || $value === '0000-00-00 00:00:00'
+                    || $value === null
+                    ? null
+                    : new DateTime($value)
+                    ;
+            }
+        }
     }
 
     public static function applyScope($scope, QueryBuilder $qb, array $args)
