@@ -47,6 +47,19 @@ class CompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('(?,?,DATE())', $compiler->parameterize($values));
     }
 
+    public function testParameterizeWithModels()
+    {
+        $c = $this->compiler;
+
+        $m1 = new Article;
+        $m1->id = 2;
+        $m2 = $this->getMock('Article', ['id']);
+        $m2->method('id')->will($this->returnValue([4, 5]));
+
+        $values = array('Yo', $m1, 12, $m2, 9);
+        $this->assertEquals('(?,(?),?,(?,?),?)', $c->parameterize($values));
+    }
+
     public function testColumnize()
     {
         $c = $this->compiler;
@@ -58,4 +71,5 @@ class CompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('`t1`.`col1` AS `_.attr1`', $c->columnize(array('col1' => 'attr1'), 't1', '_'));
         $this->assertEquals('`t1`.`col1` AS `_.attr1`,`t1`.`col2` AS `_.attr2`', $c->columnize(array('col1' => 'attr1', 'col2' => 'attr2'), 't1', '_'));
     }
+
 }

@@ -167,6 +167,17 @@ abstract class Compiler
      */
     public function parameterize($value)
     {
+        // This allows users to directly pass object or object array as
+        // a condition value.
+        //
+        // The same check is done in Compiler to correctly construct
+        // query.
+        // @see SimpleAR\Database\Compiler::parameterize()
+        if ($value instanceof \SimpleAR\Orm\Model)
+        {
+            return $this->parameterize($value->id());
+        }
+
         if (is_array($value))
         {
             // This line is taken from:

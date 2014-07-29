@@ -7,6 +7,7 @@ use \SimpleAR\Database\Builder\DeleteBuilder;
 use \SimpleAR\Database\Builder\UpdateBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Expression;
+use \SimpleAR\Orm\Model;
 
 class QueryTest extends PHPUnit_Framework_TestCase
 {
@@ -172,6 +173,20 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         $val = [1, 2, [3], [new Expression, 3, [4, new Expression]]];
         $exp = [1, 2, 3, 3, 4];
+        $this->assertEquals($exp, $q->prepareValuesForExecution($val));
+    }
+
+    public function testPrepareValuesForExecutionWithModels()
+    {
+        $q = new Query;
+
+        $m1 = new Article;
+        $m1->id = 2;
+        $m2 = new Article;
+        $m2->id = [4, 5];
+
+        $val = [$m1, [2, [$m2]], 6];
+        $exp = [2, 2, 4, 5, 6];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
     }
 }

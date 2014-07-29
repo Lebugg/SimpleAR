@@ -220,10 +220,9 @@ class Builder
     {
         if ($component)
         {
-            if (! $value instanceof Expression)
-            {
-                $this->_values[$component][] = $value;
-            }
+            // Any check on value type (Model instance, Expression...) is made
+            // in Query::prepareValuesForExecution().
+            $this->_values[$component][] = $value;
         }
         else
         {

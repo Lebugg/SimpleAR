@@ -461,6 +461,12 @@ class WhereBuilder extends Builder
         return $model::relation($relation);
     }
 
+    /**
+     * Return the linked model class name of a relation.
+     *
+     * @param Relation $relation The relation
+     * @return string The linked model class name.
+     */
     public function getNextModelByRelation(Relation $relation)
     {
         return $relation->lm->class;

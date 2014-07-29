@@ -336,4 +336,26 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $expected = ['count' => 2, 'rows' => $articles];
         $this->assertEquals($expected, $res);
     }
+
+    public function testGetID()
+    {
+        $a = new Article;
+        $a->id = 2;
+
+        $this->assertEquals([2], $a->id());
+
+        Article::table()->primaryKey = ['id', 'blogId'];
+
+        $a->id = 2;
+        $a->blogId = 12;
+        $this->assertEquals([2, 12], $a->id());
+
+        Article::table()->primaryKey = ['id', 'title'];
+        $a->id = 2;
+        $a->title = 'string';
+        $this->assertEquals([2, 'string'], $a->id());
+
+        // Reset.
+        Article::table()->primaryKey = ['id'];
+    }
 }
