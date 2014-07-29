@@ -175,7 +175,7 @@ abstract class Compiler
         // @see SimpleAR\Database\Compiler::parameterize()
         if ($value instanceof \SimpleAR\Orm\Model)
         {
-            return $this->parameterize($value->id());
+            $value = $value->id();
         }
 
         if (is_array($value))
