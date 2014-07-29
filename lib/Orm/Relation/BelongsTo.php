@@ -14,10 +14,9 @@ class BelongsTo extends Relation
             : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName);
             ;
 
-        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
-        //$this->cm->pk        = $this->cm->t->primaryKey;
+        $this->cm->column = $this->cm->t->columnRealName($this->cm->attribute);
 
         $this->lm->attribute = isset($info['key_to']) ? $info['key_to'] : 'id';
-        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
+        $this->lm->column = $this->lm->t->columnRealName($this->lm->attribute);
     }
 }

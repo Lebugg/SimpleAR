@@ -1,22 +1,15 @@
 <?php namespace SimpleAR\Database\Builder;
 
 use \SimpleAR\Database\Builder;
-// use \SimpleAR\Database\Condition\Exists as ExistsCond;
-// use \SimpleAR\Database\Condition\Nested as NestedCond;
-// use \SimpleAR\Database\Condition\Simple as SimpleCond;
-// use \SimpleAR\Database\Condition\Attribute as AttrCond;
-// use \SimpleAR\Database\Condition\SubQuery as SubQueryCond;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
-
 use \SimpleAR\Exception\MalformedOptionException;
 use \SimpleAR\Exception;
-
 use \SimpleAR\Facades\Cfg;
 use \SimpleAR\Facades\DB;
-
 use \SimpleAR\Orm\Relation;
+use \SimpleAR\Orm\Relation\ManyMany;
 use \SimpleAR\Orm\Table;
 
 class WhereBuilder extends Builder
@@ -440,7 +433,7 @@ class WhereBuilder extends Builder
                 $this->setInvolvedModel($alias, $currentModel);
                 $this->setInvolvedTable($alias, $currentTable);
                 $this->_addJoinClause(
-                    $currentTable, $alias,
+                    $currentTable->name, $alias,
                     $currentRel, $previousAlias,
                     $joinType
                 );
@@ -483,11 +476,20 @@ class WhereBuilder extends Builder
      * @param Table
      * @param string
      */
-    protected function _addJoinClause(Table $toJoin, $toJoinAlias,
-        Relation $rel = null, $previousAlias = '',
+    protected function _addJoinClause($lmTable, $lmAlias,
+        Relation $rel = null, $cmAlias = '',
         $joinType = JoinClause::INNER
     ) {
-        $jc = new JoinClause($toJoin->name, $toJoinAlias, $joinType);
+
+        // If relation cardinality is many-to-many, we must join middle table.
+        if ($rel instanceof ManyMany)
+        {
+            // _addJoinClauseManyMany returns the alias of the middle table. We 
+            // are going to use it to join the middle table with the LM table.
+            $cmAlias = $this->_addJoinClauseManyMany($rel, $cmAlias, $joinType);
+        }
+
+        $jc = new JoinClause($lmTable, $lmAlias, $joinType);
 
         // We may have to connect it to a previous JoinClause.
         if ($rel)
@@ -495,11 +497,28 @@ class WhereBuilder extends Builder
             // $rel->cm corresponds to previous model.
             foreach ($rel->getJoinColumns() as $leftCol => $rightCol)
             {
-                $jc->on($previousAlias, $leftCol, $toJoinAlias, $rightCol);
+                $jc->on($cmAlias, $leftCol, $lmAlias, $rightCol);
             }
         }
 
-        $this->_joinClauses[$toJoinAlias] = $jc;
+        $this->_joinClauses[$lmAlias] = $jc;
+    }
+
+    protected function _addJoinClauseManyMany(ManyMany $rel, $cmAlias, $joinType)
+    {
+        // $md stands for "middle".
+        $mdTable = $rel->getMiddleTableName();
+        $mdAlias = $rel->getMiddleTableAlias();
+        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
+
+        foreach ($rel->getMiddleJoinColumns() as $lCol => $rCol)
+        {
+            $jcMiddle->on($cmAlias, $lCol, $mdAlias, $rCol);
+        }
+
+        $this->_joinClauses[$mdAlias] = $jcMiddle;
+
+        return $mdAlias;
     }
 
     /**

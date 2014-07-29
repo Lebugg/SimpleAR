@@ -191,4 +191,28 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($columns, $components['columns']);
 
     }
+
+    public function testJoinManyMany()
+    {
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->with('readers');
+
+        $components = $b->build();
+
+        $jc = array(
+            (new JoinClause('articles', '_')),
+            // "_m" stands for "middle".
+            (new JoinClause('articles_USERS', 'readers_m', JoinClause::LEFT))->on('_', 'id', 'readers_m', 'article_id'),
+            (new JoinClause('USERS', 'readers', JoinClause::LEFT))->on('readers_m', 'user_id', 'readers', 'id')
+        );
+
+        $columns = array(
+            '_' => array('columns' => array_flip(Article::table()->getColumns())),
+            'readers' => array('columns' => array_flip(User::table()->getColumns())),
+        );
+
+        $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
+    }
 }
