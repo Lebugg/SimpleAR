@@ -209,7 +209,7 @@ class Connection
 
         $this->_queries[] = array(
             'sql'  => $queryDebug,
-            'time' => $time / 1000,
+            'time' => number_format($time * 1000, 2)
         );
     }
 
