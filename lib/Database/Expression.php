@@ -15,7 +15,7 @@ class Expression
      */
     protected $_value;
 
-    public function __construct($value)
+    public function __construct($value = null)
     {
         $this->_value = $value;
     }
@@ -24,9 +24,4 @@ class Expression
     {
         return $this->_value;
     }
-
-    // public function __toString()
-    // {
-    //     return (string) $this->val();
-    // }
 }

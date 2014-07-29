@@ -1,7 +1,5 @@
 <?php namespace SimpleAR\Database;
 
-require __DIR__ . '/Compiler/InsertCompiler.php';
-
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
 
@@ -14,13 +12,16 @@ abstract class Compiler
      * raw table name given in constructor. In this case, we would not be able to
      * use many features like process query on linked models.
      *
-     * Property's value is set when starting the compilation step. Each public 
-     * compile can decide whether to use table alias or not depending on number 
+     * Property's value is set when starting the compilation step. Each public
+     * compile can decide whether to use table alias or not depending on number
      * of used tables or things like that.
+     *
+     * If $useTableAlias is null when compilation starts, the compiler will 
+     * decide himself whether to use table aliases or not.
      *
      * @var bool
      */
-    public $useTableAlias = false;
+    public $useTableAlias = null;
 
     public $useResultAlias = false;
 
@@ -166,6 +167,17 @@ abstract class Compiler
      */
     public function parameterize($value)
     {
+        // This allows users to directly pass object or object array as
+        // a condition value.
+        //
+        // The same check is done in Compiler to correctly construct
+        // query.
+        // @see SimpleAR\Database\Compiler::parameterize()
+        if ($value instanceof \SimpleAR\Orm\Model)
+        {
+            $value = $value->id();
+        }
+
         if (is_array($value))
         {
             // This line is taken from:

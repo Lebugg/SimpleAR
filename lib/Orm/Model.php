@@ -5,15 +5,14 @@
  * @author Damien Launay
  */
 
-use \SimpleAR\Orm\Table;
-use \SimpleAR\Orm\Builder as QueryBuilder;
-
-use \SimpleAR\Facades\DB;
-use \SimpleAR\Facades\Cfg;
-
+use \SimpleAR\DateTime;
 use \SimpleAR\Exception\Database as DatabaseEx;
 use \SimpleAR\Exception\RecordNotFound;
 use \SimpleAR\Exception;
+use \SimpleAR\Facades\DB;
+use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Orm\Table;
+use \SimpleAR\Orm\Builder as QueryBuilder;
 
 /**
  * This class is the super class of all models.
@@ -340,7 +339,7 @@ abstract class Model
      *
      * @var bool
      */
-    protected $_dirty = true;
+    protected $_dirty = false;
 
     /**
      * Does the object exist?
@@ -1257,7 +1256,7 @@ abstract class Model
             array_combine((array) $relation->jm->to,   $lmId)
         );
 
-        self::query()->deleteFrom($relation->jm->table)
+        self::query()->delete($relation->jm->table)
             ->conditions($conditions)
             ->run();
     }
@@ -1270,7 +1269,7 @@ abstract class Model
      */
     public function save()
     {
-        if ($this->_dirty)
+        if ($this->_dirty || ! $this->isConcrete())
         {
             ($this->isConcrete() && $this->_update()) || $this->_insert();
             $this->_dirty = false;
@@ -1337,16 +1336,39 @@ abstract class Model
         $with = isset($data['__with__']) ? $data['__with__'] : null;
         unset($data['__with__']);
 
-        // Populating is easy: just call __set() on each key-value pair.
         foreach ($data as $key => $value)
         {
-            $this->$key = $value;
+            $this->_attributes[$key] = $value;
         }
 
-        // Handle eager loading if needed.
+        Cfg::get('convertDateToObject') && $this->convertDateAttributesToObject();
         $with && $this->_populateEagerLoad($with);
 
         $this->_concrete = true;
+    }
+
+    public function convertDateAttributesToObject()
+    {
+        foreach ($this->_attributes as $key => &$value)
+        {
+            // We test that is a string because setters might have been
+            // called from within _hydrate() so we cannot be sure of what
+            // $value is.
+            //
+            // strpos call <=> $key.startsWith('date')
+            if (is_string($value) && strpos($key, 'date') === 0)
+            {
+                // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
+                // cause strange values.
+                // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
+                $value =  $value === '0000-00-00'
+                    || $value === '0000-00-00 00:00:00'
+                    || $value === null
+                    ? null
+                    : new DateTime($value)
+                    ;
+            }
+        }
     }
 
     public static function applyScope($scope, QueryBuilder $qb, array $args)
@@ -1628,6 +1650,13 @@ abstract class Model
     {
     }
 
+    /**
+     * Populate linked models that have been eagerly loaded from database.
+     *
+     * @param array $with An array containing linked models' data.
+     *
+     * @see \SimpleAR\Orm\Builder
+     */
     protected function _populateEagerLoad(array $with)
     {
         foreach ($with as $relName => $data)
@@ -1650,7 +1679,7 @@ abstract class Model
                 $lmInstance = new $lmClass();
                 $lmInstance->populate($data);
 
-                $this->_attr($relName, $lmInstance);
+                $this->_attributes[$relName] = $lmInstance;
             }
             else
             {
@@ -1672,7 +1701,7 @@ abstract class Model
                     $lmInstances[] = $lmInstance;
                 }
 
-                $this->_attr($relName, $lmInstances);
+                $this->_attributes[$relName] = $lmInstances;
             }
         }
     }
@@ -2160,7 +2189,7 @@ abstract class Model
 
         $options = array_merge($options, $localOptions);
         $fnFind = $relation->isToMany() ? 'findMany' : 'findOne';
-        $res = self::query()->$fnFind($options);
+        $res = $lmClass::query()->$fnFind($options);
 
         $this->_attr($relationName, $res);
         return $res;
@@ -2334,7 +2363,9 @@ abstract class Model
                     //      2) Insert new rows.
 
                     // Remove all rows from join table. (Easier this way.)
-                    self::query()->delete()->where((array) $relation->jm->from, $this->id())->run();
+                    self::query()->delete($relation->jm->table)
+                        ->where((array) $relation->jm->from, $this->id())
+                        ->run();
 
                     $values = array();
                     // Array cast allows user not to bother to necessarily set an array.

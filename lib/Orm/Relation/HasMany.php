@@ -13,7 +13,6 @@ class HasMany extends Relation
 
         $this->cm->attribute = isset($info['key_from']) ? $info['key_from'] : 'id';
         $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
-        //$this->cm->pk        = $this->cm->t->primaryKey;
 
         $this->lm->attribute = (isset($info['key_to']))
             ? $info['key_to']

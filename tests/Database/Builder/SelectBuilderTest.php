@@ -132,7 +132,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['groupBy']);
     }
 
-    public function testWith()
+    public function testWithOption()
     {
         $b = new SelectBuilder();
         $b->root('Blog');
@@ -162,6 +162,55 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $jc[] = (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id');
         $columns['articles.author'] = array('columns' => array_flip(Author::table()->getColumns()));
+
+        $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
+    }
+
+    public function testWithOptionArray()
+    {
+        $b = new SelectBuilder();
+        $b->root('Article');
+        $b->with(['blog', 'author']);
+
+        $components = $b->build();
+
+        $jc = array(
+            (new JoinClause('articles', '_')),
+            (new JoinClause('blogs', 'blog', JoinClause::LEFT))->on('_', 'blog_id', 'blog', 'id'),
+            (new JoinClause('authors', 'author', JoinClause::LEFT))->on('_', 'author_id', 'author', 'id')
+        );
+
+        $columns = array(
+            '_' => array('columns' => array_flip(Article::table()->getColumns())),
+            'blog' => array('columns' => array_flip(Blog::table()->getColumns())),
+            'author' => array('columns' => array_flip(Author::table()->getColumns())),
+        );
+
+        $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
+
+    }
+
+    public function testJoinManyMany()
+    {
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->with('readers');
+
+        $components = $b->build();
+
+        $jc = array(
+            (new JoinClause('articles', '_')),
+            // "_m" stands for "middle".
+            (new JoinClause('articles_USERS', 'readers_m', JoinClause::LEFT))->on('_', 'id', 'readers_m', 'article_id'),
+            (new JoinClause('USERS', 'readers', JoinClause::LEFT))->on('readers_m', 'user_id', 'readers', 'id')
+        );
+
+        $columns = array(
+            '_' => array('columns' => array_flip(Article::table()->getColumns())),
+            'readers' => array('columns' => array_flip(User::table()->getColumns())),
+        );
 
         $this->assertEquals($jc, $components['from']);
         $this->assertEquals($columns, $components['columns']);

@@ -68,6 +68,14 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->delete('Article')->where('id', 12)->run();
     }
 
+    public function testDeleteSetRootIfRootHasBeenCalled()
+    {
+        $qb = new QueryBuilder;
+        $query = $qb->root('Article')->delete();
+
+        $this->assertEquals('Article', $query->getBuilder()->getRootModel());
+    }
+
     public function testUpdate()
     {
         $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
@@ -168,8 +176,19 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $conn->expects($this->once())->method('query')->with($sql, array());
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
-
         $this->assertEquals(12, $qb->root('Article')->count());
+
+        // With values to bind.
+        $qb = $this->getMock('SimpleAR\Orm\Builder', array('getConnection'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getColumn'));
+
+        $sql = 'SELECT COUNT(*) FROM `articles` WHERE `title` = ?';
+        $conn->expects($this->once())->method('getColumn')->with(0)->will($this->returnValue(12));
+        $conn->expects($this->once())->method('query')->with($sql, array('Yo'));
+
+        $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $this->assertEquals(12, $qb->root('Article')->where('title', 'Yo')->count());
     }
 
     public function testModelConstructWithEagerLoad()
@@ -355,5 +374,18 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             )->will($this->returnValue($qb));
 
         $qb->root('Article')->applyScope('status', 2);
+    }
+
+    public function testFindMany()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('setOptions', 'all'));
+
+        $options = array('conditions' => array(
+            'id' => 12,
+        ));
+
+        $qb->expects($this->once())->method('setOptions')->with($options);
+        $qb->expects($this->once())->method('all');
+        $qb->findMany($options);
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
 use \SimpleAR\Database\Builder\UpdateBuilder;
-use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\JoinClause;
 
 class UpdateBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -11,25 +11,20 @@ class UpdateBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Article')->set('title', 'Title')->set('blogId', 12);
         $components = $b->build();
 
-        $expected = array(
-            array(
-                'tableAlias' => '_',
-                'column' => 'title',
-                'value' => 'Title',
-            ),
-            array(
-                'tableAlias' => '_',
-                'column' => 'blog_id',
-                'value' => '12',
-            ),
-        );
+        $set = [
+            ['tableAlias' => '_', 'column' => 'title', 'value' => 'Title'],
+            ['tableAlias' => '_', 'column' => 'blog_id', 'value' => '12'],
+        ];
+        $updateFrom = [new JoinClause('articles', '_')];
 
-        $this->assertEquals($expected, $components['set']);
+        $this->assertEquals($set, $components['set']);
+        $this->assertEquals($updateFrom, $components['updateFrom']);
 
         $b = new UpdateBuilder();
         $b->root('Article')->set(array('title' => 'Title', 'blogId' => 12));
         $components = $b->build();
 
-        $this->assertEquals($expected, $components['set']);
+        $this->assertEquals($set, $components['set']);
+        $this->assertEquals($updateFrom, $components['updateFrom']);
     }
 }

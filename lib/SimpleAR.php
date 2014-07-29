@@ -37,7 +37,7 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 	die('SimpleAR requires PHP 5.3 or higher.');
 }
 
-define('PHP_SIMPLEAR_VERSION_ID', '1.2.7');
+define('PHP_SIMPLEAR_VERSION_ID', '1.2.8');
 
 require __DIR__ . '/Config.php';
 require __DIR__ . '/Orm/Table.php';
@@ -54,6 +54,7 @@ require __DIR__ . '/Facades/DB.php';
 require __DIR__ . '/Facades/Cfg.php';
 require __DIR__ . '/../tools/array_merge_recursive_distinct.php';
 require __DIR__ . '/../tools/is_valid_model_class.php';
+require __DIR__ . '/../tools/decamelize.php';
 
 use \SimpleAR\Config;
 use \SimpleAR\Database;

@@ -70,6 +70,8 @@ class BaseCompiler extends Compiler
 
     public function compileInsert(array $components)
     {
+        $this->useTableAlias = false;
+
         $availableComponents = $this->components['insert'];
         $sql = $this->_compileComponents($availableComponents, $components);
         $sql = 'INSERT ' . $this->_concatenate($sql);
@@ -98,10 +100,7 @@ class BaseCompiler extends Compiler
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (count($components['updateFrom']) > 1)
-        {
-            $this->useTableAlias = true;
-        }
+        $this->useTableAlias = count($components['updateFrom']) > 1;
 
         $availableComponents = $this->components['update'];
         $sql = $this->_compileComponents($availableComponents, $components);
@@ -114,10 +113,7 @@ class BaseCompiler extends Compiler
     {
         // If we are constructing query over several tables, we should use
         // table aliases.
-        if (! empty($components['using']))
-        {
-            $this->useTableAlias = true;
-        }
+        $this->useTableAlias = ! empty($components['using']);
 
         $availableComponents = $this->components['delete'];
         $sql = $this->_compileComponents($availableComponents, $components);
@@ -515,6 +511,11 @@ class BaseCompiler extends Compiler
      */
     protected function _whereBasic(array $where)
     {
+        if ($where['val'] === null)
+        {
+            return $this->_whereIsNull($where);
+        }
+
         $alias = $this->useTableAlias ? $where['table'] : '';
         $col = $this->columnize($where['cols'], $alias);
         $op  = $this->_getWhereOperator($where);
@@ -527,6 +528,35 @@ class BaseCompiler extends Compiler
     {
         return 'NOT ' . $this->_whereBasic($where);
     }
+
+    /**
+     * Compile an IS NULL clause.
+     *
+     * @param array $where
+     * @return SQL
+     */
+    protected function _whereNull(array $where)
+    {
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col = $this->columnize($where['cols'], $alias);
+
+        return "$col IS NULL";
+    }
+
+    /**
+     * Compile an IS NOT NULL clause.
+     *
+     * @param array $where
+     * @return SQL
+     */
+    protected function _whereNotNull(array $where)
+    {
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col = $this->columnize($where['cols'], $alias);
+
+        return "$col IS NOT NULL";
+    }
+
 
     /**
      * Compile a WHERE clause over two columns.
@@ -734,30 +764,10 @@ class BaseCompiler extends Compiler
      */
     protected function _compileSetPart(array $set)
     {
-        $prefix = $this->_getPrefix($set['tableAlias']);
+        $prefix = $this->useTableAlias ? $set['tableAlias'] : '';
         $left  = $this->column($set['column'], $prefix);
         $right = $this->parameterize($set['value']);
 
         return $left . ' = ' . $right;
-    }
-
-    /**
-     * Get correct table prefix.
-     *
-     * It can return:
-     *
-     *  * The table alias;
-     *  * The table name;
-     *  * The empty string: ''.
-     */
-    protected function _getPrefix($tableAlias)
-    {
-        if ($this->useTableAlias)
-        {
-            return $tableAlias;
-        }
-
-        // return $this->getInvolvedTable($tableAlias)->name;
-        return '';
     }
 }

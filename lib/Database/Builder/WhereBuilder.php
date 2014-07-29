@@ -1,22 +1,15 @@
 <?php namespace SimpleAR\Database\Builder;
 
 use \SimpleAR\Database\Builder;
-// use \SimpleAR\Database\Condition\Exists as ExistsCond;
-// use \SimpleAR\Database\Condition\Nested as NestedCond;
-// use \SimpleAR\Database\Condition\Simple as SimpleCond;
-// use \SimpleAR\Database\Condition\Attribute as AttrCond;
-// use \SimpleAR\Database\Condition\SubQuery as SubQueryCond;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
-
 use \SimpleAR\Exception\MalformedOptionException;
 use \SimpleAR\Exception;
-
 use \SimpleAR\Facades\Cfg;
 use \SimpleAR\Facades\DB;
-
 use \SimpleAR\Orm\Relation;
+use \SimpleAR\Orm\Relation\ManyMany;
 use \SimpleAR\Orm\Table;
 
 class WhereBuilder extends Builder
@@ -97,6 +90,13 @@ class WhereBuilder extends Builder
             if (is_array($val) && in_array($op, array('=', '!=')))
             {
                 $this->whereIn($attribute, $val, $logic, $op === '!=');
+                return;
+            }
+
+            // User wants a WHERE NULL condition.
+            if ($val === null)
+            {
+                $this->whereNull($attribute, $logic, $op === '!=');
                 return;
             }
 
@@ -183,6 +183,32 @@ class WhereBuilder extends Builder
         $type = 'In';
         $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+    }
+
+    /**
+     * Add a WHERE NULL clause to the query.
+     *
+     * @param string $attribute The extended attribute.
+     * @param string $logic The logical operator.
+     */
+    public function whereNull($attribute, $logic = 'AND', $not = false)
+    {
+        list($table, $cols) = $this->_processExtendedAttribute($attribute);
+
+        $type = 'Null';
+        $cond = compact('type', 'table', 'cols', 'logic', 'not');
+        $this->_addWhere($cond);
+    }
+
+    /**
+     * Add a WHERE NOT NULL clause to the query.
+     *
+     * @param string $attribute The extended attribute.
+     * @param string $logic The logical operator.
+     */
+    public function whereNotNull($attribute, $logic)
+    {
+        $this->whereNull($attributes, $logic, true);
     }
 
     /**
@@ -440,7 +466,7 @@ class WhereBuilder extends Builder
                 $this->setInvolvedModel($alias, $currentModel);
                 $this->setInvolvedTable($alias, $currentTable);
                 $this->_addJoinClause(
-                    $currentTable, $alias,
+                    $currentTable->name, $alias,
                     $currentRel, $previousAlias,
                     $joinType
                 );
@@ -461,6 +487,12 @@ class WhereBuilder extends Builder
         return $model::relation($relation);
     }
 
+    /**
+     * Return the linked model class name of a relation.
+     *
+     * @param Relation $relation The relation
+     * @return string The linked model class name.
+     */
     public function getNextModelByRelation(Relation $relation)
     {
         return $relation->lm->class;
@@ -477,11 +509,20 @@ class WhereBuilder extends Builder
      * @param Table
      * @param string
      */
-    protected function _addJoinClause(Table $toJoin, $toJoinAlias,
-        Relation $rel = null, $previousAlias = '',
+    protected function _addJoinClause($lmTable, $lmAlias,
+        Relation $rel = null, $cmAlias = '',
         $joinType = JoinClause::INNER
     ) {
-        $jc = new JoinClause($toJoin->name, $toJoinAlias, $joinType);
+
+        // If relation cardinality is many-to-many, we must join middle table.
+        if ($rel instanceof ManyMany)
+        {
+            // _addJoinClauseManyMany returns the alias of the middle table. We 
+            // are going to use it to join the middle table with the LM table.
+            $cmAlias = $this->_addJoinClauseManyMany($rel, $cmAlias, $joinType);
+        }
+
+        $jc = new JoinClause($lmTable, $lmAlias, $joinType);
 
         // We may have to connect it to a previous JoinClause.
         if ($rel)
@@ -489,24 +530,46 @@ class WhereBuilder extends Builder
             // $rel->cm corresponds to previous model.
             foreach ($rel->getJoinColumns() as $leftCol => $rightCol)
             {
-                $jc->on($previousAlias, $leftCol, $toJoinAlias, $rightCol);
+                $jc->on($cmAlias, $leftCol, $lmAlias, $rightCol);
             }
         }
 
-        $this->_joinClauses[$toJoinAlias] = $jc;
+        $this->_joinClauses[$lmAlias] = $jc;
+    }
+
+    protected function _addJoinClauseManyMany(ManyMany $rel, $cmAlias, $joinType)
+    {
+        // $md stands for "middle".
+        $mdTable = $rel->getMiddleTableName();
+        $mdAlias = $rel->getMiddleTableAlias();
+        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
+
+        foreach ($rel->getMiddleJoinColumns() as $lCol => $rCol)
+        {
+            $jcMiddle->on($cmAlias, $lCol, $mdAlias, $rCol);
+        }
+
+        $this->_joinClauses[$mdAlias] = $jcMiddle;
+
+        return $mdAlias;
     }
 
     /**
      * Add a condition to the list of conditions.
      *
      * @param array $cond The condition array
-     * @param mixed $val  The condition's value. It will be add to query's 
-     * values list.
+     *
+     * There is no second optional argument in order to allow function caller to
+     * pass a null value.
      */
-    protected function _addWhere(array $cond, $val = null)
+    protected function _addWhere(array $cond)
     {
         $this->_components['where'][] = $cond;
-        $val && $this->addValueToQuery($val, 'where');
+
+        if (func_num_args() > 1)
+        {
+            $this->addValueToQuery(func_get_arg(1), 'where');
+        }
     }
 
     /**
@@ -619,6 +682,12 @@ class WhereBuilder extends Builder
         if ($attribute instanceof Expression)
         {
             return array('', (array) $attribute->val());
+        }
+
+        // We don't use model? Can't do nothing for you.
+        if (! $this->_useModel)
+        {
+            return array('', (array) $attribute);
         }
 
         // 1)

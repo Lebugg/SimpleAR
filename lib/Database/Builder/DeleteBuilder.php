@@ -21,10 +21,9 @@ class DeleteBuilder extends WhereBuilder
             $this->_components['deleteFrom'] = $root; return;
         }
 
-        // We *have to* set the alias and not the table name. Since this is the 
-        // root that we are setting, we know its place in the arborescence. 
-        // Thus, we just have to generate its alias out of the table name.
-        $tableAlias = $this->_getAliasForTableName($this->_table->name);
-        $this->_components['deleteFrom'] = $tableAlias;
+        // Using several tables is not yet possible with delete builder. Thus, 
+        // we set the table name in "deleteFrom" component. We won't bother with 
+        // any table alias.
+        $this->_components['deleteFrom'] = $this->_table->name;
     }
 }

@@ -6,6 +6,8 @@ use \SimpleAR\Database\Builder\InsertBuilder;
 use \SimpleAR\Database\Builder\DeleteBuilder;
 use \SimpleAR\Database\Builder\UpdateBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\Expression;
+use \SimpleAR\Orm\Model;
 
 class QueryTest extends PHPUnit_Framework_TestCase
 {
@@ -140,4 +142,51 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $query->run();
     }
 
+    public function testFalsyConditionValues()
+    {
+        $conn = $this->getMock('SimpleAR\Database\Connection');
+        $query = new Query(new SelectBuilder(), new BaseCompiler(), $conn);
+        $query->root('Author')
+            ->select(array('*'), false)
+            ->conditions(array(
+                'age' => 0
+            ));
+
+        $sql = 'SELECT * FROM `authors` WHERE `age` = ?';
+        $val = array(0);
+        $conn->expects($this->once())->method('query')->with($sql, $val);
+
+        $query->run();
+    }
+
+    public function testPrepareValuesForExecution()
+    {
+        $q = new Query;
+
+        $val = [[1, 2], 2, [[3, 4, 5]]];
+        $exp = [1, 2, 2, 3, 4, 5];
+        $this->assertEquals($exp, $q->prepareValuesForExecution($val));
+
+        $val = [[[1], 3]];
+        $exp = [1, 3];
+        $this->assertEquals($exp, $q->prepareValuesForExecution($val));
+
+        $val = [1, 2, [3], [new Expression, 3, [4, new Expression]]];
+        $exp = [1, 2, 3, 3, 4];
+        $this->assertEquals($exp, $q->prepareValuesForExecution($val));
+    }
+
+    public function testPrepareValuesForExecutionWithModels()
+    {
+        $q = new Query;
+
+        $m1 = new Article;
+        $m1->id = 2;
+        $m2 = new Article;
+        $m2->id = [4, 5];
+
+        $val = [$m1, [2, [$m2]], 6];
+        $exp = [2, 2, 4, 5, 6];
+        $this->assertEquals($exp, $q->prepareValuesForExecution($val));
+    }
 }

@@ -2,6 +2,7 @@
 date_default_timezone_set('Europe/Paris');
 error_reporting(E_ALL | E_STRICT);
 
+use \SimpleAR\DateTime;
 use \SimpleAR\Facades\DB;
 use \SimpleAR\Facades\Cfg;
 use \SimpleAR\Orm\Table;
@@ -31,7 +32,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         $stub = new $class();
 
-        $this->assertTrue($stub->isDirty());
+        $this->assertFalse($stub->isDirty());
         $stub->foo = 'bar';
         $this->assertTrue($stub->isDirty());
         $stub->save();
@@ -286,5 +287,87 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $attributes = $blog->attributes();
         $this->assertArrayHasKey('articles', $attributes);
         $this->assertEquals($articles, $attributes['articles']);
+    }
+
+    public function testLoadRelationManyMany()
+    {
+        $users = array(
+            new User,
+            new User,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
+        $qb->expects($this->once())->method('findMany')->will($this->returnValue($users));
+        Article::setQueryBuilder($qb);
+
+        $article = new Article();
+        $article->populate(array('id' => 12)); // In order to be concrete.
+        $article->load('readers');
+
+        $attributes = $article->attributes();
+        $this->assertArrayHasKey('readers', $attributes);
+        $this->assertEquals($users, $attributes['readers']);
+
+        $relation = Article::relation('readers');
+        $reversed = User::relation('readers_r');
+        $this->assertInstanceOf('SimpleAR\Orm\Relation\ManyMany', $reversed);
+        $this->assertEquals($relation->reverse(), $reversed);
+    }
+
+    public function testAll()
+    {
+        $expected = [new Article, new Article];
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($expected));
+        Article::setQueryBuilder($qb);
+
+        $res = Article::all();
+        $this->assertEquals($expected, $res);
+    }
+
+    public function testSearch()
+    {
+        $articles = [new Article, new Article];
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('count', 'all'));
+        $qb->expects($this->once())->method('count')->will($this->returnValue(2));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($articles));
+        Article::setQueryBuilder($qb);
+
+        $res = Article::search([], 1, 10);
+        $expected = ['count' => 2, 'rows' => $articles];
+        $this->assertEquals($expected, $res);
+    }
+
+    public function testGetID()
+    {
+        $a = new Article;
+        $a->id = 2;
+
+        $this->assertEquals([2], $a->id());
+
+        Article::table()->primaryKey = ['id', 'blogId'];
+
+        $a->id = 2;
+        $a->blogId = 12;
+        $this->assertEquals([2, 12], $a->id());
+
+        Article::table()->primaryKey = ['id', 'title'];
+        $a->id = 2;
+        $a->title = 'string';
+        $this->assertEquals([2, 'string'], $a->id());
+
+        // Reset.
+        Article::table()->primaryKey = ['id'];
+    }
+
+    public function testDateAttributesConversion()
+    {
+        $a = new Article;
+        $a->dateCreation = '2014-06-12';
+
+        $a->convertDateAttributesToObject();
+
+        $exp = new DateTime('2014-06-12');
+        $this->assertEquals($exp, $a->dateCreation);
     }
 }

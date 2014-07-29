@@ -107,6 +107,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
+
     public function testCompileDelete()
     {
         $compiler = new BaseCompiler();
@@ -251,6 +252,28 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $compiler->useTableAlias = true;
         $expected = 'WHERE `a`.`author_id` = `b`.`id`';
         $result   = $compiler->compileWhere($components);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testCompileIsNull()
+    {
+        $c = new BaseCompiler();
+
+        $where = ['type' => 'Null', 'table' => '', 'cols' => ['author_id'], 'val' => null, 'logic' => 'AND', 'not' => false];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        $components['where'] = array($where);
+
+        $expected = 'WHERE `author_id` IS NULL';
+        $result   = $c->compileWhere($components);
+        $this->assertEquals($expected, $result);
+
+        $where = ['type' => 'Null', 'table' => '', 'cols' => ['author_id'], 'val' => null, 'logic' => 'AND', 'not' => true];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        $components['where'] = array($where);
+
+        $expected = 'WHERE `author_id` IS NOT NULL';
+        $result   = $c->compileWhere($components);
         $this->assertEquals($expected, $result);
     }
 
@@ -405,4 +428,17 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 
+    public function testUpdate()
+    {
+        $c = new BaseCompiler();
+        $components['updateFrom'] = [new JoinClause('articles', '_')];
+        $components['set'] = [[
+            'tableAlias' => '_',
+            'column' => 'title',
+            'value' => 'Yo',
+        ]];
+
+        $sql = 'UPDATE `articles` SET `title` = ?';
+        $this->assertEquals($sql, $c->compileUpdate($components));
+    }
 }

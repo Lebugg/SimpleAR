@@ -384,22 +384,39 @@ class Query
 
         foreach ($values as $value)
         {
-            // Discard Expression. It is directly written in SQL.
+            // Expression values are directly inserted in the SQL string. We do
+            // not need to include them to the values-to-bind list.
             if ($value instanceof Expression) { continue; }
 
-            elseif (is_array($value))
+            // This allows users to directly pass object or object array as
+            // a condition value.
+            //
+            // The same check is done in Compiler to correctly construct
+            // query.
+            // @see SimpleAR\Database\Compiler::parameterize()
+            if ($value instanceof \SimpleAR\Orm\Model)
+            {
+                $value = $value->id();
+            }
+
+            if (is_array($value))
             {
                 if (! $value) { continue; }
 
-                elseif (is_array($value[0]))
-                {
-                    $res = array_merge($res, call_user_func_array('array_merge', $value));
-                }
-
                 else
                 {
-                    $res = array_merge($res, $value);
+                    $res = array_merge($res, $this->prepareValuesForExecution($value));
                 }
+
+                // elseif (is_array($value[0]))
+                // {
+                //     $res = array_merge($res, call_user_func_array('array_merge', $value));
+                // }
+                //
+                // else
+                // {
+                //     $res = array_merge($res, $value);
+                // }
             }
 
             else

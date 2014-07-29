@@ -115,9 +115,9 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($options);
 
         $expected = array();
-        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['id'], 'op' => '!=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        $expected[] = ['type' => 'Null', 'table' => '_', 'cols' => ['id'], 'logic' => 'AND', 'not' => true];
         //$expected[] = new SimpleCond('_', array('id'), '!=', null, 'AND');
-        $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['title'], 'op' => '=', 'val' => null, 'logic' => 'AND', 'not' => false];
+        $expected[] = ['type' => 'Null', 'table' => '_', 'cols' => ['title'], 'logic' => 'AND', 'not' => false];
         //$expected[] = new SimpleCond('_', array('title'), '=', null, 'AND');
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
@@ -277,5 +277,18 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $where[] = ['type' => 'In', 'table' => '_', 'cols' => ['id'], 'val' => [1,2,3], 'logic' => 'AND', 'not' => true];
         $components = $b->build();
         $this->assertEquals($where, $components['where']);
+    }
+
+    public function testSimpleConditionWithoutUsingModel()
+    {
+        $b = new WhereBuilder;
+        $b->root('USERS');
+        $b->where('firstName', 'Jean');
+
+        $expected = ['root' => 'USERS', 'where' => [
+            ['type' => 'Basic', 'table' => '', 'cols' => ['firstName'], 'op' => '=', 'val' => 'Jean', 'logic' => 'AND', 'not' => false],
+        ]];
+
+        $this->assertEquals($expected, $b->build());
     }
 }

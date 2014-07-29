@@ -128,10 +128,10 @@ abstract class Relation
      * to retrieve only needed information instead of a bunch of useless data.
      *
      * To specify an order for a relation, just add an "order_by" entry in the relation array.
+     *
      * Example:
      *  ```php
-     *  // Person with information retrieved by NSA.
-     *  class NSA_Person
+     *  class Person
      *  {
      *      protected $_filters = array(
      *          'restricted' => array(
@@ -147,7 +147,7 @@ abstract class Relation
      *      protected $_relations = array(
      *          'workers' => array(
      *              'type'  => 'has_many',
-     *              'model' => 'NSA_Person',
+     *              'model' => 'Person',
      *
      *              'filter' => 'restricted',
      *          ),
@@ -243,7 +243,7 @@ abstract class Relation
         $this->cm = new \StdClass();
         $this->cm->class     = $cmClass;
         $this->cm->t         = $cmClass::table();
-        //$this->cm->table     = $this->cm->t->name;
+        $this->cm->table     = $this->cm->t->name;
     }
 
     public function setInformation(array $info)
@@ -251,7 +251,7 @@ abstract class Relation
         $this->lm = new \StdClass();
         $this->lm->class = $s = $info['model'] . Cfg::get('modelClassSuffix');
         $this->lm->t     = $s::table();
-        //$this->lm->table = $this->lm->t->name;
+        $this->lm->table = $this->lm->t->name;
         //$this->lm->pk    = $this->lm->t->primaryKey;
 
         foreach (array('filter', 'conditions', 'order') as $item)
@@ -332,6 +332,7 @@ abstract class Relation
 
         return $res;
     }
+
     /**
      * Return an associative list of columns on which the relation is made.
      *
