@@ -255,6 +255,27 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
     }
 
+    public function testCompileIsNull()
+    {
+        $c = new BaseCompiler();
+
+        $where = ['type' => 'Basic', 'table' => '', 'cols' => ['author_id'], 'op' => '=', 'val' => null, 'logic' => 'AND'];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        $components['where'] = array($where);
+
+        $expected = 'WHERE `author_id` IS NULL';
+        $result   = $c->compileWhere($components);
+        $this->assertEquals($expected, $result);
+
+        $where = ['type' => 'Basic', 'table' => '', 'cols' => ['author_id'], 'op' => '!=', 'val' => null, 'logic' => 'AND'];
+        //$where = new SimpleCond('a', 'author_id', '=', 12);
+        $components['where'] = array($where);
+
+        $expected = 'WHERE `author_id` IS NOT NULL';
+        $result   = $c->compileWhere($components);
+        $this->assertEquals($expected, $result);
+    }
+
     public function testCompileAggregates()
     {
         $c = new BaseCompiler();

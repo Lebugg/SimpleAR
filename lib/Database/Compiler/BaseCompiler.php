@@ -511,6 +511,11 @@ class BaseCompiler extends Compiler
      */
     protected function _whereBasic(array $where)
     {
+        if ($where['val'] === null)
+        {
+            return $this->_whereIsNull($where);
+        }
+
         $alias = $this->useTableAlias ? $where['table'] : '';
         $col = $this->columnize($where['cols'], $alias);
         $op  = $this->_getWhereOperator($where);
@@ -522,6 +527,21 @@ class BaseCompiler extends Compiler
     protected function _whereNotBasic(array $where)
     {
         return 'NOT ' . $this->_whereBasic($where);
+    }
+
+    /**
+     * Compile an IS NULL clause.
+     *
+     * @param array $where
+     * @return SQL
+     */
+    protected function _whereIsNull(array $where)
+    {
+        $alias = $this->useTableAlias ? $where['table'] : '';
+        $col = $this->columnize($where['cols'], $alias);
+        $val = $where['op'] === '=' ? 'IS NULL' : 'IS NOT NULL';
+
+        return "$col $val";
     }
 
     /**
