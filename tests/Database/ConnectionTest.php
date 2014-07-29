@@ -10,11 +10,11 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
 
         $expected = [[
             'sql' => "SELECT * FROM a WHERE b = 'value'",
-            'time' => '12,000,000.00'
+            'time' => 120 // Time in milliseconds.
         ]];
 
         $sql = "SELECT * FROM a WHERE b = ?";
-        $conn->logQuery($sql, ['value'], 12000);
+        $conn->logQuery($sql, ['value'], 0.12); // 0.12: time in seconds.
 
         $this->assertEquals($expected, $conn->queries());
     }
