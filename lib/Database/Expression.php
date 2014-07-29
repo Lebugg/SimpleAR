@@ -15,7 +15,7 @@ class Expression
      */
     protected $_value;
 
-    public function __construct($value)
+    public function __construct($value = null)
     {
         $this->_value = $value;
     }

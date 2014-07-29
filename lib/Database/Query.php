@@ -391,15 +391,20 @@ class Query
             {
                 if (! $value) { continue; }
 
-                elseif (is_array($value[0]))
-                {
-                    $res = array_merge($res, call_user_func_array('array_merge', $value));
-                }
-
                 else
                 {
-                    $res = array_merge($res, $value);
+                    $res = array_merge($res, $this->prepareValuesForExecution($value));
                 }
+
+                // elseif (is_array($value[0]))
+                // {
+                //     $res = array_merge($res, call_user_func_array('array_merge', $value));
+                // }
+                //
+                // else
+                // {
+                //     $res = array_merge($res, $value);
+                // }
             }
 
             else
