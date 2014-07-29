@@ -194,6 +194,20 @@ class Connection
         return $this->_sth;
     }
 
+    /**
+     * Log given query.
+     *
+     * @param string $query The raw SQL string.
+     * @param array  $params The bound parameters.
+     * @param float  $time The query execution time in seconds.
+     *
+     * Queries will be stored in $_queries property as an array containing these 
+     * entries:
+     *
+     *  * "sql" The SQL string where wilcards have been transpolated with bound 
+     *  params;
+     *  * "time": The query execution time, in milliseconds.
+     */
     public function logQuery($query, array $params, $time)
     {
         $queryDebug  = $query;
@@ -209,7 +223,7 @@ class Connection
 
         $this->_queries[] = array(
             'sql'  => $queryDebug,
-            'time' => number_format($time * 1000, 2)
+            'time' => $time * 1000,
         );
     }
 
