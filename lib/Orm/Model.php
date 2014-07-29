@@ -1337,13 +1337,11 @@ abstract class Model
         $with = isset($data['__with__']) ? $data['__with__'] : null;
         unset($data['__with__']);
 
-        // Populating is easy: just call __set() on each key-value pair.
         foreach ($data as $key => $value)
         {
             $this->_attributes[$key] = $value;
         }
 
-        // Handle eager loading if needed.
         $with && $this->_populateEagerLoad($with);
 
         $this->_concrete = true;
@@ -1628,6 +1626,13 @@ abstract class Model
     {
     }
 
+    /**
+     * Populate linked models that have been eagerly loaded from database.
+     *
+     * @param array $with An array containing linked models' data.
+     *
+     * @see \SimpleAR\Orm\Builder
+     */
     protected function _populateEagerLoad(array $with)
     {
         foreach ($with as $relName => $data)
@@ -1650,7 +1655,7 @@ abstract class Model
                 $lmInstance = new $lmClass();
                 $lmInstance->populate($data);
 
-                $this->_attr($relName, $lmInstance);
+                $this->_attributes[$relName] = $lmInstance;
             }
             else
             {
@@ -1672,7 +1677,7 @@ abstract class Model
                     $lmInstances[] = $lmInstance;
                 }
 
-                $this->_attr($relName, $lmInstances);
+                $this->_attributes[$relName] = $lmInstances;
             }
         }
     }
