@@ -3,7 +3,6 @@
 require __DIR__ . '/SimpleAR.php';
 
 $cfg = new SimpleAR\Config();
-$cfg->dsn              = json_decode(file_get_contents(__DIR__ . '/tests/db.json'), true);
 $cfg->doForeignKeyWork = true;
 $cfg->debug            = true;
 $cfg->dateFormat       = 'd/m/Y';
