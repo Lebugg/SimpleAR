@@ -312,7 +312,7 @@ class Config
      */
     public function __get($option)
     {
-        if (isset($this->{'_' . $option}))
+        if (property_exists($this, '_' . $option))
         {
             return $this->{'_' . $option};
         }
