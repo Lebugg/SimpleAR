@@ -104,7 +104,19 @@ class Connection
 
     public function configure(Config $config)
     {
-        $a    = $config->dsn;
+        $config->dsn && $this->connect($config->dsn);
+
+        $this->_debug    = $config->debug;
+    }
+
+    /**
+     * Connect to database according to given information.
+     *
+     * @param array $dsn An array containing DB information.
+     */
+    public function connect(array $dsn)
+    {
+        $a    = $dsn;
         $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $options = array();
@@ -122,7 +134,6 @@ class Connection
 
         $this->_database = $a['name'];
         $this->_driver   = $a['driver'];
-        $this->_debug    = $config->debug;
     }
 
     public function setPDO(\PDO $pdo)
