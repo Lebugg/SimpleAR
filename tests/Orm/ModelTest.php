@@ -370,4 +370,17 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $exp = new DateTime('2014-06-12');
         $this->assertEquals($exp, $a->dateCreation);
     }
+
+    public function testCountMethodFiltersPassedOptions()
+    {
+        $opts = ['conditions' => [], 'having' => [], 'groupBy' => []];
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('setOptions', 'count'));
+        $qb->expects($this->once())->method('setOptions')->with($opts)->will($this->returnValue($qb));
+        $qb->expects($this->once())->method('count');
+        Article::setQueryBuilder($qb);
+
+        $opts['select'] = ['title', 'stuff'];
+        $opts['orderBy'] = ['#readers'];
+        Article::count($opts);
+    }
 }

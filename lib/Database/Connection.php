@@ -24,7 +24,7 @@ class Connection
      *
      * @var PDO
      */
-    private $_pdo;
+    protected $_pdo;
 
     /**
      * The current/last PDO Statement used.
@@ -33,21 +33,28 @@ class Connection
      *
      * @var PDOStatement
      */
-    private $_sth;
+    protected $_sth;
 
     /**
      * Are we in debug mode?
      *
      * @var bool
      */
-    private $_debug;
+    protected $_debug;
 
     /**
      * Database name.
      *
      * @var string
      */
-    private $_database;
+    protected $_database;
+
+    /**
+     * Database driver.
+     *
+     * @var string
+     */
+    protected $_driver;
 
     /**
      * Executed query array.
