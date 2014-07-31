@@ -10,7 +10,7 @@ layout: article
 We recommend that you read these guides, if possible, in this order:
 
 
-###  [Getting started](/articles/getting_started.html)
+###  [Getting started]({{ site.baseurl }}/articles/getting_started.html)
 
 An overview of {{ site.projectName }} with a quick tutorial that helps you to get started with it. It should take about
 10 minutes to read and study the provided code examples
