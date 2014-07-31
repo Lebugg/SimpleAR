@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
+<!doctype html>
 <html lang='en' style='height: 100%'>
   <head>
     <title>{{page.title}}</title>
@@ -18,38 +17,7 @@
   </head>
   <body style='height: 100%'>
 
-    <header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav" role="banner">
-      <div class="container">
-        <div class="navbar-header">
-          <button class="navbar-toggle" type="button" data-toggle="collapse" data-target=".bs-navbar-collapse">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a href="./" class="navbar-brand">Project Name</a>
-        </div>
-        <nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation">
-          <ul class="nav navbar-nav">
-            <li>
-              <a href='/'>Home</a>
-            </li>
-            <li>
-              <a href="/articles/guides.html">All guides</a>
-            </li>
-            <li>
-              <a href='/articles/community.html'>Community</a>
-            </li>
-            <li>
-              <a href='https://github.com/clojurewerkz'>Code on Github</a>
-            </li>
-            <li>
-              <a href='http://clojurewerkz.org'>More Clojure libraries</a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </header>
+    {% include header.html %}
 
     {{ content }}
 
