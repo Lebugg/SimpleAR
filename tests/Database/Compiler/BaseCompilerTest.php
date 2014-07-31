@@ -446,4 +446,21 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $sql = 'UPDATE `articles` SET `title` = ?';
         $this->assertEquals($sql, $c->compileUpdate($components));
     }
+
+    public function testMultiColumnsCondition()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+
+        $w = ['type' => 'In', 'table' => '',
+            'cols' => ['author_id','blog_id'],
+            'val' => [[1, 2], [2,3], [3,3]],
+            'logic' => 'AND'];
+
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
 }

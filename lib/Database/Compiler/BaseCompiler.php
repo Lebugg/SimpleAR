@@ -637,7 +637,7 @@ class BaseCompiler extends Compiler
             : $this->parameterize($where['val']);
 
         $alias = $this->useTableAlias ? $where['table'] : '';
-        $col   = $this->columnize($where['cols'], $alias);
+        $col   = $this->columnize($where['cols'], $alias, '', true);
 
         return "$col IN $sql";
     }
