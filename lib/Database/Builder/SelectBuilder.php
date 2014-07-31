@@ -34,13 +34,17 @@ class SelectBuilder extends WhereBuilder
     }
 
     /**
-     * Add columns to select.
+     * Add attributes to select.
      *
-     * @param array $columns The columns to select.
+     * @param array $attribtues An attribute array.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
-    public function select(array $columns, $expand = true)
+    public function select(array $attributes, $expand = true)
     {
+        $columns = $attributes === array('*')
+            ? $attributes
+            : $this->convertAttributesToColumns($attributes, $this->getRootTable());
+
         $this->_selectColumns($this->getRootAlias(), $columns, $expand);
     }
 
@@ -178,7 +182,11 @@ class SelectBuilder extends WhereBuilder
             $columns = array_flip($columns);
         }
 
-        $this->_components['columns'][$tableAlias]['columns'] = $columns;
+        $resultAlias = $tableAlias === $this->getRootAlias() ? '' : $tableAlias;
+        $this->_components['columns'][$tableAlias] = array(
+            'columns' => $columns,
+            'resultAlias' => $resultAlias
+        );
     }
 
     /**

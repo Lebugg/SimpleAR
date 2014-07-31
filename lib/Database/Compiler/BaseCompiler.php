@@ -226,7 +226,7 @@ class BaseCompiler extends Compiler
             {
                 $columns     = $data['columns'];
                 $tableAlias  = $this->useTableAlias ? $tableAlias : '';
-                $resultAlias = $this->useResultAlias ? $data['resultAlias'] : '';
+                $resultAlias = isset($data['resultAlias']) ? $data['resultAlias'] : '';
 
                 $sql[] = $this->columnize($columns, $tableAlias, $resultAlias);
             }

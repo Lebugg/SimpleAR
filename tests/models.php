@@ -90,6 +90,7 @@ class User extends SimpleAR\Orm\Model
     );
 }
 
+// Normally, this is done by autoloader.
 Blog::wakeup();
 Article::wakeup();
 Author::wakeup();

@@ -23,8 +23,6 @@ abstract class Compiler
      */
     public $useTableAlias = null;
 
-    public $useResultAlias = false;
-
     public $rootAlias = '_';
 
     public $components = array(
