@@ -224,7 +224,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
         $columns = array(
-            '_' => ['columns' => ['author_id', 'title', 'created_at'], 'resultAlias' => ''],
+            '_' => ['columns' => ['id', 'author_id', 'title', 'created_at'], 'resultAlias' => ''],
         );
 
         $this->assertEquals($columns, $components['columns']);

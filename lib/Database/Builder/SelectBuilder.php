@@ -36,16 +36,23 @@ class SelectBuilder extends WhereBuilder
     /**
      * Add attributes to select.
      *
-     * @param array $attribtues An attribute array.
+     * Note: Table primary key will always be added to the selection.
+     * -----
+     *
+     * @param array $attributes An attribute array.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
     public function select(array $attributes, $expand = true)
     {
-        $columns = $attributes === array('*')
-            ? $attributes
-            : (array) $this->convertAttributesToColumns($attributes, $this->getRootTable());
+        if ($attributes !== array('*'))
+        {
+            // We add primary key if not present.
+            $table = $this->getRootTable();
+            $attributes = array_unique(array_merge($table->getPrimaryKey(), $attributes));
+            $attributes = $this->convertAttributesToColumns($attributes, $table);
+        }
 
-        $this->_selectColumns($this->getRootAlias(), $columns, $expand);
+        $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
     }
 
     public function selectSub(Query $sub, $alias)
