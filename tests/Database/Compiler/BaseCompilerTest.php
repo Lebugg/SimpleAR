@@ -371,12 +371,14 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     {
         $jc = array(
             (new JoinClause('blogs', '_')),
-            (new JoinClause('articles', 'articles', JoinClause::LEFT))->on('_', 'id', 'articles', 'blog_id')
+            (new JoinClause('articles', 'articles', JoinClause::LEFT))->on('_', 'id', 'articles', 'blog_id'),
+            (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id')
         );
 
         $columns = array(
-            '_' => array('columns' => array('*')),
-            'articles' => array('columns' => array('*'))
+            '_' => ['columns' => ['*'], 'resultAlias' => ''],
+            'articles' => ['columns' => ['*'], 'resultAlias' => ''],
+            'articles.author' => ['columns' => ['first_name' => 'firstName', 'last_name' => 'lastName'], 'resultAlias' => 'articles.author'],
         );
 
         $components['from'] = $jc;
@@ -384,7 +386,10 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $c = new BaseCompiler();
 
-        $sql = 'SELECT `_`.*,`articles`.* FROM `blogs` `_` LEFT JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id`';
+        $sql = 'SELECT `_`.*,`articles`.*,`articles.author`.`first_name` AS `articles.author.firstName`,`articles.author`.`last_name` AS `articles.author.lastName`'
+            . ' FROM `blogs` `_`' 
+            . ' LEFT JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id`'
+            . ' LEFT JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id`';
         $val = array();
 
         $this->assertEquals($sql, $c->compileSelect($components));
@@ -440,5 +445,22 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $sql = 'UPDATE `articles` SET `title` = ?';
         $this->assertEquals($sql, $c->compileUpdate($components));
+    }
+
+    public function testMultiColumnsCondition()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+
+        $w = ['type' => 'In', 'table' => '',
+            'cols' => ['author_id','blog_id'],
+            'val' => [[1, 2], [2,3], [3,3]],
+            'logic' => 'AND'];
+
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
     }
 }

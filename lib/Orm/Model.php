@@ -748,6 +748,9 @@ abstract class Model
      *  ```php
      * Model::find('count', $options);
      *  ```
+     *
+     * It also filters passed options.
+     *
      * @param array $options An option array.
      * @return array
      *
@@ -755,6 +758,11 @@ abstract class Model
      */
     public static function count(array $options = array())
     {
+        // When compute count, we cannot pass options like "limit" or "order",
+        // it would not make sense.
+        $authorizedOpts = array('conditions' => '', 'having' => '', 'groupBy' => '', 'group_by' => '');
+        $options = array_intersect_key($options, $authorizedOpts);
+
         return self::find('count', $options);
     }
 

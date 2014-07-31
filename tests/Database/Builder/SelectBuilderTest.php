@@ -146,8 +146,8 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => array('columns' => array_flip(Blog::table()->getColumns())),
-            'articles' => array('columns' => array_flip(Article::table()->getColumns())),
+            '_' => ['columns' => array_flip(Blog::table()->getColumns()), 'resultAlias' => ''],
+            'articles' => ['columns' => array_flip(Article::table()->getColumns()), 'resultAlias' => 'articles'],
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -161,7 +161,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
 
         $jc[] = (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id');
-        $columns['articles.author'] = array('columns' => array_flip(Author::table()->getColumns()));
+        $columns['articles.author'] = ['columns' => array_flip(Author::table()->getColumns()), 'resultAlias' => 'articles.author'];
 
         $this->assertEquals($jc, $components['from']);
         $this->assertEquals($columns, $components['columns']);
@@ -182,9 +182,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => array('columns' => array_flip(Article::table()->getColumns())),
-            'blog' => array('columns' => array_flip(Blog::table()->getColumns())),
-            'author' => array('columns' => array_flip(Author::table()->getColumns())),
+            '_' => ['columns' => array_flip(Article::table()->getColumns()), 'resultAlias' => ''],
+            'blog' => ['columns' => array_flip(Blog::table()->getColumns()), 'resultAlias' => 'blog'],
+            'author' => ['columns' => array_flip(Author::table()->getColumns()), 'resultAlias' => 'author'],
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -208,11 +208,25 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => array('columns' => array_flip(Article::table()->getColumns())),
-            'readers' => array('columns' => array_flip(User::table()->getColumns())),
+            '_' => ['columns' => array_flip(Article::table()->getColumns()), 'resultAlias' => ''],
+            'readers' => ['columns' => array_flip(User::table()->getColumns()), 'resultAlias' => 'readers'],
         );
 
         $this->assertEquals($jc, $components['from']);
+        $this->assertEquals($columns, $components['columns']);
+    }
+
+    public function testSelect()
+    {
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->select(['authorId', 'title', 'created_at']);
+
+        $components = $b->build();
+        $columns = array(
+            '_' => ['columns' => ['id', 'author_id', 'title', 'created_at'], 'resultAlias' => ''],
+        );
+
         $this->assertEquals($columns, $components['columns']);
     }
 }

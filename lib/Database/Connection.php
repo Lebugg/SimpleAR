@@ -24,7 +24,7 @@ class Connection
      *
      * @var PDO
      */
-    private $_pdo;
+    protected $_pdo;
 
     /**
      * The current/last PDO Statement used.
@@ -33,21 +33,28 @@ class Connection
      *
      * @var PDOStatement
      */
-    private $_sth;
+    protected $_sth;
 
     /**
      * Are we in debug mode?
      *
      * @var bool
      */
-    private $_debug;
+    protected $_debug;
 
     /**
      * Database name.
      *
      * @var string
      */
-    private $_database;
+    protected $_database;
+
+    /**
+     * Database driver.
+     *
+     * @var string
+     */
+    protected $_driver;
 
     /**
      * Executed query array.
@@ -104,7 +111,19 @@ class Connection
 
     public function configure(Config $config)
     {
-        $a    = $config->dsn;
+        $config->dsn && $this->connect($config->dsn);
+
+        $this->_debug    = $config->debug;
+    }
+
+    /**
+     * Connect to database according to given information.
+     *
+     * @param array $dsn An array containing DB information.
+     */
+    public function connect(array $dsn)
+    {
+        $a    = $dsn;
         $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $options = array();
@@ -122,7 +141,6 @@ class Connection
 
         $this->_database = $a['name'];
         $this->_driver   = $a['driver'];
-        $this->_debug    = $config->debug;
     }
 
     public function setPDO(\PDO $pdo)
@@ -188,6 +206,9 @@ class Connection
         }
         catch (\PDOException $ex)
         {
+            // We must wait for PHP 5.5 to be able to use `finally` block.
+            $this->_debug && $this->logQuery($query, $params, 0);
+
             throw new DatabaseEx($ex->getMessage(), $query, $ex);
         }
 

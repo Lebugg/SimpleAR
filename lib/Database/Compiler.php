@@ -23,8 +23,6 @@ abstract class Compiler
      */
     public $useTableAlias = null;
 
-    public $useResultAlias = false;
-
     public $rootAlias = '_';
 
     public $components = array(
@@ -218,12 +216,12 @@ abstract class Compiler
      *
      * @return string SQL
      */
-    public function columnize(array $columns, $tablePrefix = '', $resultPrefix = '')
+    public function columnize(array $columns, $tablePrefix = '', $resultPrefix = '', $parenthesis = false)
     {
         $tablePrefix = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
         $resultPrefix = $resultPrefix ? $resultPrefix . '.' : '';
 
-        $sql = array();
+        $cols = array();
         foreach($columns as $column => $attribute)
         {
             $left = $right = '';
@@ -242,10 +240,11 @@ abstract class Compiler
                 }
             }
 
-            $sql[] = $right ? $left . ' AS ' . $right : $left;
+            $cols[] = $right ? $left . ' AS ' . $right : $left;
         }
 
-        return implode(',', $sql);
+        $sql = implode(',', $cols);
+        return $parenthesis && isset($cols[1]) ? '(' . $sql . ')' : $sql;
     }
 
     /**
