@@ -189,4 +189,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $exp = [2, 2, 4, 5, 6];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
     }
+
+    public function testCallsToBuilder()
+    {
+        $b = $this->getMock('SimpleAR\Database\Builder\SelectBuilder', array('select'));
+        $b->expects($this->exactly(1))->method('select')->with(['title', 'authorId', 'created_at']);
+
+        $q = new Query();
+        $q->setBuilder($b);
+        $q->select(['title', 'authorId', 'created_at']);
+    }
 }

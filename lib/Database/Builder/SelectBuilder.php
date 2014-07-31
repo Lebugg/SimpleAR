@@ -43,7 +43,7 @@ class SelectBuilder extends WhereBuilder
     {
         $columns = $attributes === array('*')
             ? $attributes
-            : $this->convertAttributesToColumns($attributes, $this->getRootTable());
+            : (array) $this->convertAttributesToColumns($attributes, $this->getRootTable());
 
         $this->_selectColumns($this->getRootAlias(), $columns, $expand);
     }
