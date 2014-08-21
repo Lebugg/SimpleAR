@@ -314,6 +314,35 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($relation->reverse(), $reversed);
     }
 
+    public function testLoadRelationWithConditions()
+    {
+        $articles = array(
+            new Article,
+            new Article,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
+        $opts = [
+            'conditions' => [
+                ['created_at', '<=', 'NOW()'],
+                'blogId' => 12
+            ],
+        ];
+        $qb->expects($this->once())
+            ->method('findMany')
+            ->with($opts)
+            ->will($this->returnValue($articles));
+        Article::setQueryBuilder($qb);
+
+        $blog = new Blog();
+        $blog->populate(array('id' => 12)); // In order to be concrete.
+        $blog->load('recentArticles');
+
+        $attributes = $blog->attributes();
+        $this->assertArrayHasKey('recentArticles', $attributes);
+        $this->assertEquals($articles, $attributes['recentArticles']);
+    }
+
     public function testAll()
     {
         $expected = [new Article, new Article];

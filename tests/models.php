@@ -18,6 +18,13 @@ class Blog extends SimpleAR\Orm\Model
             'type'  => 'has_many',
             'model' => 'Article',
         ),
+        'recentArticles' => [
+            'type'  => 'has_many',
+            'model' => 'Article',
+            'conditions' => [
+                ['created_at', '<=', 'NOW()'],
+            ],
+        ],
     );
 }
 

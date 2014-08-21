@@ -2176,8 +2176,15 @@ abstract class Model
         // fetch potential linked objects from DB.
 		$lmClass = $relation->lm->class;
 
-        $options['order_by'] = $relation->order;
-        $options['filter']   = $relation->filter;
+        if ($relation->order)
+        {
+            $options['order_by'] = $relation->order;
+        }
+
+        if ($relation->filter)
+        {
+            $options['filter']   = $relation->filter;
+        }
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
