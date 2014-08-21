@@ -324,6 +324,7 @@ class Builder
         $q->limit($nbItems, ($page - 1) * $nbItems);
 
         $res['rows'] = $this->all();
+        $q->getBuilder()->clearResult();
         $res['count'] = $this->count();
 
         return $res;
