@@ -104,7 +104,12 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
             ),
         );
 
+        $this->assertEquals($expected, $components['orderBy']);
 
+        $b = new SelectBuilder();
+        $b->root('Article');
+        $b->orderBy(['author/lastName', 'created_at' => 'DESC']);
+        $components = $b->build();
         $this->assertEquals($expected, $components['orderBy']);
     }
 

@@ -95,6 +95,24 @@ class SelectBuilder extends WhereBuilder
 
     public function orderBy($attribute, $sort = 'ASC')
     {
+        if (is_array($attribute))
+        {
+            foreach ($attribute as $attr => $sort) {
+                if (is_string($attr))
+                {
+                    $this->orderBy($attr, $sort);
+                }
+                else
+                {
+                    // User did not specify the sort order. $sort contains the 
+                    // attribute.
+                    $this->orderBy($sort);
+                }
+            }
+
+            return;
+        }
+
         list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
         $column = $columns[0];
 
