@@ -301,9 +301,32 @@ class Builder
     public function count($attribute = '*')
     {
         $q = $this->getQueryOrNewSelect();
+        $q->removeOptions(array('orderBy', 'limit', 'offset', 'with'));
         $q->count($attribute)->run();
 
         return $q->getConnection()->getColumn();
+    }
+
+	/**
+     * Search for object in database. It combines count() and all() functions.
+     *
+	 * This function makes pagination easier.
+	 *
+	 * @param int   $page    Page number. Min: 1.
+	 * @param int   $nbItems Number of items. Min: 1.
+	 */
+    public function search($page, $nbItems)
+    {
+		$page    = $page    >= 1 ? $page    : 1;
+		$nbItems = $nbItems >= 1 ? $nbItems : 1;
+
+        $q  = $this->getQueryOrNewSelect();
+        $q->limit($nbItems, ($page - 1) * $nbItems);
+
+        $res['rows'] = $this->all();
+        $res['count'] = $this->count();
+
+        return $res;
     }
 
     /**

@@ -1,6 +1,8 @@
 <?php
 
 use SimpleAR\Orm\Builder as QueryBuilder;
+use SimpleAR\Database\Builder\SelectBuilder;
+use SimpleAR\Database\Compiler\BaseCompiler;
 
 class BuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -387,5 +389,25 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->once())->method('setOptions')->with($options);
         $qb->expects($this->once())->method('all');
         $qb->findMany($options);
+    }
+
+    public function testSearch()
+    {
+        $b = $this->getMock('SimpleAR\Database\Builder', ['build']);
+        $b->expects($this->exactly(2))->method('build');
+
+        $c = $this->getMock('SimpleAR\Database\Compiler', ['compile']);
+        $c->expects($this->exactly(2))->method('compile')->will($this->returnValue(['SQL', []]));
+
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow', 'getColumn']);
+        $conn->expects($this->exactly(2))->method('query');
+
+        $q = $this->getMock('SimpleAR\Database\Query', ['getConnection'], [$b, $c, $conn]);
+        $q->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['getQuery']);
+        $qb->expects($this->any())->method('getQuery')->will($this->returnValue($q));
+
+        $qb->search(2, 10);
     }
 }

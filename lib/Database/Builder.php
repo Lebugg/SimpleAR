@@ -66,9 +66,6 @@ class Builder
      */
     protected $_values = array();
 
-    // @DUNNO_YET
-    protected $_root = '';
-
     protected $_options = array();
     protected $_components;
 
@@ -90,19 +87,20 @@ class Builder
     /**
      * Run the build process.
      *
-     * @param array $options Options to build.
+     * @param array $options Options to build. If given, it will erase 
+     * previously set options.
      *
-     * @return array
+     * @return array The built components. Components are to be passed to a 
+     * Compiler.
      */
     public function build(array $options = array())
     {
-        $this->_options = array_merge($this->_options, $options);
+        $this->_options = $options ?: $this->_options;
         $this->_buildOptions($this->_options);
 
         // Allow specific builders to set default values after build.
         $this->_onAfterBuild();
 
-        // Work's done!
         return $this->_components;
     }
 
@@ -230,6 +228,19 @@ class Builder
             {
                 $this->addValueToQuery($values, $component);
             }
+        }
+    }
+
+    /**
+     * Remove options from builder.
+     *
+     * @param array $toRemove The options to remove.
+     */
+    public function removeOptions(array $toRemove)
+    {
+        foreach ($toRemove as $option)
+        {
+            unset($this->_options[$option]);
         }
     }
 

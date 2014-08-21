@@ -282,13 +282,9 @@ class Query
      */
     public function run($again = false)
     {
-        $this->_built    || $this->build();
-        $this->_compiled || $this->compile();
-
-        if (! $this->_executed || $again)
-        {
-            $this->execute($this->isCriticalQuery());
-        }
+        $this->build();
+        $this->compile();
+        $this->execute($this->isCriticalQuery());
 
         return $this;
     }
