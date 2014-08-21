@@ -101,7 +101,7 @@ class Builder
         // Allow specific builders to set default values after build.
         $this->_onAfterBuild();
 
-        return $this->_components;
+        return $this->cleanComponents();
     }
 
     public function __call($name, $args)
@@ -229,6 +229,20 @@ class Builder
                 $this->addValueToQuery($values, $component);
             }
         }
+    }
+
+    /**
+     * Return and clear component array.
+     *
+     * A builder can `build()` options any number of time. But at each run, 
+     * previous result must be cleared.
+     */
+    public function cleanComponents()
+    {
+        $tmp = $this->_components;
+        $this->_components = array();
+
+        return $tmp;
     }
 
     /**
