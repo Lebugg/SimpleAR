@@ -71,6 +71,17 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(5, $components['limit']);
     }
 
+    public function testLimitOffset()
+    {
+        $b = $this->getMock('SimpleAR\Database\Builder\SelectBuilder', array('offset'));
+        $b->expects($this->once())->method('offset')->with(10);
+        $b->root('Blog');
+        $b->limit(5, 10);
+
+        $components = $b->build();
+        $this->assertEquals(5, $components['limit']);
+    }
+
     public function testOffset()
     {
         $b = new SelectBuilder();

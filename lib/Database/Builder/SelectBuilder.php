@@ -127,6 +127,12 @@ class SelectBuilder extends WhereBuilder
         $this->_components['groupBy'][] = compact('tableAlias', 'column');
     }
 
+    /**
+     * Set the limit number of objects to return.
+     *
+     * @param int $limit The limit
+     * @param int $offset The offset (Optional).
+     */
     public function limit($limit, $offset = null)
     {
         $this->_components['limit'] = (int) $limit;
