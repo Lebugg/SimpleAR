@@ -276,8 +276,8 @@ class ModelTest extends PHPUnit_Framework_TestCase
             new Article,
         );
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
-        $qb->expects($this->once())->method('findMany')->will($this->returnValue($articles));
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($articles));
         Blog::setQueryBuilder($qb);
 
         $blog = new Blog();
@@ -296,8 +296,8 @@ class ModelTest extends PHPUnit_Framework_TestCase
             new User,
         );
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
-        $qb->expects($this->once())->method('findMany')->will($this->returnValue($users));
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($users));
         Article::setQueryBuilder($qb);
 
         $article = new Article();
@@ -321,7 +321,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
             new Article,
         );
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('setOptions', 'all'));
         $opts = [
             'conditions' => [
                 ['created_at', '<=', 'NOW()'],
@@ -329,8 +329,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
             ],
         ];
         $qb->expects($this->once())
-            ->method('findMany')
+            ->method('setOptions')
             ->with($opts)
+            ->will($this->returnValue($qb));
+        $qb->expects($this->once())
+            ->method('all')
             ->will($this->returnValue($articles));
         Article::setQueryBuilder($qb);
 
@@ -341,6 +344,23 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $attributes = $blog->attributes();
         $this->assertArrayHasKey('recentArticles', $attributes);
         $this->assertEquals($articles, $attributes['recentArticles']);
+    }
+
+    public function testLoadRelationWithScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['applyScopes', 'all']);
+        $scope = [
+            'status' => [2],
+            'recent' => [],
+        ];
+        $qb->expects($this->once())
+            ->method('applyScopes')
+            ->with($scope);
+        Article::setQueryBuilder($qb);
+
+        $blog = new Blog();
+        $blog->populate(array('id' => 12)); // In order to be concrete.
+        $blog->load('onlineArticles');
     }
 
     public function testAll()

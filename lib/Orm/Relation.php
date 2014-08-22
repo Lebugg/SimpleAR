@@ -96,6 +96,13 @@ abstract class Relation
 	public $conditions = array();
 
     /**
+     * Relation scope.
+     *
+     * @var array
+     */
+    protected $_scope;
+
+    /**
      * Defines a sort order for linked model instances.
      *
      * If the relation defines an order, linked model instances will be sorted with this order. It
@@ -261,6 +268,58 @@ abstract class Relation
                 $this->$item = $info[$item];
             }
         }
+
+        if (! empty($info['scope']))
+        {
+            $this->setScope($info['scope']);
+        }
+    }
+
+    /**
+     * Get relation scope.
+     *
+     * @return array
+     */
+    public function getScope()
+    {
+        return $this->_scope;
+    }
+
+    /**
+     * Set scope for a relation.
+     *
+     * Scopes are like conditions, but use query builder to construct a query.
+     * We separate them from `conditions` entry in order to handle them more 
+     * easily.
+     *
+     * Scope entry can take different forms:
+     *  * it can be a simple string (for one scope only).
+     *  * it can be an array of scopes. This array can mix both numeric entry 
+     *  and associative entry.
+     *      * former case: value is a scope name;
+     *      * latter case: key is a scope name; value is an array of arguments 
+     *      to pass to the scope function.
+     *
+     * This function standardizes the parameter to produce associative array as 
+     * described just above.
+     *
+     * @param string|array $scope The scope to set.
+     */
+    public function setScope($scope)
+    {
+        $res = array();
+
+        foreach ((array) $scope as $key => $value)
+        {
+            if (is_numeric($key))
+            {
+                list($key, $value) = array($value, array());
+            }
+
+            $res[$key] = (array) $value;
+        }
+
+        $this->_scope = $res;
     }
 
     /**

@@ -353,6 +353,29 @@ class Builder
     }
 
     /**
+     * Apply scopes to the query.
+     *
+     * @param array $scopes The scopes to apply.
+     */
+    public function applyScopes(array $scopes)
+    {
+        $root = $this->_root;
+        foreach ($scopes as $name => $args)
+        {
+            // Check if model has a scope of this name.
+            if ($root::hasScope($name))
+            {
+                return $root::applyScope($name, $this, $args);
+            }
+            else
+            {
+                throw new Exception('Unknown scope "' . $name . '" with args: '
+                    . var_export($args, true));
+            }
+        }
+    }
+
+    /**
      * Redirect method calls.
      *
      * All unknown method calls are redirected to be called on Query instance.
@@ -448,11 +471,6 @@ class Builder
     public function getConnection()
     {
         return $this->_connection = ($this->_connection ?: DB::getConnection());
-    }
-
-    protected function _applyScope($modelClass, $scope, array $args)
-    {
-        return $modelClass::applyScope($scope, $this, $args);
     }
 
     /**

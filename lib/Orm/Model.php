@@ -2203,8 +2203,15 @@ abstract class Model
         );
 
         $options = array_merge($options, $localOptions);
-        $fnFind = $relation->isToMany() ? 'findMany' : 'findOne';
-        $res = $lmClass::query()->$fnFind($options);
+        $q = $lmClass::query()->setOptions($options);
+
+        if ($scope = $relation->getScope())
+        {
+            $q->applyScopes($scope);
+        }
+
+        $get = $relation->isToMany() ? 'all' : 'one';
+        $res = $q->$get();
 
         $this->_attr($relationName, $res);
         return $res;

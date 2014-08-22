@@ -25,6 +25,14 @@ class Blog extends SimpleAR\Orm\Model
                 ['created_at', '<=', 'NOW()'],
             ],
         ],
+        'onlineArticles' => [
+            'type'  => 'has_many',
+            'model' => 'Article',
+            'scope' => [
+                'recent',
+                'status' => 2,
+            ],
+        ]
     );
 }
 
@@ -68,6 +76,11 @@ class Article extends SimpleAR\Orm\Model
         }
 
         return $qb;
+    }
+
+    public static function scope_recent($qb)
+    {
+        $qb->where('created_at', '<=', DB::expr('NOW()'));
     }
 }
 
