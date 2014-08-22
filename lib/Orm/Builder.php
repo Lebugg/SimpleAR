@@ -378,7 +378,8 @@ class Builder
     /**
      * Redirect method calls.
      *
-     * All unknown method calls are redirected to be called on Query instance.
+     * If method name matches a root model scope, scope is applied, otherwise,
+     * all unknown method calls are redirected to be called on Query instance.
      *
      * Note: The SelectBuilder will be used.
      * -----
@@ -388,6 +389,13 @@ class Builder
     public function __call($name, $args)
     {
         $q = $this->getQueryOrNewSelect();
+        $root = $this->_root;
+
+        // Check if model has a scope of this name.
+        if ($root::hasScope($name))
+        {
+            return $root::applyScope($name, $this, $args);
+        }
 
         // If 'with()' option is called, query builder has to parse eager loaded
         // models.
