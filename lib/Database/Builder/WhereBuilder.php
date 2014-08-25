@@ -782,8 +782,6 @@ class WhereBuilder extends Builder
         $currentWhere[] = $cond;
         $this->_components['where'] = $currentWhere;
 
-        //$cond = new NestedCond($conditions, $logic);
-
         return $cond;
     }
 }

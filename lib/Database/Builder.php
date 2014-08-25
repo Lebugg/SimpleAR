@@ -18,6 +18,15 @@ class Builder
     const DELETE = 'delete';
 
     /**
+     * The Builder's type.
+     *
+     * It corresponds to one of the above const values.
+     *
+     * @var string
+     */
+    public $type;
+
+    /**
      * The "root table" of the query. If set, it means that we are using a model 
      * to construct the query: i.e. User::all();
      *
@@ -59,7 +68,21 @@ class Builder
      */
     protected $_values = array();
 
+    /**
+     * The list of given options.
+     * 
+     * @var array
+     */
     protected $_options = array();
+
+    /**
+     * The list of built components.
+     *
+     * When an option is built, the resulting value(s) is stored in 
+     * $_components.
+     *
+     * @var array
+     */
     protected $_components;
 
     /**
@@ -74,8 +97,6 @@ class Builder
         // are not available.
         'root',
     );
-
-    public $type;
 
     /**
      * Run the build process.
@@ -97,6 +118,29 @@ class Builder
         return $this->_components;
     }
 
+    /**
+     * Set an option.
+     *
+     * Options are defined in sub-builders. Options are here to allow the array
+     * way of constructing query. This array way tends to be replaced by 
+     * method-chaining.
+     *
+     * Example:
+     * --------
+     *
+     * With an array:
+     * ```php
+     * MyModel::all(['conditions' => ['myAttr' => 'myVal'], 'limit' => 10]);
+     * ```
+     *
+     * With method-chaining:
+     * ```php
+     * MyModel::where('myAttr', 'myVal')->limit(10)->all();
+     * ```
+     *
+     * If an option is set twice, values will be merged with array_merge().
+     * @see http://php.net/manual/en/function.array-merge.php
+     */
     public function __call($name, $args)
     {
         if (! isset($args[1]) && isset($args[0]))
@@ -104,7 +148,10 @@ class Builder
             $args = $args[0];
         }
 
-        $this->_options[$name] = $args;
+        $this->_options[$name] = isset($this->_options[$name])
+            ? array_merge($this->_options[$name], (array) $args)
+            : $args;
+
         return $this;
     }
 
@@ -131,11 +178,31 @@ class Builder
         $this->_root = $tableName;
     }
 
+    /**
+     * Return the list of options that are waiting to be built.
+     *
+     * @var array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+    /**
+     * Get option values.
+     *
+     * @return array The values.
+     */
     public function getValues()
     {
         return $this->_values;
     }
 
+    /**
+     * Get the root table object.
+     *
+     * @return Table The root Table.
+     */
     public function getRootTable()
     {
         return $this->_table;
