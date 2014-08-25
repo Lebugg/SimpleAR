@@ -262,7 +262,7 @@ class BaseCompiler extends Compiler
         foreach ($orderBys as $item)
         {
             $tableAlias = $this->useTableAlias ? $item['tableAlias'] : '';
-            $col = $this->column($item['column'], $item['tableAlias']);
+            $col = $this->column($item['column'], $tableAlias);
             $sql[] = $col . ' ' . $item['sort'];
         }
 
@@ -280,7 +280,7 @@ class BaseCompiler extends Compiler
         foreach ($groups as $g)
         {
             $tableAlias = $this->useTableAlias ? $g['tableAlias'] : '';
-            $sql[] = $this->column($g['column'], $g['tableAlias']);
+            $sql[] = $this->column($g['column'], $tableAlias);
         }
 
         return 'GROUP BY ' . implode(',', $sql);

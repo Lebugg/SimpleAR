@@ -319,8 +319,22 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
     public function testOrderBy()
     {
+        // No JOIN, No use of table alias.
         $c = new BaseCompiler();
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = [new JoinClause('articles', '_')];
+        $components['orderBy'] = array(
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+                'sort' => 'DESC',
+            ),
+        );
+        $expected = 'SELECT * FROM `articles` ORDER BY `created_at` DESC';
+        $this->assertEquals($expected, $c->compileSelect($components));
 
+        // With JOIN.
+        $c = new BaseCompiler();
         $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
@@ -345,9 +359,22 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
     public function testGroupBy()
     {
-        $q = new Query();
+        // No JOIN.
         $c = new BaseCompiler();
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = [new JoinClause('articles', '_')];
+        $components['groupBy'] = array(
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+            ),
+        );
 
+        $expected = 'SELECT * FROM `articles` GROUP BY `created_at`';
+        $this->assertEquals($expected, $c->compileSelect($components));
+
+        // With JOIN
+        $c = new BaseCompiler();
         $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
