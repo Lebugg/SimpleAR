@@ -18,13 +18,6 @@ class Builder
     const DELETE = 'delete';
 
     /**
-     * The query to build.
-     *
-     * @var Query
-     */
-    protected $_query;
-
-    /**
      * The "root table" of the query. If set, it means that we are using a model 
      * to construct the query: i.e. User::all();
      *
