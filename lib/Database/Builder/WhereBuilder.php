@@ -206,9 +206,22 @@ class WhereBuilder extends Builder
      * @param string $attribute The extended attribute.
      * @param string $logic The logical operator.
      */
-    public function whereNotNull($attribute, $logic)
+    public function whereNotNull($attribute, $logic = 'AND')
     {
         $this->whereNull($attributes, $logic, true);
+    }
+
+    /**
+     * Add a raw where clause.
+     *
+     * @param Expression $val The raw where clause.
+     * @param string $logic The logical operator.
+     */
+    public function whereRaw(Expression $val, $logic = 'AND')
+    {
+        $type = 'Raw';
+        $cond = compact('type', 'val', 'logic');
+        $this->_addWhere($cond);
     }
 
     /**
@@ -609,7 +622,7 @@ class WhereBuilder extends Builder
             // Secondly, the whole condition can be an Expression.
             elseif ($value instanceof Expression)
             {
-                $this->where(null, null, $value, $logic);
+                $this->whereRaw($value, $logic);
             }
 
             elseif (is_array($value))

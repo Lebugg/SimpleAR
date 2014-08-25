@@ -557,6 +557,10 @@ class BaseCompiler extends Compiler
         return "$col IS NOT NULL";
     }
 
+    protected function _whereRaw(array $where)
+    {
+        return $this->parameterize($where['val']);
+    }
 
     /**
      * Compile a WHERE clause over two columns.

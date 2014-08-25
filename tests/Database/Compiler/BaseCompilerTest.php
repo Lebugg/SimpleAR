@@ -1,10 +1,11 @@
 <?php
 
-use \SimpleAR\Database\Query;
-use \SimpleAR\Database\Compiler\BaseCompiler;
-use \SimpleAR\Database\JoinClause;
+use SimpleAR\Database\Compiler\BaseCompiler;
+use SimpleAR\Database\Expression;
+use SimpleAR\Database\JoinClause;
+use SimpleAR\Database\Query;
 
-use \SimpleAR\Facades\DB;
+use SimpleAR\Facades\DB;
 
 class BaseCompilerTest extends PHPUnit_Framework_TestCase
 {
@@ -461,6 +462,23 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
+
+    public function testWhereRaw()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+
+        $w = ['type' => 'Raw', 
+            'val' => new Expression("FN(attr) = 'val'"),
+            'logic' => 'AND',
+        ];
+
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE FN(attr) = \'val\'';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 }
