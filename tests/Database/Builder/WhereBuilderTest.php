@@ -1,13 +1,14 @@
 <?php
 
-use \SimpleAR\Database\Builder\WhereBuilder;
-use \SimpleAR\Database\Builder\SelectBuilder;
-use \SimpleAR\Database\Compiler\BaseCompiler;
-use \SimpleAR\Database\Query;
-use \SimpleAR\Database\JoinClause;
+use SimpleAR\Database\Builder\WhereBuilder;
+use SimpleAR\Database\Builder\SelectBuilder;
+use SimpleAR\Database\Compiler\BaseCompiler;
+use SimpleAR\Database\Expression;
+use SimpleAR\Database\JoinClause;
+use SimpleAR\Database\Query;
 
-use \SimpleAR\Facades\Cfg;
-use \SimpleAR\Facades\DB;
+use SimpleAR\Facades\Cfg;
+use SimpleAR\Facades\DB;
 
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -290,5 +291,34 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         ]];
 
         $this->assertEquals($expected, $b->build());
+    }
+
+    public function testConditionWithExpressions()
+    {
+        $b = new WhereBuilder;
+        $expr = new Expression('FN(attr) = val');
+        $b->whereRaw($expr);
+
+        $expected = [
+            ['type' => 'Raw', 'val' => $expr, 'logic' => 'AND'],
+        ];
+
+        $components = $b->build();
+        $this->assertEquals($expected, $components['where']);
+
+        // With "conditions" option, now.
+        $b = new WhereBuilder;
+        $expr = new Expression('FN(attr) = val');
+        $expr2 = new Expression('MONTH(date) = 2000');
+        $conditions = [$expr, $expr2];
+        $b->conditions($conditions);
+
+        $expected = [
+            ['type' => 'Raw', 'val' => $expr, 'logic' => 'AND'],
+            ['type' => 'Raw', 'val' => $expr2, 'logic' => 'AND'],
+        ];
+
+        $components = $b->build();
+        $this->assertEquals($expected, $components['where']);
     }
 }
