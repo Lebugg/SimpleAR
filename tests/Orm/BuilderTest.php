@@ -410,4 +410,17 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->search(2, 10);
     }
+
+    public function testGet()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['__call', 'all']);
+        $qb->expects($this->once())->method('__call')->with('limit', [10]);
+        $qb->expects($this->once())->method('all');
+        $qb->get(10);
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['__call', 'all']);
+        $qb->expects($this->never())->method('__call');
+        $qb->expects($this->once())->method('all');
+        $qb->get();
+    }
 }

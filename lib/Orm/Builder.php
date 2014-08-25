@@ -293,6 +293,32 @@ class Builder
     }
 
     /**
+     * Return model instances.
+     *
+     * This function is merely a syntaxic sugar for `$builder->limit(<limit>)->all()`.
+     *
+     * Example:
+     * --------
+     *
+     * ```php
+     * Beer::where('type', 'ale')->get(5);
+     * ```
+     *
+     * is equivalent to:
+     * ```php
+     * Beer::where('type', 'ale')->limit(5)->all();
+     * ```
+     *
+     * @param int $limit The number of objects to return. If not given, will 
+     * return all found objects.
+     */
+    public function get($limit = null)
+    {
+        $limit && $this->limit($limit);
+        return $this->all();
+    }
+
+    /**
      * Return the number of rows matching the current query.
      *
      * @param string $attribute An optional attribute to count on.
