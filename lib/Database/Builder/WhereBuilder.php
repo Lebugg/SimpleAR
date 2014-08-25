@@ -650,7 +650,7 @@ class WhereBuilder extends Builder
             // No guess; let's complain!
             else
             {
-                throw new MalformedOptionException(var_export($key, true) . ' => ' .var_export($value, true));
+                throw new MalformedOptionException('conditions', var_export($key, true) . ' => ' .var_export($value, true));
             }
 
             // Reset logical operator to its default value.

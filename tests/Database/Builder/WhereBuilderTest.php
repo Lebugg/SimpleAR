@@ -321,4 +321,15 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
         $this->assertEquals($expected, $components['where']);
     }
+
+    /**
+     * @expectedException SimpleAR\Exception\MalformedOptionException
+     */
+    public function testMalformedConditionsOption()
+    {
+        $b = new WhereBuilder();
+        $conditions = array('countryId', '!=', 12); // Surrounding parenthesis missing.
+        $b->conditions($conditions);
+        $b->build();
+    }
 }
