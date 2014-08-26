@@ -20,7 +20,7 @@ class UpdateBuilder extends WhereBuilder
 
         if (! $this->_useModel)
         {
-            $this->_components['updateFrom'] = $root; return;
+            $this->_components['updateFrom'] = $root; return $this;
         }
 
         $joinClause = new JoinClause($this->_table->name, $this->getRootAlias());
