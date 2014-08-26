@@ -240,9 +240,9 @@ class Builder
      *
      * @return SimpleAR\Model
      */
-    public function one()
+    public function one(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         return $this->_fetchModelInstance();
     }
@@ -250,22 +250,25 @@ class Builder
     /**
      * Alias for one().
      *
+     * @param  array $columns The columns to select.
+     * @return SimpleAR\Orm\Model
+     *
      * @see one()
-     * @return Model
      */
-    public function first()
+    public function first(array $columns = array('*'))
     {
-        return $this->one();
+        return $this->one($columns);
     }
 
     /**
      * Get the last fetched model.
      *
-     * @return Model
+     * @param  array $columns The columns to select.
+     * @return SimpleAR\Orm\Model
      */
-    public function last()
+    public function last(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         return $this->_fetchModelInstance(false);
     }
@@ -273,13 +276,10 @@ class Builder
     /**
      * Return all fetch Model instances.
      *
-     * This function is just a foreach wrapper around `row()`.
-     *
-     * @see Select::row()
-     *
+     * @param  array $columns The columns to select.
      * @return array
      */
-    public function all()
+    public function all(array $columns = array('*'))
     {
         $q = $this->getQueryOrNewSelect()->run();
 
