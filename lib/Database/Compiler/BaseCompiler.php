@@ -74,7 +74,7 @@ class BaseCompiler extends Compiler
 
         $availableComponents = $this->components['insert'];
         $sql = $this->_compileComponents($availableComponents, $components);
-        $sql = 'INSERT ' . $this->_concatenate($sql);
+        $sql = 'INSERT ' . implode(' ', $sql);
 
         return $sql;
     }
@@ -91,7 +91,7 @@ class BaseCompiler extends Compiler
         }
 
         $sql = $this->_compileComponents($availableComponents, $components);
-        $sql = 'SELECT ' . $this->_concatenate($sql);
+        $sql = 'SELECT ' . implode(' ', $sql);
 
         return $sql;
     }
@@ -104,7 +104,7 @@ class BaseCompiler extends Compiler
 
         $availableComponents = $this->components['update'];
         $sql = $this->_compileComponents($availableComponents, $components);
-        $sql = 'UPDATE ' . $this->_concatenate($sql);
+        $sql = 'UPDATE ' . implode(' ', $sql);
 
         return $sql;
     }
@@ -117,7 +117,7 @@ class BaseCompiler extends Compiler
 
         $availableComponents = $this->components['delete'];
         $sql = $this->_compileComponents($availableComponents, $components);
-        $sql = 'DELETE ' . $this->_concatenate($sql);
+        $sql = 'DELETE ' . implode(' ', $sql);
 
         return $sql;
     }
@@ -216,9 +216,20 @@ class BaseCompiler extends Compiler
             $sql[] = $fn . '(' . $cols . ')' . $this->_compileAs($agg['resultAlias']);
         }
 
-        return implode(',', $sql);
+        $sql = implode(',', $sql);
+
+        // If there are simple columns to be selected too, we need to add a 
+        // separation comma.
+        if (isset($this->_componentsToCompile['columns'])) { $sql = ',' . $sql; }
+
+        return $sql;
     }
 
+    /**
+     * Compile columns to select.
+     *
+     * @param array $columns The columns to select.
+     */
     protected function _compileColumns(array $columns)
     {
         $sql = array();
@@ -356,7 +367,7 @@ class BaseCompiler extends Compiler
             $first = false;
         }
 
-        $sql = $this->_concatenate($sql);
+        $sql = implode(' ', $sql);
 
         return $sql;
     }
@@ -415,7 +426,7 @@ class BaseCompiler extends Compiler
             $sql[] = $this->_compileJoinOn($on);
         }
 
-        return $this->_concatenate($sql);
+        return implode(' ', $sql);
     }
 
     /**
