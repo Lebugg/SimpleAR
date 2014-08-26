@@ -410,4 +410,25 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->search(2, 10);
     }
+
+    public function testPreloadRelation()
+    {
+        $q1 = new Query(new SelectBuilder, new BaseCompiler, $conn);
+        $b = new SelectBuilder;
+        $q2 = $this->getMock('SimpleAR\Database\Query', ['__query']);
+        $q2->expects($this->any())->method('__call')
+            ->withConsecutive(
+                array('root', ['Article']),
+                array('where', ['id', 12])
+            );
+
+        $qb = new QueryBuilder;
+
+        $qb->expects($this->exactly(2))->method('newQuery')
+            ->will($this->onConsecutiveCalls($q1, $q2));
+
+        $qb->root('Blog');
+        $qb->preload('articles');
+        $qb->where('id', 12)->one();
+    }
 }

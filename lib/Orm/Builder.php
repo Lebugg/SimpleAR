@@ -95,18 +95,6 @@ class Builder
         return $this;
     }
 
-    public function findOne(array $options)
-    {
-        $this->setOptions($options);
-        return $this->one();
-    }
-
-    public function findMany(array $options)
-    {
-        $this->setOptions($options);
-        return $this->all();
-    }
-
     /**
      * Add a condition that check existence of related model instances for the 
      * root model.
@@ -181,6 +169,12 @@ class Builder
         return $this;
     }
 
+    /**
+     * Create a new delete query.
+     *
+     * @param  string $root The query's root.
+     * @return Query
+     */
     public function delete($root = '')
     {
         $query = $this->newQuery(new DeleteBuilder);
@@ -211,6 +205,14 @@ class Builder
         return $query->getConnection()->lastInsertId();
     }
 
+    /**
+     * Create a new insert query.
+     *
+     * @param string $table The root table name.
+     * @param array  $fields The fields targetted by the query.
+     *
+     * @return Query
+     */
     public function insertInto($table, $fields)
     {
         $query = $this->newQuery(new InsertBuilder())
@@ -220,6 +222,11 @@ class Builder
         return $query;
     }
 
+    /**
+     * Create a new update query.
+     *
+     * @return Query
+     */
     public function update($root = '')
     {
         $query = $this->newQuery(new UpdateBuilder())
@@ -228,6 +235,15 @@ class Builder
         return $query;
     }
 
+    /**
+     * Return columns of the given table.
+     *
+     * This is used by SimpleAR\Orm\Model::wakeup() in order to known model's
+     * columns if they are not defined by user.
+     *
+     * @param string $tableName The name of the table of which we want the
+     * columns.
+     */
     public function getTableColumns($tableName)
     {
         $conn = $this->getConnection();
@@ -244,7 +260,11 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->run();
 
-        return $this->_fetchModelInstance();
+        $object = $this->_fetchModelInstance();
+
+        $this->_relationsToPreload && $this->preloadRelations($object);
+
+        return $object;
     }
 
     /**
@@ -267,15 +287,14 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->run();
 
-        return $this->_fetchModelInstance(false);
+        $object = $this->_fetchModelInstance(false);
+        $this->_relationsToPreload && $this->preloadRelations($object);
+
+        return $object;
     }
 
     /**
      * Return all fetch Model instances.
-     *
-     * This function is just a foreach wrapper around `row()`.
-     *
-     * @see Select::row()
      *
      * @return array
      */
@@ -287,9 +306,42 @@ class Builder
         while ($one = $this->_fetchModelInstance())
         {
             $all[] = $one;
+            $ids[] = $one->id;
         }
 
+        $this->_relationsToPreload && $this->preloadRelations($all);
         return $all;
+    }
+
+    /**
+     * Find one model isntance.
+     *
+     * @param  array $options The options to pass to the query.
+     * @return SimpleAR\Orm\Model
+     */
+    public function findOne(array $options)
+    {
+        $this->setOptions($options);
+        return $this->one();
+    }
+
+    /**
+     * Find several model isntances.
+     *
+     * @param  array $options The options to pass to the query.
+     * @return array
+     */
+    public function findMany(array $options)
+    {
+        $this->setOptions($options);
+        return $this->all();
+    }
+
+    public function preloadRelations($objects)
+    {
+        foreach ($this->_relationsToPreload as $relation)
+        {
+        }
     }
 
     /**
@@ -376,6 +428,31 @@ class Builder
     }
 
     /**
+     * Preload a relation.
+     *
+     * Another query will be performed to fetch linked models for the given
+     * relation.
+     *
+     * @param string $relation The relation to preload.
+     */
+    public function preload($relation)
+    {
+    }
+
+    /**
+     * Eager-load a relation.
+     *
+     * Joins will be added to the query to fetch linked models for the given
+     * relation.
+     *
+     * @param string $relation The relation to preload.
+     */
+    public function eagerLoad($relation)
+    {
+        $this->with($relation);
+    }
+
+    /**
      * Redirect method calls.
      *
      * If method name matches a root model scope, scope is applied, otherwise,
@@ -384,7 +461,7 @@ class Builder
      * Note: The SelectBuilder will be used.
      * -----
      *
-     * @return Query The current query instance.
+     * @return $this
      */
     public function __call($name, $args)
     {
