@@ -20,7 +20,6 @@ class SelectBuilder extends WhereBuilder
     /**
      * Set query root.
      *
-     * @override
      */
     public function root($root)
     {
@@ -28,7 +27,6 @@ class SelectBuilder extends WhereBuilder
 
         $joinClause = new JoinClause($this->_table->name, $this->getRootAlias());
         $this->_joinClauses[$this->getRootAlias()] = $joinClause;
-        //$this->_components['from'] = array($joinClause);
 
         return $this;
     }
@@ -168,11 +166,7 @@ class SelectBuilder extends WhereBuilder
         // Handle multiple relations.
         if (is_array($relation))
         {
-            foreach ($relation as $rel)
-            {
-                $this->with($rel);
-            }
-
+            array_walk($relation, array($this, 'with'));
             return $this;
         }
 
@@ -184,7 +178,6 @@ class SelectBuilder extends WhereBuilder
         // as a parameter.
         $tableAlias = $this->relationsToTableAlias($relation);
         $this->addInvolvedTable($tableAlias, JoinClause::LEFT);
-        //$this->_components['from'][] = $this->getJoinClause($tableAlias);
 
         // 2)
         $alias = '';
@@ -236,16 +229,7 @@ class SelectBuilder extends WhereBuilder
 
     protected function _onAfterBuild()
     {
-        $c =& $this->_components;
-        $rootAlias = $this->getRootAlias();
-
-        if (empty($c['columns'][$rootAlias])
-            && empty($c['aggregates'])
-        ) {
-            $this->_selectColumns($rootAlias, array('*'));
-        }
-
-        $c['from'] = array_values($this->_joinClauses);
+        $this->_components['from'] = array_values($this->_joinClauses);
     }
 
 }

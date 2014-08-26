@@ -49,6 +49,8 @@ class Builder
      */
     protected $_eagerLoad = false;
 
+    protected $_relationsToPreload = array();
+
     /**
      * A row fetched from DB but stored here because not used yet.
      *
@@ -256,13 +258,12 @@ class Builder
      *
      * @return SimpleAR\Model
      */
-    public function one()
+    public function one(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         $object = $this->_fetchModelInstance();
-
-        $this->_relationsToPreload && $this->preloadRelations($object);
+        $this->_relationsToPreload && $this->preloadRelations(array($object));
 
         return $object;
     }
@@ -270,25 +271,28 @@ class Builder
     /**
      * Alias for one().
      *
+     * @param  array $columns The columns to select.
+     * @return SimpleAR\Orm\Model
+     *
      * @see one()
-     * @return Model
      */
-    public function first()
+    public function first(array $columns = array('*'))
     {
-        return $this->one();
+        return $this->one($columns);
     }
 
     /**
      * Get the last fetched model.
      *
-     * @return Model
+     * @param  array $columns The columns to select.
+     * @return SimpleAR\Orm\Model
      */
-    public function last()
+    public function last(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         $object = $this->_fetchModelInstance(false);
-        $this->_relationsToPreload && $this->preloadRelations($object);
+        $this->_relationsToPreload && $this->preloadRelations(array($object));
 
         return $object;
     }
@@ -296,11 +300,11 @@ class Builder
     /**
      * Return all fetch Model instances.
      *
-     * @return array
+     * @param  array $columns The columns to select.
      */
-    public function all()
+    public function all(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
@@ -337,11 +341,94 @@ class Builder
         return $this->all();
     }
 
-    public function preloadRelations($objects)
+    public function preloadRelations(array $objects)
     {
         foreach ($this->_relationsToPreload as $relation)
         {
         }
+    }
+
+    /**
+     * Loads a model defined in model relations array.
+     *
+     * @param string $name The relations array entry.
+     *
+     * @return Model|array|null
+     */
+    public function loadRelation($relationName, array $objects, array $localOptions = array())
+    {
+        $root = $this->getRoot();
+        $relation = $root::relation($relationName);
+
+        // Our object is already saved. It has an ID. We are going to
+        // fetch potential linked objects from DB.
+		$lmClass = $relation->lm->class;
+
+        if ($relation->order)
+        {
+            $options['order_by'] = $relation->order;
+        }
+
+        if ($relation->filter)
+        {
+            $options['filter']   = $relation->filter;
+        }
+
+        $lmAttributePrefix = '';
+        if ($relation instanceof Relation\ManyMany)
+        {
+			$reversed = $relation->reverse();
+			$lmClass::relation($reversed->name, $reversed);
+
+            $lmAttributePrefix = $reversed->name . '/';
+            $relation = $reversed;
+        }
+
+        $options['conditions'] = array_merge(
+            $relation->conditions,
+            array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
+            $lmClass::getGlobalConditions()
+        );
+
+        $options = array_merge($options, $localOptions);
+        $q = $lmClass::query()->setOptions($options);
+
+        if ($scope = $relation->getScope())
+        {
+            $q->applyScopes($scope);
+        }
+
+        $get = $relation->isToMany() ? 'all' : 'one';
+        $res = $q->$get();
+
+        $this->_attr($relationName, $res);
+        return $res;
+    }
+
+    /*
+     * Return model instances.
+     *
+     * This function is merely a syntaxic sugar for `$builder->limit(<limit>)->all()`.
+     *
+     * Example:
+     * --------
+     *
+     * ```php
+     * Beer::where('type', 'ale')->get(5);
+     * ```
+     *
+     * is equivalent to:
+     * ```php
+     * Beer::where('type', 'ale')->limit(5)->all();
+     * ```
+     *
+     * @param int $limit The number of objects to return. If not given, will 
+     * return all found objects.
+     */
+    public function get($limit = null)
+    {
+        $limit && $this->limit($limit);
+        return $this->all();
     }
 
     /**
@@ -507,6 +594,16 @@ class Builder
     }
 
     /**
+     * Set the query.
+     *
+     * @param Query $q The query.
+     */
+    public function setQuery(Query $q)
+    {
+        $this->_query = $q;
+    }
+
+    /**
      * Return a new Query instance.
      *
      * @param Builder $b The builder to use.
@@ -519,23 +616,28 @@ class Builder
         $c = $c ?: $this->getCompiler();
         $conn = $conn ?: $this->getConnection();
 
-        $q = new Query($b, $c, $conn);
-
-        return $q;
+        return new Query($b, $c, $conn);
     }
 
     /**
      * Return the current query instance or a new Select query if there is no
      * query yet.
      *
+     * @see getQuery()
      * @see newQuery()
      */
     public function getQueryOrNewSelect()
     {
-        $this->_query = $this->getQuery() ?: $this->newQuery(new SelectBuilder);
-        $this->_root && $this->_query->root($this->_root);
+        $q = $this->getQuery();
 
-        return $this->_query;
+        if (! $q)
+        {
+            $q = $this->newQuery(new SelectBuilder);
+            ($root = $this->getRoot()) && $q->root($root);
+            $this->setQuery($q);
+        }
+
+        return $q;
     }
 
     /**
@@ -556,6 +658,21 @@ class Builder
     public function getConnection()
     {
         return $this->_connection = ($this->_connection ?: DB::getConnection());
+    }
+
+    /**
+     * Set the Connection.
+     *
+     * @param Connection $conn The connection.
+     */
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
+    }
+
+    protected function _applyScope($modelClass, $scope, array $args)
+    {
+        return $modelClass::applyScope($scope, $this, $args);
     }
 
     /**
@@ -654,18 +771,13 @@ class Builder
      */
     protected function _getNextRow($next = true)
     {
-        $res = false;
-
         // It saves superfluous call to Connection instance.
-        if (! $this->_noRowToFetch)
-        {
-            $res = $this->_query->getConnection()->getNextRow($next);
+        if ($this->_noRowToFetch) { return false; }
 
-            if ($res === false)
-            {
-                $this->_noRowToFetch = true;
-            }
-        }
+        $res = $this->getQuery()->getConnection()->getNextRow($next);
+
+        // Do not try to call Connection next time, it's useless.
+        if ($res === false) { $this->_noRowToFetch = true; }
 
         return $res;
     }

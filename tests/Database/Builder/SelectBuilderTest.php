@@ -26,9 +26,10 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Blog');
         $b->aggregate('COUNT', 'articles/id', '#articles');
         $b->aggregate('AVG', 'articles/author/age', 'mediumAge');
+        $b->select(['*']);
         $components = $b->build();
 
-        $expected = array(
+        $aggs = array(
             array(
                 'columns' => array('id'),
                 'function' => 'COUNT',
@@ -42,7 +43,11 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
                 'resultAlias' => 'mediumAge',
             ),
         );
-        $this->assertEquals($expected, $components['aggregates']);
+        $cols = [
+            '_' => ['columns' => array_flip(Blog::table()->getColumns()), 'resultAlias' => ''],
+        ];
+        $this->assertEquals($aggs, $components['aggregates']);
+        $this->assertEquals($cols, $components['columns']);
     }
 
     public function testCount()
@@ -153,6 +158,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b = new SelectBuilder();
         $b->root('Blog');
         $b->with('articles');
+        $b->select(array('*'));
 
         $components = $b->build();
 
@@ -172,7 +178,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         // Deeper "with"
         $b = new SelectBuilder();
         $b->root('Blog');
-        $b->with('articles/author');
+        $b->with('articles/author')->select(['*']);
 
         $components = $b->build();
 
@@ -187,7 +193,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
     {
         $b = new SelectBuilder();
         $b->root('Article');
-        $b->with(['blog', 'author']);
+        $b->with(['blog', 'author'])->select(['*']);
 
         $components = $b->build();
 
@@ -212,7 +218,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
     {
         $b = new SelectBuilder;
         $b->root('Article');
-        $b->with('readers');
+        $b->with('readers')->select(['*']);
 
         $components = $b->build();
 

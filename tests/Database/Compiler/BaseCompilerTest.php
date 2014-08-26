@@ -293,6 +293,20 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 
+    public function testCompileColumnsAndAggregates()
+    {
+        $c = new BaseCompiler();
+
+        $agg[] = array('columns' => array('views'), 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views');
+
+        $components['from'] = [new JoinClause('articles')];
+        $components['aggregates'] = $agg;
+        $components['columns'] = ['' => ['columns' => ['*']]];
+
+        $expected = 'SELECT * ,SUM(`articles`.`views`) AS `#views` FROM `articles`';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
+
     public function testCompileLimit()
     {
         $c = new BaseCompiler();
