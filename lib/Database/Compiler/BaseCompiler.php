@@ -200,7 +200,9 @@ class BaseCompiler extends Compiler
      * aggregate to build. Each has these entries:
      *  
      *  * "function": The aggregate function;
-     *  * "columns": The columns to apply the function on.
+     *  * "columns": The columns to apply the function on;
+     *  * "tableAlias": The table alias;
+     *  * "resultAlias": The aggregate column's alias.
      */
     protected function _compileAggregates(array $aggregates)
     {

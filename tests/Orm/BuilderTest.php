@@ -341,7 +341,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $qb->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
 
-        $qb->root('Blog')->has('articles', '>', 3);
+        $qb->root('Blog')->has('articles', '>', 3)->select(['*']);
 
         //$sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
         $sql = 'SELECT (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) AS `#articles`,`_`.`name` AS `name`,`_`.`description` AS `description`,`_`.`created_at` AS `created_at`,`_`.`id` AS `id` FROM `blogs` `_` WHERE `#articles` > ?';

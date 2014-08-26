@@ -73,7 +73,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
                     'title' => array('Das Kapital', 'Essays'),
                     'OR', 'authorId' => 1,
                 ),
-            ));
+            ))
+            ->select(['*']);
 
         $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`id` AS `id` FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
         $val = array(12, 1, 'Das Kapital', 'Essays', 1);
