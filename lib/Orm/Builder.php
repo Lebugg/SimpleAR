@@ -375,6 +375,16 @@ class Builder
     }
 
     /**
+     * Set the query.
+     *
+     * @param Query $q The query.
+     */
+    public function setQuery(Query $q)
+    {
+        $this->_query = $q;
+    }
+
+    /**
      * Return a new Query instance.
      *
      * @param Builder $b The builder to use.
@@ -387,23 +397,28 @@ class Builder
         $c = $c ?: $this->getCompiler();
         $conn = $conn ?: $this->getConnection();
 
-        $q = new Query($b, $c, $conn);
-
-        return $q;
+        return new Query($b, $c, $conn);
     }
 
     /**
      * Return the current query instance or a new Select query if there is no
      * query yet.
      *
+     * @see getQuery()
      * @see newQuery()
      */
     public function getQueryOrNewSelect()
     {
-        $this->_query = $this->getQuery() ?: $this->newQuery(new SelectBuilder);
-        $this->_root && $this->_query->root($this->_root);
+        $q = $this->getQuery();
 
-        return $this->_query;
+        if (! $q)
+        {
+            $q = $this->newQuery(new SelectBuilder);
+            ($root = $this->getRoot()) && $q->root($root);
+            $this->setQuery($q);
+        }
+
+        return $q;
     }
 
     /**
@@ -424,6 +439,16 @@ class Builder
     public function getConnection()
     {
         return $this->_connection = ($this->_connection ?: DB::getConnection());
+    }
+
+    /**
+     * Set the Connection.
+     *
+     * @param Connection $conn The connection.
+     */
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
     }
 
     protected function _applyScope($modelClass, $scope, array $args)
@@ -527,18 +552,13 @@ class Builder
      */
     protected function _getNextRow($next = true)
     {
-        $res = false;
-
         // It saves superfluous call to Connection instance.
-        if (! $this->_noRowToFetch)
-        {
-            $res = $this->_query->getConnection()->getNextRow($next);
+        if ($this->_noRowToFetch) { return false; }
 
-            if ($res === false)
-            {
-                $this->_noRowToFetch = true;
-            }
-        }
+        $res = $this->getQuery()->getConnection()->getNextRow($next);
+
+        // Do not try to call Connection next time, it's useless.
+        if ($res === false) { $this->_noRowToFetch = true; }
 
         return $res;
     }
