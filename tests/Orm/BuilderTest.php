@@ -105,7 +105,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $row = array('title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5);
         $conn->expects($this->once())->method('getNextRow')->will($this->returnValue($row));
-        $q->method('__call')->withConsecutive(
+        $q->expects($this->exactly(2))->method('__call')->withConsecutive(
             ['root', ['Article']],
             ['select', [['*']]]
         )->will($this->returnValue($q));
@@ -148,8 +148,10 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     public function testAll()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'run'], [null, null, $conn]);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
+        $qb->setQuery($q);
 
         $return[] = array('id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2);
         $return[] = array('id' => 11, 'title' => 'My Book', 'authorId' => 1, 'blogId' => 4);
@@ -158,6 +160,11 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $conn->expects($this->exactly(4))->method('getNextRow')->with(true)->will($this->onConsecutiveCalls(
             $return[0], $return[1], $return[2], false
         ));
+        $q->expects($this->exactly(2))->method('__call')->withConsecutive(
+            ['root', ['Article']],
+            ['select', [['*']]]
+        )->will($this->returnValue($q));
+        $q->expects($this->once())->method('run');
 
         $articles = $qb->root('Article')->all();
         foreach ($articles as $i => $article)

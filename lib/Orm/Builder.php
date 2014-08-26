@@ -281,7 +281,7 @@ class Builder
      */
     public function all(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->run();
+        $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
