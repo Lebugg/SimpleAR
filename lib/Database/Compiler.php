@@ -33,6 +33,13 @@ abstract class Compiler
     );
 
     /**
+     * The components to compile.
+     *
+     * @var array
+     */
+    protected $_componentsToCompile = array();
+
+    /**
      * Compile an Query.
      *
      * @param Query $query The query to compile.
@@ -65,6 +72,8 @@ abstract class Compiler
 
     protected function _compileComponents(array $availableComponents, array $actualComponents)
     {
+        $this->_componentsToCompile = $actualComponents;
+
         $sql = array();
         $val = array();
 
@@ -111,11 +120,6 @@ abstract class Compiler
         }
 
         return $val;
-    }
-
-    protected function _concatenate(array $components)
-    {
-        return implode(' ', $components);
     }
 
     /**
