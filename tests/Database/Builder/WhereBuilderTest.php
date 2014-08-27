@@ -332,4 +332,23 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->conditions($conditions);
         $b->build();
     }
+
+    public function testWhereTuple()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->whereTuple(['authorId', 'blogId'], [[1,2], [1,3], [2,2]]);
+
+        $expected = [
+            [
+                'type' => 'Tuple', 'table' => '_',
+                'cols' => ['author_id', 'blog_id'],
+                'val' => [[1,2], [1,3], [2,2]],
+                'logic' => 'AND', 'not' => false
+            ],
+        ];
+
+        $components = $b->build();
+        $this->assertEquals($expected, $components['where']);
+    }
 }

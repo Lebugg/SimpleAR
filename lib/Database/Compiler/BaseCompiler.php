@@ -670,9 +670,19 @@ class BaseCompiler extends Compiler
             : $this->parameterize($where['val']);
 
         $alias = $this->useTableAlias ? $where['table'] : '';
-        $col   = $this->columnize($where['cols'], $alias);
+        $col   = $this->columnize($where['cols'], $alias, '', true);
 
         return "$col NOT IN $sql";
+    }
+
+    protected function _whereTuple(array $where)
+    {
+        return $this->_whereIn($where);
+    }
+
+    protected function _whereNotTuple(array $where)
+    {
+        return $this->_whereNotIn($where);
     }
 
     protected function _whereSub(array $where)

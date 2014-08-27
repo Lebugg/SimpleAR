@@ -238,4 +238,13 @@ class SelectBuilder extends WhereBuilder
         $this->_components['from'] = array_values($this->_joinClauses);
     }
 
+    protected function _buildOrder_by($orderBy)
+    {
+        $this->orderBy($orderBy);
+    }
+
+    protected function _buildGroupBy($groupBy)
+    {
+        $this->groupBy($groupBy);
+    }
 }

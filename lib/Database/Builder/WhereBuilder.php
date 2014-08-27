@@ -224,6 +224,23 @@ class WhereBuilder extends Builder
         $this->_addWhere($cond);
     }
 
+    public function whereTuple(array $attributes, $val, $logic = 'AND', $not = false)
+    {
+        $cols  = array();
+        foreach ($attributes as $attribute)
+        {
+            // For now, last $table will be used. But in future, tuple
+            // conditions will be able to use different tables for different
+            // attributes.
+            list($table, $tmpCols) = $this->_processExtendedAttribute($attribute);
+            $cols = array_merge($cols, $tmpCols);
+        }
+
+        $type = 'Tuple';
+        $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
+        $this->_addWhere($cond, $val);
+    }
+
     /**
      * Get the separation character of relation names in options.
      *
