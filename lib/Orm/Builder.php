@@ -302,11 +302,14 @@ class Builder
     /**
      * Return all fetch Model instances.
      *
-     * @param  array $columns The columns to select.
+     * @param array $columns The columns to select.
+     * @param Query $q A query to set options on. If not given, builder will use 
+     * getQueryOrNewSelect() to get one.
      */
-    public function all(array $columns = array('*'))
+    public function all(array $columns = array('*'), Query $q = null)
     {
-        $q = $this->getQueryOrNewSelect()->select($columns)->run();
+        $q = $q ?: $this->getQueryOrNewSelect();
+        $q->select($columns)->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
@@ -354,7 +357,7 @@ class Builder
         }
     }
 
-    public function loadRelation(Relation $relation, array $objects)
+    public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
     {
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
@@ -387,21 +390,25 @@ class Builder
 
         $options['conditions'] = array_merge(
             $relation->conditions,
-            $lmClass::getGlobalConditions()
+            $lmClass::getGlobalConditions(),
+            $localOptions
         );
-        $options['orderBy'] = $relation->getOrderBy();
+        if ($orderBy = $relation->getOrderBy()) {
+            $options['orderBy'] = $orderBy;
+        }
 
         $q = $this->newQuery(new SelectBuilder);
+        $q->root($lmClass);
+        $this->setQuery($q); // We'll need it for possible scopes.
         $this->setOptions($options, $q);
         $q->whereTuple($lmAttributes, $cmValues);
-        //array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
 
         if ($scope = $relation->getScope())
         {
-            $q->applyScopes($scope);
+            $this->applyScopes($scope);
         }
 
-        $lmInstances = $q->all($relation->filter ?: array('*'));
+        $lmInstances = $this->all($relation->filter ?: array('*'), $q);
 
         return $lmInstances;
     }

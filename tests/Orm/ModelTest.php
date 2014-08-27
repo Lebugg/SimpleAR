@@ -314,38 +314,6 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($relation->reverse(), $reversed);
     }
 
-    public function testLoadRelationWithConditions()
-    {
-        $articles = array(
-            new Article,
-            new Article,
-        );
-
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('setOptions', 'all'));
-        $opts = [
-            'conditions' => [
-                ['created_at', '<=', 'NOW()'],
-                'blogId' => 12
-            ],
-        ];
-        $qb->expects($this->once())
-            ->method('setOptions')
-            ->with($opts)
-            ->will($this->returnValue($qb));
-        $qb->expects($this->once())
-            ->method('all')
-            ->will($this->returnValue($articles));
-        Article::setQueryBuilder($qb);
-
-        $blog = new Blog();
-        $blog->populate(array('id' => 12)); // In order to be concrete.
-        $blog->load('recentArticles');
-
-        $attributes = $blog->attributes();
-        $this->assertArrayHasKey('recentArticles', $attributes);
-        $this->assertEquals($articles, $attributes['recentArticles']);
-    }
-
     public function testLoadRelationWithScope()
     {
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['applyScopes', 'all']);
@@ -359,7 +327,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         Article::setQueryBuilder($qb);
 
         $blog = new Blog();
-        $blog->populate(array('id' => 12)); // In order to be concrete.
+        $blog->populate(['id' => 12]); // In order to be concrete.
         $blog->load('onlineArticles');
     }
 

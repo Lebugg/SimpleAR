@@ -440,14 +440,14 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $articles[] = new Article(['id' => 4, 'blogId' => 3]);
         $articles[] = new Article(['id' => 5, 'blogId' => 2]);
 
-        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'orderBy', 'whereTuple', 'all']);
+        $q = $this->getMock('SimpleAR\Database\Query', ['root', '__call', 'whereTuple']);
+        $q->expects($this->once())->method('root')->with('Article');
         $q->expects($this->once())->method('__call')->with('conditions', [[]]);
-        $q->expects($this->once())->method('orderBy')->with([]);
         $q->expects($this->once())->method('whereTuple')->with(['blogId'], [[1],[2],[3]]);
-        $q->expects($this->once())->method('all')->with(['*'])->will($this->returnValue($articles));
 
-        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery']);
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery', 'all']);
         $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
+        $qb->expects($this->once())->method('all')->with(['*'], $q)->will($this->returnValue($articles));
         $qb->root('Blog');
         $this->assertEquals($articles, $qb->loadRelation($relation, $blogs));
     }

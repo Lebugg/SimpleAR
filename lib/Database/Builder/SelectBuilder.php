@@ -241,9 +241,4 @@ class SelectBuilder extends WhereBuilder
     {
         $this->groupBy($groupBy);
     }
-
-    protected function _buildFilter($filter)
-    {
-         $this->select($filter);
-    }
 }
