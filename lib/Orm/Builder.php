@@ -398,8 +398,8 @@ class Builder
         }
 
         $q = $this->newQuery(new SelectBuilder);
-        $q->root($lmClass);
         $this->setQuery($q); // We'll need it for possible scopes.
+        $this->root($lmClass);
         $this->setOptions($options, $q);
         $q->whereTuple($lmAttributes, $cmValues);
 
