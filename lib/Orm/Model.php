@@ -893,16 +893,14 @@ abstract class Model
 
     }
 
+    /**
+     * Get the ID of current object.
+     *
+     * @return array
+     */
     public function id()
     {
-        $id = array();
-
-        foreach (self::table()->getPrimaryKey() as $attribute)
-        {
-            $id[] = $this->$attribute;
-        }
-
-        return $id;
+        return $this->get(self::table()->getPrimaryKey());
     }
 
     /**
@@ -1161,6 +1159,23 @@ abstract class Model
         }
 
         return $this;
+    }
+
+    /**
+     * Get several attributes values.
+     *
+     * @param  array $attributes The attributes of which retrieve the values.
+     * @return array
+     */
+    public function get(array $attributes)
+    {
+        $res = array();
+        foreach ($attributes as $attr)
+        {
+            $res[] = $this->$attr;
+        }
+
+        return $res;
     }
 
     /**
