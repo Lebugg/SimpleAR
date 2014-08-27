@@ -40,7 +40,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testSelectBasic()
     {
         $compiler = new BaseCompiler();
-
         $components['from'] = array(new JoinClause('articles'));
 
         // "*" symbol for all columns.
@@ -61,6 +60,21 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $cols = array('a' => array('columns' => array('id', 'author_id' => 'authorId', 'title')));
         $components['columns'] = $cols;
         $expected = 'SELECT `id`,`author_id` AS `authorId`,`title` FROM `articles`';
+        $result   = $compiler->compileSelect($components);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testSelectBasicWithColumnsAndColumn()
+    {
+        $compiler = new BaseCompiler();
+        $components['from'] = array(new JoinClause('articles'));
+        $expr = new Expression('AVG(created_at) AS average');
+        $components['columns'] = [
+            '_' => ['columns' => ['id', 'author_id'], 'resultAlias' => ''],
+            ['column' => $expr, 'alias' => ''],
+        ];
+
+        $expected = 'SELECT `id`,`author_id`,AVG(created_at) AS average FROM `articles`';
         $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }

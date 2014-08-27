@@ -1,8 +1,9 @@
 <?php
 
-use \SimpleAR\Database\Builder\SelectBuilder;
-use \SimpleAR\Database\Compiler\BaseCompiler;
-use \SimpleAR\Database\JoinClause;
+use SimpleAR\Database\Builder\SelectBuilder;
+use SimpleAR\Database\Compiler\BaseCompiler;
+use SimpleAR\Database\Expression;
+use SimpleAR\Database\JoinClause;
 
 class SelectBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -243,12 +244,14 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b = new SelectBuilder;
         $b->root('Article');
         $b->select(['authorId', 'title', 'created_at']);
+        $expr = new Expression('AVG(created_at) AS average');
+        $b->select($expr);
 
         $components = $b->build();
-        $columns = array(
+        $columns = [
             '_' => ['columns' => ['id', 'author_id', 'title', 'created_at'], 'resultAlias' => ''],
-        );
-
+            ['column' => $expr, 'alias' => ''],
+        ];
         $this->assertEquals($columns, $components['columns']);
     }
 }

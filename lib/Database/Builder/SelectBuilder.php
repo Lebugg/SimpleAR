@@ -37,11 +37,17 @@ class SelectBuilder extends WhereBuilder
      * Note: Table primary key will always be added to the selection.
      * -----
      *
-     * @param array $attributes An attribute array.
+     * @param array|Expression $attributes An attribute array or an Expression 
+     * object.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
-    public function select(array $attributes, $expand = true)
+    public function select($attributes, $expand = true)
     {
+        if ($attributes instanceof Expression)
+        {
+            $this->_selectColumn($attributes, ''); return;
+        }
+
         if ($attributes !== array('*'))
         {
             // We add primary key if not present.
