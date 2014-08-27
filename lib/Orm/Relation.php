@@ -126,7 +126,7 @@ abstract class Relation
      *  ```
      * @var string|array
      */
-	public $order;
+	public $order = array();
 
     /**
      * Defines a filter to apply to linked model instances.
@@ -421,5 +421,35 @@ abstract class Relation
         }
 
         return $res;
+    }
+
+    /**
+     * Return current model attributes involved in relation.
+     *
+     * @return array
+     */
+    public function getCmAttributes()
+    {
+        return (array) $this->cm->attribute;
+    }
+
+    /**
+     * Return linked model attributes involved in relation.
+     *
+     * @return array
+     */
+    public function getLmAttributes()
+    {
+        return (array) $this->lm->attribute;
+    }
+
+    /**
+     * Return the order by option of this relation.
+     *
+     * @return array|null
+     */
+    public function getOrderBy()
+    {
+        return $this->order;
     }
 }

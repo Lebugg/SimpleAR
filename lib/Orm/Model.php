@@ -2144,7 +2144,7 @@ abstract class Model
      */
     private function _setDefaultValues()
     {
-        $this->_hydrate(static::$_defaultValues);
+        static::$_defaultValues && $this->set(static::$_defaultValues);
     }
 
     /**

@@ -427,4 +427,53 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->once())->method('all');
         $qb->get();
     }
+
+    public function testLoadRelation()
+    {
+        $relation = Blog::relation('articles');
+        $blogs[] = new Blog(['id' => 1]);
+        $blogs[] = new Blog(['id' => 2]);
+        $blogs[] = new Blog(['id' => 3]);
+        $articles[] = new Article(['id' => 1, 'blogId' => 1]);
+        $articles[] = new Article(['id' => 2, 'blogId' => 2]);
+        $articles[] = new Article(['id' => 3, 'blogId' => 3]);
+        $articles[] = new Article(['id' => 4, 'blogId' => 3]);
+        $articles[] = new Article(['id' => 5, 'blogId' => 2]);
+
+        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'orderBy', 'whereTuple', 'all']);
+        $q->expects($this->once())->method('__call')->with('conditions', [[]]);
+        $q->expects($this->once())->method('orderBy')->with([]);
+        $q->expects($this->once())->method('whereTuple')->with(['blogId'], [[1],[2],[3]]);
+        $q->expects($this->once())->method('all')->with(['*'])->will($this->returnValue($articles));
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery']);
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
+        $qb->root('Blog');
+        $this->assertEquals($articles, $qb->loadRelation($relation, $blogs));
+    }
+
+    public function testPreloadRelations()
+    {
+        $relation = Blog::relation('articles');
+        $blogs[] = $b1 = new Blog(['id' => 1]);
+        $blogs[] = $b2 = new Blog(['id' => 2]);
+        $blogs[] = $b3 = new Blog(['id' => 3]);
+        $articles[] = $a1 = new Article(['id' => 1, 'blogId' => 1]);
+        $articles[] = $a2 = new Article(['id' => 2, 'blogId' => 2]);
+        $articles[] = $a3 = new Article(['id' => 3, 'blogId' => 3]);
+        $articles[] = $a4 = new Article(['id' => 4, 'blogId' => 3]);
+        $articles[] = $a5 = new Article(['id' => 5, 'blogId' => 2]);
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['loadRelation']);
+        $qb->expects($this->once())->method('loadRelation')
+            ->with($relation, $blogs)
+            ->will($this->returnValue($articles));
+
+        $qb->root('Blog');
+        $qb->preload('articles');
+        $qb->preloadRelations($blogs);
+        $this->assertEquals([$a1], $b1->articles);
+        $this->assertEquals([$a2, $a5], $b2->articles);
+        $this->assertEquals([$a3, $a4], $b3->articles);
+    }
 }

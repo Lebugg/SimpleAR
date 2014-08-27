@@ -522,4 +522,27 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $expected = 'SELECT * FROM `articles` WHERE FN(attr) = \'val\'';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
+
+    public function testWhereTuple()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+
+        $w = ['type' => 'Tuple', 'table' => '',
+            'cols' => ['author_id', 'blog_id'],
+            'val' => [[1,2], [1,3], [2,2]],
+            'logic' => 'AND'
+        ];
+        //$where = new InCond('', 'author_id', array(1, 2));
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+
+        $w['not'] = true;
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) NOT IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
 }

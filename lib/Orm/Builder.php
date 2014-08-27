@@ -157,11 +157,13 @@ class Builder
      * Set several options.
      *
      * @param array $options The options to set.
+     * @param Query $q A query to set options on. If not given, builder will use 
+     * getQueryOrNewSelect() to get one.
      * @return $this
      */
-    public function setOptions(array $options)
+    public function setOptions(array $options, Query $q = null)
     {
-        $q = $this->getQueryOrNewSelect();
+        $q = $q ?: $this->getQueryOrNewSelect();
 
         foreach ($options as $name => $value)
         {
@@ -341,38 +343,22 @@ class Builder
         return $this->all();
     }
 
-    public function preloadRelations(array $objects)
+    public function preloadRelations(array $cmInstances)
     {
-        foreach ($this->_relationsToPreload as $relation)
+        $root = $this->getRoot();
+        foreach ($this->_relationsToPreload as $relationName)
         {
+            $relation = $root::relation($relationName);
+            $lmInstances = $this->loadRelation($relation, $cmInstances);
+            $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
         }
     }
 
-    /**
-     * Loads a model defined in model relations array.
-     *
-     * @param string $name The relations array entry.
-     *
-     * @return Model|array|null
-     */
-    public function loadRelation($relationName, array $objects, array $localOptions = array())
+    public function loadRelation(Relation $relation, array $objects)
     {
-        $root = $this->getRoot();
-        $relation = $root::relation($relationName);
-
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
 		$lmClass = $relation->lm->class;
-
-        if ($relation->order)
-        {
-            $options['order_by'] = $relation->order;
-        }
-
-        if ($relation->filter)
-        {
-            $options['filter']   = $relation->filter;
-        }
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
@@ -384,25 +370,40 @@ class Builder
             $relation = $reversed;
         }
 
+        // Get CM join attributes values for each given objects.
+        $cmValues = array();
+        foreach ($objects as $o)
+        {
+            $cmValues[] = $o->get($relation->getCmAttributes());
+        }
+
+        $lmAttributes = $relation->getLmAttributes();
+        if ($lmAttributePrefix) {
+            foreach ($lmAttributes as &$attr)
+            {
+                $attr = $lmAttributePrefix . $attr;
+            }
+        }
+
         $options['conditions'] = array_merge(
             $relation->conditions,
-            array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
             $lmClass::getGlobalConditions()
         );
+        $options['orderBy'] = $relation->getOrderBy();
 
-        $options = array_merge($options, $localOptions);
-        $q = $lmClass::query()->setOptions($options);
+        $q = $this->newQuery(new SelectBuilder);
+        $this->setOptions($options, $q);
+        $q->whereTuple($lmAttributes, $cmValues);
+        //array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
 
         if ($scope = $relation->getScope())
         {
             $q->applyScopes($scope);
         }
 
-        $get = $relation->isToMany() ? 'all' : 'one';
-        $res = $q->$get();
+        $lmInstances = $q->all($relation->filter ?: array('*'));
 
-        $this->_attr($relationName, $res);
-        return $res;
+        return $lmInstances;
     }
 
     /*
@@ -524,6 +525,7 @@ class Builder
      */
     public function preload($relation)
     {
+        $this->_relationsToPreload[] = $relation;
     }
 
     /**
@@ -845,6 +847,34 @@ class Builder
 
         $i++;
         return $res;
+    }
+
+    protected function _associateLinkedModels(array $cmInstances, array $lmInstances, Relation $relation)
+    {
+        $cmAttr = $relation->getCmAttributes();
+        $lmAttr = $relation->getLmAttributes();
+        $rName  = $relation->name;
+
+        foreach ($cmInstances as $cm)
+        {
+            foreach ($lmInstances as $lm)
+            {
+                if ($cm->get($cmAttr) === $lm->get($lmAttr))
+                {
+                    if ($relation->isToMany())
+                    {
+                        $tmp = $cm->$rName;
+                        $tmp[] = $lm;
+                        $cm->$rName = $tmp;
+                    }
+                    else
+                    {
+                        $cm->$rName = $lm;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
 }
