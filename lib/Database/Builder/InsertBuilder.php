@@ -6,12 +6,6 @@ class InsertBuilder extends Builder
 {
     public $type = Builder::INSERT;
 
-    public $availableOptions = array(
-        'root',
-        'fields',
-        'values',
-    );
-
     public function useRootModel($class)
     {
         parent::useRootModel($class);
@@ -24,7 +18,15 @@ class InsertBuilder extends Builder
         $this->_components['into'] = $table;
     }
 
-    protected function _buildFields(array $fields)
+    /**
+     * Set the attributes in which to insert values.
+     *
+     * Component: "insertColumns"
+     * ----------
+     *
+     * @param array $fields The attributes.
+     */
+    public function fields(array $fields)
     {
         // $fields can be either attributes or columns. It depends on $useModel 
         // value.
@@ -36,9 +38,18 @@ class InsertBuilder extends Builder
         $this->_components['insertColumns'] = $fields;
     }
 
-    protected function _buildValues(array $values)
+    /**
+     * Set values to insert.
+     *
+     * Component: "values"
+     * ----------
+     *
+     * @param array $values The values to insert.
+     */
+    public function values(array $values)
     {
         $this->_components['values'] = $values;
         $this->addValueToQuery($values, 'values');
     }
+
 }

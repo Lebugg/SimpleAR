@@ -10,13 +10,6 @@ class SelectBuilder extends WhereBuilder
 {
     public $type = Builder::SELECT;
 
-    public $availableOptions = array(
-        'root',
-        'conditions',
-        'limit',
-        'offset',
-    );
-
     /**
      * Set query root.
      *
@@ -242,7 +235,7 @@ class SelectBuilder extends WhereBuilder
         $this->orderBy($orderBy);
     }
 
-    protected function _buildGroupBy($groupBy)
+    protected function _buildGroup_by($groupBy)
     {
         $this->groupBy($groupBy);
     }

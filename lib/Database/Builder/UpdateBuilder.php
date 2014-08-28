@@ -8,12 +8,6 @@ class UpdateBuilder extends WhereBuilder
 {
     public $type = Builder::UPDATE;
 
-    public $availableOptions = array(
-        'root',
-        'set',
-        'conditions',
-    );
-
     public function root($root)
     {
         parent::root($root);

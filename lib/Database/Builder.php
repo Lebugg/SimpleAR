@@ -86,19 +86,6 @@ class Builder
     protected $_components;
 
     /**
-     * Available options for this builder.
-     *
-     * @var array
-     */
-    public $availableOptions = array(
-        // "root" option can only be a string.
-        // It can be: either a valid model class name, or a any other string, 
-        // interpreted as the root table name. In the second case, many features 
-        // are not available.
-        'root',
-    );
-
-    /**
      * Run the build process.
      *
      * @param array $options Options to build. If given, it will erase 
@@ -318,33 +305,61 @@ class Builder
         }
     }
 
+    /**
+     * Build all unbuilt options.
+     *
+     * There is unbuilt options when the option-array syntax is used to build 
+     * queries.
+     *
+     * Example:
+     * --------
+     *
+     * When constructing a query as follows:
+     * ```php
+     * MyModel::one(array('limit' => 10, 'offset' => 50));
+     * ```
+     * "limit" and "offset" options will still be not built.
+     *
+     *
+     * Algorithm:
+     * ----------
+     *
+     * For each option name, this function will try to delegate the option 
+     * handling:
+     *
+     * <option>: The option name.
+     *
+     *  1) If a function named "_build<Option>" exists, call it. (Not the 
+     *  capital "O");
+     *  2) Else, if a function named "<optionName>" exists, call it;
+     *  3) Else, ignore the option.
+     *
+     * @param array $options The options to build.
+     */
     protected function _buildOptions(array $options)
     {
-        foreach ($this->availableOptions as $option)
+        foreach ($options as $name => $value)
         {
-            if (isset($options[$option]))
+            $fn = '_build' . ucfirst($name);
+            if (method_exists($this, $fn))
             {
-                $fn = '_build' . ucfirst($option);
-                $this->$fn($options[$option]);
+                $this->$fn($value);
+            }
+            elseif (method_exists($this, $name))
+            {
+                $this->$name($value);
             }
         }
     }
 
     /**
-     * Set the "root" of the query.
+     * Set the query root.
      *
-     * It can be:
-     *  
-     *  * A valid model class name.
-     *  * A table name.
+     * Component: "root"
+     * ----------
      *
-     * @param  string $root The query root.
+     * @param string $root A valid model class name, or a DB table name.
      */
-    protected function _buildRoot($root)
-    {
-        $this->root($root);
-    }
-
     public function root($root)
     {
         if (\SimpleAR\is_valid_model_class($root))

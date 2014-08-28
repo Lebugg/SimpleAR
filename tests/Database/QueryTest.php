@@ -85,20 +85,19 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
     public function testInsertQuery()
     {
-        global $sar;
-        $conn = $this->getMock('\SimpleAR\Database\Connection', array(), array($sar->cfg));
+        $conn = $this->getMock('\SimpleAR\Database\Connection', ['query']);
 
         $query = new Query(new InsertBuilder(), new BaseCompiler(), $conn);
         $query->root('Article')
-            ->fields('blogId', 'title', 'authorId')
-            ->values(array(
-                array(1, 'A', 12),
-                array(1, 'B', 15),
-                array(3, 'C', 16),
-            ));
+            ->fields(['blogId', 'title', 'authorId'])
+            ->values([
+                [1, 'A', 12],
+                [1, 'B', 15],
+                [3, 'C', 16],
+            ]);
 
         $sql = 'INSERT INTO `articles` (`blog_id`,`title`,`author_id`) VALUES(?,?,?),(?,?,?),(?,?,?)';
-        $val = array(1, 'A', 12, 1, 'B', 15, 3, 'C', 16);
+        $val = [1, 'A', 12, 1, 'B', 15, 3, 'C', 16];
         $conn->expects($this->once())->method('query')->with($sql, $val);
 
         $query->run();

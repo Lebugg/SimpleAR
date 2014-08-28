@@ -7,11 +7,6 @@ class DeleteBuilder extends WhereBuilder
 {
     public $type = Builder::DELETE;
 
-    public $availableOptions = array(
-        'root',
-        'conditions',
-    );
-
     public function root($root)
     {
         parent::root($root);

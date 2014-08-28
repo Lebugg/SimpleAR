@@ -14,11 +14,6 @@ use \SimpleAR\Orm\Table;
 
 class WhereBuilder extends Builder
 {
-    public $availableOptions = array(
-        'root',
-        'conditions',
-    );
-
     /**
      *
      * @var array of Table
