@@ -106,7 +106,8 @@ class User extends SimpleAR\Orm\Model
 
     protected static $_columns = array(
         'firstName',
-        'lastName',
+        'lastName' => 'name',
+        'name' => 'name',
     );
 }
 

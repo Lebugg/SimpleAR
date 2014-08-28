@@ -53,7 +53,8 @@ class SelectBuilder extends WhereBuilder
             // We add primary key if not present.
             $table = $this->getRootTable();
             $attributes = array_unique(array_merge($table->getPrimaryKey(), $attributes));
-            $attributes = $this->convertAttributesToColumns($attributes, $table);
+            $columns = $this->convertAttributesToColumns($attributes, $table);
+            $attributes = array_combine($attributes, $columns);
         }
 
         $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
@@ -208,8 +209,6 @@ class SelectBuilder extends WhereBuilder
         if ($expand && $columns === array('*'))
         {
             $columns = $this->getInvolvedTable($tableAlias)->getColumns();
-            // Compiler wants it the other way [<column> => <attribute>].
-            $columns = array_flip($columns);
         }
 
         $resultAlias = $tableAlias === $this->getRootAlias() ? '' : $tableAlias;

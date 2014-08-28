@@ -64,12 +64,12 @@ class CompilerTest extends PHPUnit_Framework_TestCase
     {
         $c = $this->compiler;
 
-        $this->assertEquals('`author_id`', $c->columnize(array('author_id')));
-        $this->assertEquals('`a`,`b`,`c`', $c->columnize(array('a', 'b', 'c')));
-        $this->assertEquals('`t1`.`col1`', $c->columnize(array('col1'), 't1'));
-        $this->assertEquals('`t1`.`col1`,`t1`.`col2`', $c->columnize(array('col1', 'col2'), 't1'));
-        $this->assertEquals('`t1`.`col1` AS `_.attr1`', $c->columnize(array('col1' => 'attr1'), 't1', '_'));
-        $this->assertEquals('`t1`.`col1` AS `_.attr1`,`t1`.`col2` AS `_.attr2`', $c->columnize(array('col1' => 'attr1', 'col2' => 'attr2'), 't1', '_'));
+        $this->assertEquals('`author_id`', $c->columnize(['author_id']));
+        $this->assertEquals('`a`,`b`,`c`', $c->columnize(['a', 'b', 'c']));
+        $this->assertEquals('`t1`.`col1`', $c->columnize(['col1'], 't1'));
+        $this->assertEquals('`t1`.`col1`,`t1`.`col2`', $c->columnize(['col1', 'col2'], 't1'));
+        $this->assertEquals('`t1`.`col1` AS `_.attr1`', $c->columnize(['attr1' => 'col1'], 't1', '_'));
+        $this->assertEquals('`t1`.`col1` AS `_.attr1`,`t1`.`col2` AS `_.attr2`', $c->columnize(['attr1' => 'col1', 'attr2' => 'col2'], 't1', '_'));
     }
 
 }

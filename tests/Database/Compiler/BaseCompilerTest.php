@@ -57,7 +57,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
 
         // Several columns.
-        $cols = array('a' => array('columns' => array('id', 'author_id' => 'authorId', 'title')));
+        $cols = ['a' => ['columns' => ['id', 'authorId' => 'author_id', 'title']]];
         $components['columns'] = $cols;
         $expected = 'SELECT `id`,`author_id` AS `authorId`,`title` FROM `articles`';
         $result   = $compiler->compileSelect($components);
@@ -113,10 +113,10 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = array(new JoinClause('articles', 'a'));
 
         // Several columns.
-        $cols = array('a' => array(
-            'columns' => array('id', 'author_id' => 'authorId', 'title'),
+        $cols = ['a' => [
+            'columns' => ['id', 'authorId' => 'author_id', 'title'],
             'resultAlias' => '_'
-        ));
+        ]];
         $components['columns'] = $cols;
         $expected = 'SELECT `id` AS `_.id`,`author_id` AS `_.authorId`,`title` AS `_.title` FROM `articles`';
         $result   = $compiler->compileSelect($components);
@@ -434,7 +434,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $columns = array(
             '_' => ['columns' => ['*'], 'resultAlias' => ''],
             'articles' => ['columns' => ['*'], 'resultAlias' => ''],
-            'articles.author' => ['columns' => ['first_name' => 'firstName', 'last_name' => 'lastName'], 'resultAlias' => 'articles.author'],
+            'articles.author' => ['columns' => ['firstName' => 'first_name', 'lastName' => 'last_name'], 'resultAlias' => 'articles.author'],
         );
 
         $components['from'] = $jc;

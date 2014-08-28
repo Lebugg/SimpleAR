@@ -210,8 +210,8 @@ abstract class Compiler
      *
      * @param array $columns The column array. It can take three forms:
      * - an indexed array where values are column names;
-     * - an associative array where keys are column names and values are
-     * attribute names (for column renaming in result. Select queries only);
+     * - an associative array where keys are attributes names and values are
+     * columns names (for column renaming in result. Select queries only);
      * - a mix of both. Values of numeric entries will be taken as column names.
      *
      * @param array  $columns
@@ -226,21 +226,21 @@ abstract class Compiler
         $resultPrefix = $resultPrefix ? $resultPrefix . '.' : '';
 
         $cols = array();
-        foreach($columns as $column => $attribute)
+        foreach($columns as $attribute => $column)
         {
             $left = $right = '';
 
-            if (is_string($column))
+            if (is_string($attribute))
             {
                 $left  = $tablePrefix . $this->wrap($column);
                 $right = $this->wrap($resultPrefix . $attribute);
             }
             else
             {
-                $left = $tablePrefix . $this->wrap($attribute);
+                $left = $tablePrefix . $this->wrap($column);
                 if ($resultPrefix)
                 {
-                    $right = $this->wrap($resultPrefix . $attribute);
+                    $right = $this->wrap($resultPrefix . $column);
                 }
             }
 
