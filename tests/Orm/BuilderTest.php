@@ -400,7 +400,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $b = $this->getMock('SimpleAR\Database\Builder', ['build']);
         $b->expects($this->exactly(2))->method('build');
 
-        $c = $this->getMock('SimpleAR\Database\Compiler', ['compile']);
+        $c = $this->getMockForAbstractClass('\SimpleAR\Database\Compiler', [], '', false, false,false,['compile']);
         $c->expects($this->exactly(2))->method('compile')->will($this->returnValue(['SQL', []]));
 
         $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow', 'getColumn']);

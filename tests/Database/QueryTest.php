@@ -21,7 +21,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
     public function testRunProcess()
     {
         $b = $this->getMock('\SimpleAR\Database\Builder', ['build', 'getValues']);
-        $c = $this->getMock('\SimpleAR\Database\Compiler', ['compile']);
+        $c = $this->getMockForAbstractClass('\SimpleAR\Database\Compiler', [], '', false, false,false,['compile']);
         $conn  = $this->getMock('\SimpleAR\Database\Connection', ['query']);
 
         $q = new Query($b, $c, $conn);

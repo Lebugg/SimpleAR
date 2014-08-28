@@ -241,7 +241,7 @@ class BaseCompiler extends Compiler
                 $tableAlias  = $this->useTableAlias ? $tableAlias : '';
                 $resultAlias = isset($data['resultAlias']) ? $data['resultAlias'] : '';
 
-                $sql[] = $this->columnize($columns, $tableAlias, $resultAlias);
+                $sql[] = $this->project($columns, $tableAlias, $resultAlias);
             }
 
             else
@@ -251,6 +251,55 @@ class BaseCompiler extends Compiler
         }
 
         return implode(',', $sql);
+    }
+
+    /**
+     * Compile a projection.
+     *
+     * It may be necessary to add alias to columns:
+     * - we want to prefix columns with table aliases;
+     * - we want to rename columns in query result (only for Select queries).
+     *
+     * @param array $columns The column array. It can take three forms:
+     * - an indexed array where values are column names;
+     * - an associative array where keys are attributes names and values are
+     * columns names (for column renaming in result. Select queries only);
+     * - a mix of both. Values of numeric entries will be taken as column names.
+     *
+     * @param array  $columns
+     * @param string $tablePrefix  The table alias to prefix the column with.
+     * @param string $resultPrefix The result alias to rename the column into.
+     *
+     * @return string SQL
+     */
+    public function project(array $columns, $tablePrefix = '', $resultPrefix = '')
+    {
+        $tablePrefix  = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
+        $resultPrefix = $resultPrefix ? $resultPrefix . '.' : '';
+
+        $cols = array();
+        foreach($columns as $attribute => $column)
+        {
+            $left = $right = '';
+
+            if (is_string($attribute))
+            {
+                $left  = $tablePrefix . $this->wrap($column);
+                $right = $this->wrap($resultPrefix . $attribute);
+            }
+            else
+            {
+                $left = $tablePrefix . $this->wrap($column);
+                if ($resultPrefix)
+                {
+                    $right = $this->wrap($resultPrefix . $column);
+                }
+            }
+
+            $cols[] = $right ? $left . ' AS ' . $right : $left;
+        }
+
+        return implode(',', $cols);
     }
 
     /**
@@ -654,7 +703,12 @@ class BaseCompiler extends Compiler
             : $this->parameterize($where['val']);
 
         $alias = $this->useTableAlias ? $where['table'] : '';
-        $col   = $this->columnize($where['cols'], $alias, '', true);
+        $col   = $this->columnize($where['cols'], $alias, '');
+
+        if (isset($where['cols'][1]))
+        {
+            $col = '(' . $col . ')';
+        }
 
         return "$col IN $sql";
     }
@@ -670,7 +724,12 @@ class BaseCompiler extends Compiler
             : $this->parameterize($where['val']);
 
         $alias = $this->useTableAlias ? $where['table'] : '';
-        $col   = $this->columnize($where['cols'], $alias, '', true);
+        $col   = $this->columnize($where['cols'], $alias, '');
+
+        if (isset($where['cols'][1]))
+        {
+            $col = '(' . $col . ')';
+        }
 
         return "$col NOT IN $sql";
     }

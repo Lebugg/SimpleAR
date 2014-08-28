@@ -55,6 +55,11 @@ abstract class Compiler
         return array($sql, $val);
     }
 
+    public abstract function compileInsert(array $components);
+    public abstract function compileSelect(array $components);
+    public abstract function compileUpdate(array $components);
+    public abstract function compileDelete(array $components);
+
     /**
      * Compile components.
      *
@@ -201,54 +206,18 @@ abstract class Compiler
         return $tablePrefix . $this->wrap($column) . $alias;
     }
 
-    /**
-     * Apply aliases to columns.
-     *
-     * It may be necessary to add alias to columns:
-     * - we want to prefix columns with table aliases;
-     * - we want to rename columns in query result (only for Select queries).
-     *
-     * @param array $columns The column array. It can take three forms:
-     * - an indexed array where values are column names;
-     * - an associative array where keys are attributes names and values are
-     * columns names (for column renaming in result. Select queries only);
-     * - a mix of both. Values of numeric entries will be taken as column names.
-     *
-     * @param array  $columns
-     * @param string $tablePrefix  The table alias to prefix the column with.
-     * @param string $resultPrefix The result alias to rename the column into.
-     *
-     * @return string SQL
-     */
-    public function columnize(array $columns, $tablePrefix = '', $resultPrefix = '', $parenthesis = false)
+    public function columnize(array $columns, $tablePrefix = '')
     {
-        $tablePrefix = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
-        $resultPrefix = $resultPrefix ? $resultPrefix . '.' : '';
+        $tablePrefix = $tablePrefix && is_string($tablePrefix) ? $this->wrap($tablePrefix) . '.' : $tablePrefix;
 
         $cols = array();
-        foreach($columns as $attribute => $column)
+        foreach($columns as $i => $column)
         {
-            $left = $right = '';
-
-            if (is_string($attribute))
-            {
-                $left  = $tablePrefix . $this->wrap($column);
-                $right = $this->wrap($resultPrefix . $attribute);
-            }
-            else
-            {
-                $left = $tablePrefix . $this->wrap($column);
-                if ($resultPrefix)
-                {
-                    $right = $this->wrap($resultPrefix . $column);
-                }
-            }
-
-            $cols[] = $right ? $left . ' AS ' . $right : $left;
+            $prefix = is_array($tablePrefix) ? $this->wrap($tablePrefix[$i]) . '.' : $tablePrefix;
+            $cols[] = $prefix . $this->wrap($column);
         }
 
-        $sql = implode(',', $cols);
-        return $parenthesis && isset($cols[1]) ? '(' . $sql . ')' : $sql;
+        return implode(',', $cols);
     }
 
     /**
