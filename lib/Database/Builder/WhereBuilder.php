@@ -87,7 +87,7 @@ class WhereBuilder extends Builder
         {
             // Let's dereference $val too if it contains a single element. It'll 
             // avoid a IN condition.
-            if (! isset($val[1])) { $val = $val[0]; }
+            if (! isset($val[1]) && isset($val[0])) { $val = $val[0]; }
 
             elseif (in_array($op, array('=', '!=')))
             {
