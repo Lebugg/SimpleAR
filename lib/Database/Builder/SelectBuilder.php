@@ -119,10 +119,13 @@ class SelectBuilder extends WhereBuilder
 
     public function groupBy($attribute)
     {
-        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
-        $column = $columns[0];
+        foreach ((array) $attribute as $attr)
+        {
+            list($tableAlias, $columns) = $this->_processExtendedAttribute($attr);
+            $column = $columns[0];
 
-        $this->_components['groupBy'][] = compact('tableAlias', 'column');
+            $this->_components['groupBy'][] = compact('tableAlias', 'column');
+        }
     }
 
     /**

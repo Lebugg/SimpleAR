@@ -152,6 +152,13 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
 
         $this->assertEquals($expected, $components['groupBy']);
+
+        // With array
+        $b = new SelectBuilder();
+        $b->root('Article');
+        $b->groupBy(['author/lastName', 'created_at']);
+        $components = $b->build();
+        $this->assertEquals($expected, $components['groupBy']);
     }
 
     public function testWithOption()
