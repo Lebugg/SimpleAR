@@ -14,11 +14,6 @@ use \SimpleAR\Orm\Table;
 
 class WhereBuilder extends Builder
 {
-    public $availableOptions = array(
-        'root',
-        'conditions',
-    );
-
     /**
      *
      * @var array of Table
@@ -70,42 +65,48 @@ class WhereBuilder extends Builder
             list($val, $op) = array($op, '=');
         }
 
-        // Default operator is '='.
-        if ($op === null)
-        {
-            $op = '=';
-        }
+        if ($op === null) { $op = '='; }
 
-        // Allow user to set a bunch of attributes in one line.
+        // If condition is made over several attributes, `whereTuple()` is what
+        // we need.
+        // However, if $attribute contain only one attribute, we simply
+        // dereference it.
         if (is_array($attribute))
         {
-            foreach ($attribute as $i => $attr)
+            if (isset($attribute[1]))
             {
-                $this->where($attr, $op, $val[$i], $logic);
+                $this->whereTuple($attribute, $val, $logic, $not); return;
             }
+
+            $attribute = $attribute[0];
         }
-        else
+
+
+        // Maybe user wants a IN condition?
+        if (is_array($val))
         {
-            // Maybe user wants a IN condition?
-            if (is_array($val) && in_array($op, array('=', '!=')))
+            // Let's dereference $val too if it contains a single element. It'll 
+            // avoid a IN condition.
+            if (! isset($val[1]) && isset($val[0])) { $val = $val[0]; }
+
+            elseif (in_array($op, array('=', '!=')))
             {
-                $this->whereIn($attribute, $val, $logic, $op === '!=');
-                return;
+                $this->whereIn($attribute, $val, $logic, $op === '!='); return;
             }
-
-            // User wants a WHERE NULL condition.
-            if ($val === null)
-            {
-                $this->whereNull($attribute, $logic, $op === '!=');
-                return;
-            }
-
-            list($table, $cols) = $this->_processExtendedAttribute($attribute);
-
-            $type = 'Basic';
-            $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
-            $this->_addWhere($cond, $val);
         }
+
+        // User wants a WHERE NULL condition.
+        if ($val === null)
+        {
+            $this->whereNull($attribute, $logic, $op === '!=');
+            return;
+        }
+
+        list($table, $cols) = $this->_processExtendedAttribute($attribute);
+
+        $type = 'Basic';
+        $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
+        $this->_addWhere($cond, $val);
     }
 
     /**
@@ -222,6 +223,25 @@ class WhereBuilder extends Builder
         $type = 'Raw';
         $cond = compact('type', 'val', 'logic');
         $this->_addWhere($cond);
+    }
+
+    public function whereTuple(array $attributes, $val, $logic = 'AND', $not = false)
+    {
+        $cols  = array();
+        $table = array();
+        foreach ($attributes as $attribute)
+        {
+            // For now, last $table will be used. But in future, tuple
+            // conditions will be able to use different tables for different
+            // attributes.
+            list($tmpTable, $tmpCols) = $this->_processExtendedAttribute($attribute);
+            $table[] = $tmpTable;
+            $cols = array_merge($cols, $tmpCols);
+        }
+
+        $type = 'Tuple';
+        $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
+        $this->_addWhere($cond, $val);
     }
 
     /**
@@ -650,7 +670,7 @@ class WhereBuilder extends Builder
             // No guess; let's complain!
             else
             {
-                throw new MalformedOptionException(var_export($key, true) . ' => ' .var_export($value, true));
+                throw new MalformedOptionException('conditions', var_export($key, true) . ' => ' .var_export($value, true));
             }
 
             // Reset logical operator to its default value.
@@ -794,8 +814,6 @@ class WhereBuilder extends Builder
 
         $currentWhere[] = $cond;
         $this->_components['where'] = $currentWhere;
-
-        //$cond = new NestedCond($conditions, $logic);
 
         return $cond;
     }

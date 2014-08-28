@@ -271,13 +271,14 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testLoadRelation()
     {
+        // With a *-to-many relation.
         $articles = array(
             new Article,
             new Article,
         );
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
-        $qb->expects($this->once())->method('findMany')->will($this->returnValue($articles));
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($articles));
         Blog::setQueryBuilder($qb);
 
         $blog = new Blog();
@@ -287,6 +288,24 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $attributes = $blog->attributes();
         $this->assertArrayHasKey('articles', $attributes);
         $this->assertEquals($articles, $attributes['articles']);
+
+        // With a *-to-one relation.
+        // QueryBuilder::loadRelation always return an array.
+        $authors = array(
+            new Author,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('loadRelation'));
+        $qb->expects($this->once())->method('loadRelation')->will($this->returnValue($authors));
+        Article::setQueryBuilder($qb);
+
+        $article = new Article();
+        $article->populate(array('id' => 12)); // In order to be concrete.
+        $article->load('author');
+
+        $attributes = $article->attributes();
+        $this->assertArrayHasKey('author', $attributes);
+        $this->assertEquals($authors[0], $attributes['author']);
     }
 
     public function testLoadRelationManyMany()
@@ -296,8 +315,8 @@ class ModelTest extends PHPUnit_Framework_TestCase
             new User,
         );
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('findMany'));
-        $qb->expects($this->once())->method('findMany')->will($this->returnValue($users));
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
+        $qb->expects($this->once())->method('all')->will($this->returnValue($users));
         Article::setQueryBuilder($qb);
 
         $article = new Article();
@@ -312,6 +331,23 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $reversed = User::relation('readers_r');
         $this->assertInstanceOf('SimpleAR\Orm\Relation\ManyMany', $reversed);
         $this->assertEquals($relation->reverse(), $reversed);
+    }
+
+    public function testLoadRelationWithScope()
+    {
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['applyScopes', 'all']);
+        $scope = [
+            'status' => [2],
+            'recent' => [],
+        ];
+        $qb->expects($this->once())
+            ->method('applyScopes')
+            ->with($scope);
+        Article::setQueryBuilder($qb);
+
+        $blog = new Blog();
+        $blog->populate(['id' => 12]); // In order to be concrete.
+        $blog->load('onlineArticles');
     }
 
     public function testAll()

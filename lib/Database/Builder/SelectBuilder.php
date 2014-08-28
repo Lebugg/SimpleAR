@@ -10,13 +10,6 @@ class SelectBuilder extends WhereBuilder
 {
     public $type = Builder::SELECT;
 
-    public $availableOptions = array(
-        'root',
-        'conditions',
-        'limit',
-        'offset',
-    );
-
     /**
      * Set query root.
      *
@@ -37,17 +30,24 @@ class SelectBuilder extends WhereBuilder
      * Note: Table primary key will always be added to the selection.
      * -----
      *
-     * @param array $attributes An attribute array.
+     * @param array|Expression $attributes An attribute array or an Expression 
+     * object.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
-    public function select(array $attributes, $expand = true)
+    public function select($attributes, $expand = true)
     {
+        if ($attributes instanceof Expression)
+        {
+            $this->_selectColumn($attributes, ''); return;
+        }
+
         if ($attributes !== array('*'))
         {
             // We add primary key if not present.
             $table = $this->getRootTable();
             $attributes = array_unique(array_merge($table->getPrimaryKey(), $attributes));
-            $attributes = $this->convertAttributesToColumns($attributes, $table);
+            $columns = $this->convertAttributesToColumns($attributes, $table);
+            $attributes = array_combine($attributes, $columns);
         }
 
         $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
@@ -93,6 +93,24 @@ class SelectBuilder extends WhereBuilder
 
     public function orderBy($attribute, $sort = 'ASC')
     {
+        if (is_array($attribute))
+        {
+            foreach ($attribute as $attr => $sort) {
+                if (is_string($attr))
+                {
+                    $this->orderBy($attr, $sort);
+                }
+                else
+                {
+                    // User did not specify the sort order. $sort contains the 
+                    // attribute.
+                    $this->orderBy($sort);
+                }
+            }
+
+            return;
+        }
+
         list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
         $column = $columns[0];
 
@@ -101,12 +119,21 @@ class SelectBuilder extends WhereBuilder
 
     public function groupBy($attribute)
     {
-        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
-        $column = $columns[0];
+        foreach ((array) $attribute as $attr)
+        {
+            list($tableAlias, $columns) = $this->_processExtendedAttribute($attr);
+            $column = $columns[0];
 
-        $this->_components['groupBy'][] = compact('tableAlias', 'column');
+            $this->_components['groupBy'][] = compact('tableAlias', 'column');
+        }
     }
 
+    /**
+     * Set the limit number of objects to return.
+     *
+     * @param int $limit The limit
+     * @param int $offset The offset (Optional).
+     */
     public function limit($limit, $offset = null)
     {
         $this->_components['limit'] = (int) $limit;
@@ -178,8 +205,6 @@ class SelectBuilder extends WhereBuilder
         if ($expand && $columns === array('*'))
         {
             $columns = $this->getInvolvedTable($tableAlias)->getColumns();
-            // Compiler wants it the other way [<column> => <attribute>].
-            $columns = array_flip($columns);
         }
 
         $resultAlias = $tableAlias === $this->getRootAlias() ? '' : $tableAlias;
@@ -208,4 +233,13 @@ class SelectBuilder extends WhereBuilder
         $this->_components['from'] = array_values($this->_joinClauses);
     }
 
+    protected function _buildOrder_by($orderBy)
+    {
+        $this->orderBy($orderBy);
+    }
+
+    protected function _buildGroup_by($groupBy)
+    {
+        $this->groupBy($groupBy);
+    }
 }

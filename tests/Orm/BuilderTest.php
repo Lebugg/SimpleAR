@@ -1,6 +1,8 @@
 <?php
 
 use SimpleAR\Orm\Builder as QueryBuilder;
+use SimpleAR\Database\Builder\SelectBuilder;
+use SimpleAR\Database\Compiler\BaseCompiler;
 
 class BuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -391,5 +393,86 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->expects($this->once())->method('setOptions')->with($options);
         $qb->expects($this->once())->method('all');
         $qb->findMany($options);
+    }
+
+    public function testSearch()
+    {
+        $b = $this->getMock('SimpleAR\Database\Builder', ['build']);
+        $b->expects($this->exactly(2))->method('build');
+
+        $c = $this->getMockForAbstractClass('\SimpleAR\Database\Compiler', [], '', false, false,false,['compile']);
+        $c->expects($this->exactly(2))->method('compile')->will($this->returnValue(['SQL', []]));
+
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow', 'getColumn']);
+        $conn->expects($this->exactly(2))->method('query');
+
+        $q = $this->getMock('SimpleAR\Database\Query', ['getConnection'], [$b, $c, $conn]);
+        $q->expects($this->any())->method('getConnection')->will($this->returnValue($conn));
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['getQuery']);
+        $qb->expects($this->any())->method('getQuery')->will($this->returnValue($q));
+
+        $qb->search(2, 10);
+    }
+
+    public function testGet()
+    {
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['__call', 'all']);
+        $qb->expects($this->once())->method('__call')->with('limit', [10]);
+        $qb->expects($this->once())->method('all');
+        $qb->get(10);
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['__call', 'all']);
+        $qb->expects($this->never())->method('__call');
+        $qb->expects($this->once())->method('all');
+        $qb->get();
+    }
+
+    public function testLoadRelation()
+    {
+        $relation = Blog::relation('articles');
+        $blogs[] = new Blog(['id' => 1]);
+        $blogs[] = new Blog(['id' => 2]);
+        $blogs[] = new Blog(['id' => 3]);
+        $articles[] = new Article(['id' => 1, 'blogId' => 1]);
+        $articles[] = new Article(['id' => 2, 'blogId' => 2]);
+        $articles[] = new Article(['id' => 3, 'blogId' => 3]);
+        $articles[] = new Article(['id' => 4, 'blogId' => 3]);
+        $articles[] = new Article(['id' => 5, 'blogId' => 2]);
+
+        $q = $this->getMock('SimpleAR\Database\Query', ['root', '__call', 'whereTuple']);
+        $q->expects($this->once())->method('__call')->with('conditions', [[]]);
+        $q->expects($this->once())->method('whereTuple')->with(['blogId'], [[1],[2],[3]]);
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['root', 'newQuery', 'all']);
+        $qb->expects($this->once())->method('root')->with('Article');
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
+        $qb->expects($this->once())->method('all')->with(['*'], $q)->will($this->returnValue($articles));
+        $this->assertEquals($articles, $qb->loadRelation($relation, $blogs));
+    }
+
+    public function testPreloadRelations()
+    {
+        $relation = Blog::relation('articles');
+        $blogs[] = $b1 = new Blog(['id' => 1]);
+        $blogs[] = $b2 = new Blog(['id' => 2]);
+        $blogs[] = $b3 = new Blog(['id' => 3]);
+        $articles[] = $a1 = new Article(['id' => 1, 'blogId' => 1]);
+        $articles[] = $a2 = new Article(['id' => 2, 'blogId' => 2]);
+        $articles[] = $a3 = new Article(['id' => 3, 'blogId' => 3]);
+        $articles[] = $a4 = new Article(['id' => 4, 'blogId' => 3]);
+        $articles[] = $a5 = new Article(['id' => 5, 'blogId' => 2]);
+
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['loadRelation']);
+        $qb->expects($this->once())->method('loadRelation')
+            ->with($relation, $blogs)
+            ->will($this->returnValue($articles));
+
+        $qb->root('Blog');
+        $qb->preload('articles');
+        $qb->preloadRelations($blogs);
+        $this->assertEquals([$a1], $b1->articles);
+        $this->assertEquals([$a2, $a5], $b2->articles);
+        $this->assertEquals([$a3, $a4], $b3->articles);
     }
 }

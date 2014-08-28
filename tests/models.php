@@ -18,6 +18,21 @@ class Blog extends SimpleAR\Orm\Model
             'type'  => 'has_many',
             'model' => 'Article',
         ),
+        'recentArticles' => [
+            'type'  => 'has_many',
+            'model' => 'Article',
+            'conditions' => [
+                ['created_at', '<=', 'NOW()'],
+            ],
+        ],
+        'onlineArticles' => [
+            'type'  => 'has_many',
+            'model' => 'Article',
+            'scope' => [
+                'recent',
+                'status' => 2,
+            ],
+        ]
     );
 }
 
@@ -62,6 +77,11 @@ class Article extends SimpleAR\Orm\Model
 
         return $qb;
     }
+
+    public static function scope_recent($qb)
+    {
+        $qb->where('created_at', '<=', DB::expr('NOW()'));
+    }
 }
 
 class Author extends SimpleAR\Orm\Model
@@ -86,7 +106,8 @@ class User extends SimpleAR\Orm\Model
 
     protected static $_columns = array(
         'firstName',
-        'lastName',
+        'lastName' => 'name',
+        'name' => 'name',
     );
 }
 

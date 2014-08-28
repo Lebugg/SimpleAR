@@ -893,16 +893,14 @@ abstract class Model
 
     }
 
+    /**
+     * Get the ID of current object.
+     *
+     * @return array
+     */
     public function id()
     {
-        $id = array();
-
-        foreach (self::table()->getPrimaryKey() as $attribute)
-        {
-            $id[] = $this->$attribute;
-        }
-
-        return $id;
+        return $this->get(self::table()->getPrimaryKey());
     }
 
     /**
@@ -1161,6 +1159,23 @@ abstract class Model
         }
 
         return $this;
+    }
+
+    /**
+     * Get several attributes values.
+     *
+     * @param  array $attributes The attributes of which retrieve the values.
+     * @return array
+     */
+    public function get(array $attributes)
+    {
+        $res = array();
+        foreach ($attributes as $attr)
+        {
+            $res[] = $this->$attr;
+        }
+
+        return $res;
     }
 
     /**
@@ -2020,135 +2035,6 @@ abstract class Model
     }
 
     /**
-     * Loads the model instance from the database.
-     *
-     * @param array $row It is the array directly given by the
-     * \PDOStatement:fetch() function. Every field contained in this  parameter
-     * correspond to attribute name, not to column's.
-     *
-     * @return $this
-     *
-     * @see SimpleAR\Model::_onBeforeLoad()
-     * @see SimpleAR\Model::_onAfterLoad()
-     */
-    // private function _load(array $row)
-    // {
-    //     // Need to prepare?
-    //     $this->_onBeforeLoad();
-    //
-    //     $table = static::table();
-    //
-    //     if ($table->isSimplePrimaryKey)
-    //     {
-    //         $this->_id = $row['id'];
-    //         unset($row['id']);
-    //     }
-    //     else
-    //     {
-    //         $this->_id = array();
-    //
-    //         foreach ($table->primaryKey as $attribute)
-    //         {
-    //             $this->_id[] = $row[$attribute];
-    //             //unset($row[$key]);
-    //         }
-    //     }
-    //
-    //     // Eager load.
-    //     if (isset($row['_WITH_']))
-    //     {
-    //         foreach ($row['_WITH_'] as $relation => $value)
-    //         {
-    //             $relation = static::relation($relation);
-    //             $class  = $relation->lm->class;
-    //
-    //             if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
-    //             {
-    //                 // $value is an array of attributes. The attributes of the linked model
-    //                 // instance.
-    //                 // But it *might* be an array of arrays of attributes. For instance, when
-    //                 // relation is defined as a Has One relation but actually is a Has Many in
-    //                 // database. In that case, SQL query would return several rows for this relation
-    //                 // and we would result with $value to be an array of arrays.
-    //
-    //                 // Array of arrays ==> array of attribute.
-    //                 if (isset($value[0])) { $value = $value[0]; }
-    //
-    //                 $o = new $class();
-    //                 $o->_load($value);
-    //
-    //                 if ($o->id !== null)
-    //                 {
-    //                     $this->_attr($relation->name, $o);
-    //                 }
-    //             }
-    //             else
-    //             {
-    //                 // $value is an array of arrays. These subarrays contain attributes of linked
-    //                 // models.
-    //                 // But $value can directly be an associative array (if SQL query returned only
-    //                 // one row). We have to check this, then.
-    //
-    //                 $a = array();
-    //
-    //                 if ($value)
-    //                 {
-    //                     // $value is an attribute array.
-    //                     // Array of attributes ==> array of arrays.
-    //                     if (! isset($value[0])) { $value = array($value); }
-    //
-    //                     foreach ($value as $attributes)
-    //                     {
-    //                         $o = new $class();
-    //                         $o->_load($attributes);
-    //
-    //                         if ($o->id !== null)
-    //                         {
-    //                             $a[] = $o;
-    //                         }
-    //                     }
-    //                 }
-    //
-    //                 $this->_attr($relation->name, $a);
-    //             }
-    //         }
-    //
-    //         unset($row['_WITH_']);
-    //     }
-    //
-    //     $this->_hydrate($row, false);
-    //
-    //     if (Cfg::get('convertDateToObject'))
-    //     {
-    //         foreach ($this->_attributes as $key => &$value)
-    //         {
-    //             // We test that is a string because setters might have been
-    //             // called from within _hydrate() so we cannot be sure of what
-    //             // $value is.
-    //             //
-    //             // strpos call <=> $key.startsWith('date')
-    //             if (is_string($value) && strpos($key, 'date') === 0)
-    //             {
-    //                 // Do not process "NULL-like" values (0000-00-00 or 0000-00-00 00:00). It would
-    //                 // cause strange values.
-    //                 // @see http://stackoverflow.com/questions/10450644/how-do-you-explain-the-result-for-a-new-datetime0000-00-00-000000
-    //                 $value =  $value === '0000-00-00'
-    //                         || $value === '0000-00-00 00:00:00'
-    //                         || $value === null
-    //                         ? null
-    //                         : new DateTime($value)
-    //                         ;
-    //             }
-    //         }
-    //     }
-    //
-    //     $this->_onAfterLoad();
-    //     $this->_dirty = false;
-    //
-    //     return $this;
-    // }
-
-    /**
      * Loads a model defined in model relations array.
      *
      * @param string $name The relations array entry.
@@ -2164,44 +2050,65 @@ abstract class Model
         //
         // However, it is ok for BelongsTo since it does not rest on current
         // instance's ID.
-        if (! $this->isConcrete() && ! $relation instanceof Relation\BelongsTo)
+        $value = array();
+        if ($this->isConcrete() || $relation instanceof Relation\BelongsTo)
         {
-            $value = $relation->isToMany() ? array() : null;
-            $this->_attr($relationName, $value);
-
-            return $value;
+            $value = static::query()->loadRelation($relation, array($this), $localOptions);
         }
 
-        // Our object is already saved. It has an ID. We are going to
-        // fetch potential linked objects from DB.
-		$lmClass = $relation->lm->class;
-
-        $options['order_by'] = $relation->order;
-        $options['filter']   = $relation->filter;
-
-        $lmAttributePrefix = '';
-        if ($relation instanceof Relation\ManyMany)
-        {
-			$reversed = $relation->reverse();
-			$lmClass::relation($reversed->name, $reversed);
-
-            $lmAttributePrefix = $reversed->name . '/';
-            $relation = $reversed;
+        // We don't want an array if relation is *-to-one.
+        if (! $relation->isToMany()) {
+            // $value is *always* an array.
+            $value = isset($value[0]) ? $value[0] : null;
         }
 
-        $options['conditions'] = array_merge(
-            $relation->conditions,
-            array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
-            $lmClass::getGlobalConditions()
-        );
+        $this->_attr($relationName, $value);
+        return $value;
 
-        $options = array_merge($options, $localOptions);
-        $fnFind = $relation->isToMany() ? 'findMany' : 'findOne';
-        $res = $lmClass::query()->$fnFind($options);
-
-        $this->_attr($relationName, $res);
-        return $res;
-
+        // // Our object is already saved. It has an ID. We are going to
+        // // fetch potential linked objects from DB.
+		// $lmClass = $relation->lm->class;
+        //
+        // if ($relation->order)
+        // {
+        //     $options['order_by'] = $relation->order;
+        // }
+        //
+        // if ($relation->filter)
+        // {
+        //     $options['filter']   = $relation->filter;
+        // }
+        //
+        // $lmAttributePrefix = '';
+        // if ($relation instanceof Relation\ManyMany)
+        // {
+		// 	$reversed = $relation->reverse();
+		// 	$lmClass::relation($reversed->name, $reversed);
+        //
+        //     $lmAttributePrefix = $reversed->name . '/';
+        //     $relation = $reversed;
+        // }
+        //
+        // $options['conditions'] = array_merge(
+        //     $relation->conditions,
+        //     array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
+        //     $lmClass::getGlobalConditions()
+        // );
+        //
+        // $options = array_merge($options, $localOptions);
+        // $q = $lmClass::query()->setOptions($options);
+        //
+        // if ($scope = $relation->getScope())
+        // {
+        //     $q->applyScopes($scope);
+        // }
+        //
+        // $get = $relation->isToMany() ? 'all' : 'one';
+        // $res = $q->$get();
+        //
+        // $this->_attr($relationName, $res);
+        // return $res;
+        //
         // if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
         // {
         //
@@ -2244,7 +2151,7 @@ abstract class Model
      */
     private function _setDefaultValues()
     {
-        $this->_hydrate(static::$_defaultValues);
+        static::$_defaultValues && $this->set(static::$_defaultValues);
     }
 
     /**

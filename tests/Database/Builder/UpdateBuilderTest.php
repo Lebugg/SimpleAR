@@ -21,7 +21,7 @@ class UpdateBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($updateFrom, $components['updateFrom']);
 
         $b = new UpdateBuilder();
-        $b->root('Article')->set(array('title' => 'Title', 'blogId' => 12));
+        $b->root('Article')->set(['title' => 'Title', 'blogId' => 12]);
         $components = $b->build();
 
         $this->assertEquals($set, $components['set']);

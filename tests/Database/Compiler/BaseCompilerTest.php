@@ -40,7 +40,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testSelectBasic()
     {
         $compiler = new BaseCompiler();
-
         $components['from'] = array(new JoinClause('articles'));
 
         // "*" symbol for all columns.
@@ -58,9 +57,36 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
 
         // Several columns.
-        $cols = array('a' => array('columns' => array('id', 'author_id' => 'authorId', 'title')));
+        $cols = ['a' => ['columns' => ['id', 'authorId' => 'author_id', 'title']]];
         $components['columns'] = $cols;
         $expected = 'SELECT `id`,`author_id` AS `authorId`,`title` FROM `articles`';
+        $result   = $compiler->compileSelect($components);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testCompileProjection()
+    {
+        $c = new BaseCompiler;
+
+        $this->assertEquals('`author_id`', $c->project(['author_id']));
+        $this->assertEquals('`a`,`b`,`c`', $c->project(['a', 'b', 'c']));
+        $this->assertEquals('`t1`.`col1`', $c->project(['col1'], 't1'));
+        $this->assertEquals('`t1`.`col1`,`t1`.`col2`', $c->project(['col1', 'col2'], 't1'));
+        $this->assertEquals('`t1`.`col1` AS `_.attr1`', $c->project(['attr1' => 'col1'], 't1', '_'));
+        $this->assertEquals('`t1`.`col1` AS `_.attr1`,`t1`.`col2` AS `_.attr2`', $c->project(['attr1' => 'col1', 'attr2' => 'col2'], 't1', '_'));
+    }
+
+    public function testSelectBasicWithColumnsAndColumn()
+    {
+        $compiler = new BaseCompiler();
+        $components['from'] = array(new JoinClause('articles'));
+        $expr = new Expression('AVG(created_at) AS average');
+        $components['columns'] = [
+            '_' => ['columns' => ['id', 'author_id'], 'resultAlias' => ''],
+            ['column' => $expr, 'alias' => ''],
+        ];
+
+        $expected = 'SELECT `id`,`author_id`,AVG(created_at) AS average FROM `articles`';
         $result   = $compiler->compileSelect($components);
         $this->assertEquals($expected, $result);
     }
@@ -99,10 +125,10 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = array(new JoinClause('articles', 'a'));
 
         // Several columns.
-        $cols = array('a' => array(
-            'columns' => array('id', 'author_id' => 'authorId', 'title'),
+        $cols = ['a' => [
+            'columns' => ['id', 'authorId' => 'author_id', 'title'],
             'resultAlias' => '_'
-        ));
+        ]];
         $components['columns'] = $cols;
         $expected = 'SELECT `id` AS `_.id`,`author_id` AS `_.authorId`,`title` AS `_.title` FROM `articles`';
         $result   = $compiler->compileSelect($components);
@@ -333,8 +359,22 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
     public function testOrderBy()
     {
+        // No JOIN, No use of table alias.
         $c = new BaseCompiler();
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = [new JoinClause('articles', '_')];
+        $components['orderBy'] = array(
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+                'sort' => 'DESC',
+            ),
+        );
+        $expected = 'SELECT * FROM `articles` ORDER BY `created_at` DESC';
+        $this->assertEquals($expected, $c->compileSelect($components));
 
+        // With JOIN.
+        $c = new BaseCompiler();
         $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
@@ -359,9 +399,22 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
     public function testGroupBy()
     {
-        $q = new Query();
+        // No JOIN.
         $c = new BaseCompiler();
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = [new JoinClause('articles', '_')];
+        $components['groupBy'] = array(
+            array(
+                'tableAlias' => '_',
+                'column' => 'created_at',
+            ),
+        );
 
+        $expected = 'SELECT * FROM `articles` GROUP BY `created_at`';
+        $this->assertEquals($expected, $c->compileSelect($components));
+
+        // With JOIN
+        $c = new BaseCompiler();
         $components['columns'] = array('' => array('columns' => array('*')));
         $jc[] = new JoinClause('articles', '_');
         $jc[] = (new JoinClause('authors', 'author'))->on('_', 'author_id', 'author', 'id');
@@ -393,7 +446,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $columns = array(
             '_' => ['columns' => ['*'], 'resultAlias' => ''],
             'articles' => ['columns' => ['*'], 'resultAlias' => ''],
-            'articles.author' => ['columns' => ['first_name' => 'firstName', 'last_name' => 'lastName'], 'resultAlias' => 'articles.author'],
+            'articles.author' => ['columns' => ['firstName' => 'first_name', 'lastName' => 'last_name'], 'resultAlias' => 'articles.author'],
         );
 
         $components['from'] = $jc;
@@ -493,6 +546,50 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $components['where'] = array($w);
         $expected = 'SELECT * FROM `articles` WHERE FN(attr) = \'val\'';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
+
+    public function testWhereTuple()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = array(new JoinClause('articles'));
+
+        $w = ['type' => 'Tuple', 'table' => '',
+            'cols' => ['author_id', 'blog_id'],
+            'val' => [[1,2], [1,3], [2,2]],
+            'logic' => 'AND'
+        ];
+        //$where = new InCond('', 'author_id', array(1, 2));
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+
+        $w['not'] = true;
+        $components['where'] = array($w);
+        $expected = 'SELECT * FROM `articles` WHERE (`author_id`,`blog_id`) NOT IN ((?,?),(?,?),(?,?))';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
+
+    public function testWhereTupleOnDifferentTables()
+    {
+        $c = new BaseCompiler();
+
+        $components['columns'] = array('' => array('columns' => array('*')));
+        $components['from'] = [
+            (new JoinClause('articles', '_')),
+            (new JoinClause('blogs', 'blog'))->on('_', 'blog_id', 'blog', 'id'),
+        ];
+        $components['where'] = [
+            [
+                'type' => 'Tuple', 'table' => ['_', 'blog'],
+                'cols' => ['author_id', 'id'],
+                'val' => [[1,2], [1,3], [2,2]],
+                'logic' => 'AND', 'not' => false
+            ],
+        ];
+        $expected = 'SELECT * FROM `articles` `_` INNER JOIN `blogs` `blog` ON `_`.`blog_id` = `blog`.`id` WHERE (`_`.`author_id`,`blog`.`id`) IN ((?,?),(?,?),(?,?))';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 }

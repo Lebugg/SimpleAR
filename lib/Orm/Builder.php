@@ -49,6 +49,8 @@ class Builder
      */
     protected $_eagerLoad = false;
 
+    protected $_relationsToPreload = array();
+
     /**
      * A row fetched from DB but stored here because not used yet.
      *
@@ -93,18 +95,6 @@ class Builder
         $this->_query && $this->_query->root($root);
 
         return $this;
-    }
-
-    public function findOne(array $options)
-    {
-        $this->setOptions($options);
-        return $this->one();
-    }
-
-    public function findMany(array $options)
-    {
-        $this->setOptions($options);
-        return $this->all();
     }
 
     /**
@@ -167,11 +157,13 @@ class Builder
      * Set several options.
      *
      * @param array $options The options to set.
+     * @param Query $q A query to set options on. If not given, builder will use 
+     * getQueryOrNewSelect() to get one.
      * @return $this
      */
-    public function setOptions(array $options)
+    public function setOptions(array $options, Query $q = null)
     {
-        $q = $this->getQueryOrNewSelect();
+        $q = $q ?: $this->getQueryOrNewSelect();
 
         foreach ($options as $name => $value)
         {
@@ -181,6 +173,12 @@ class Builder
         return $this;
     }
 
+    /**
+     * Create a new delete query.
+     *
+     * @param  string $root The query's root.
+     * @return Query
+     */
     public function delete($root = '')
     {
         $query = $this->newQuery(new DeleteBuilder);
@@ -211,6 +209,14 @@ class Builder
         return $query->getConnection()->lastInsertId();
     }
 
+    /**
+     * Create a new insert query.
+     *
+     * @param string $table The root table name.
+     * @param array  $fields The fields targetted by the query.
+     *
+     * @return Query
+     */
     public function insertInto($table, $fields)
     {
         $query = $this->newQuery(new InsertBuilder())
@@ -220,6 +226,11 @@ class Builder
         return $query;
     }
 
+    /**
+     * Create a new update query.
+     *
+     * @return Query
+     */
     public function update($root = '')
     {
         $query = $this->newQuery(new UpdateBuilder())
@@ -228,6 +239,15 @@ class Builder
         return $query;
     }
 
+    /**
+     * Return columns of the given table.
+     *
+     * This is used by SimpleAR\Orm\Model::wakeup() in order to known model's
+     * columns if they are not defined by user.
+     *
+     * @param string $tableName The name of the table of which we want the
+     * columns.
+     */
     public function getTableColumns($tableName)
     {
         $conn = $this->getConnection();
@@ -244,7 +264,10 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
-        return $this->_fetchModelInstance();
+        $object = $this->_fetchModelInstance();
+        $this->_relationsToPreload && $this->preloadRelations(array($object));
+
+        return $object;
     }
 
     /**
@@ -270,26 +293,150 @@ class Builder
     {
         $q = $this->getQueryOrNewSelect()->select($columns)->run();
 
-        return $this->_fetchModelInstance(false);
+        $object = $this->_fetchModelInstance(false);
+        $this->_relationsToPreload && $this->preloadRelations(array($object));
+
+        return $object;
     }
 
     /**
      * Return all fetch Model instances.
      *
-     * @param  array $columns The columns to select.
-     * @return array
+     * @param array $columns The columns to select.
+     * @param Query $q A query to set options on. If not given, builder will use 
+     * getQueryOrNewSelect() to get one.
      */
-    public function all(array $columns = array('*'))
+    public function all(array $columns = array('*'), Query $q = null)
     {
-        $q = $this->getQueryOrNewSelect()->select($columns)->run();
+        $q = $q ?: $this->getQueryOrNewSelect();
+        $q->select($columns)->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
         {
             $all[] = $one;
+            $ids[] = $one->id;
         }
 
+        $this->_relationsToPreload && $this->preloadRelations($all);
         return $all;
+    }
+
+    /**
+     * Find one model isntance.
+     *
+     * @param  array $options The options to pass to the query.
+     * @return SimpleAR\Orm\Model
+     */
+    public function findOne(array $options)
+    {
+        $this->setOptions($options);
+        return $this->one();
+    }
+
+    /**
+     * Find several model isntances.
+     *
+     * @param  array $options The options to pass to the query.
+     * @return array
+     */
+    public function findMany(array $options)
+    {
+        $this->setOptions($options);
+        return $this->all();
+    }
+
+    public function preloadRelations(array $cmInstances)
+    {
+        $root = $this->getRoot();
+        foreach ($this->_relationsToPreload as $relationName)
+        {
+            $relation = $root::relation($relationName);
+            $lmInstances = $this->loadRelation($relation, $cmInstances);
+            $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
+        }
+    }
+
+    public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
+    {
+        // Our object is already saved. It has an ID. We are going to
+        // fetch potential linked objects from DB.
+		$lmClass = $relation->lm->class;
+
+        $lmAttributePrefix = '';
+        if ($relation instanceof Relation\ManyMany)
+        {
+			$reversed = $relation->reverse();
+			$lmClass::relation($reversed->name, $reversed);
+
+            $lmAttributePrefix = $reversed->name . '/';
+            $relation = $reversed;
+        }
+
+        // Get CM join attributes values for each given objects.
+        $cmValues = array();
+        foreach ($objects as $o)
+        {
+            $cmValues[] = $o->get($relation->getCmAttributes());
+        }
+
+        $lmAttributes = $relation->getLmAttributes();
+        if ($lmAttributePrefix) {
+            foreach ($lmAttributes as &$attr)
+            {
+                $attr = $lmAttributePrefix . $attr;
+            }
+        }
+
+        $options['conditions'] = array_merge(
+            $relation->conditions,
+            $lmClass::getGlobalConditions(),
+            $localOptions
+        );
+        if ($orderBy = $relation->getOrderBy()) {
+            $options['orderBy'] = $orderBy;
+        }
+
+        $q = $this->newQuery(new SelectBuilder);
+        $this->setQuery($q); // We'll need it for possible scopes.
+        $this->root($lmClass);
+        $this->setOptions($options, $q);
+        $q->whereTuple($lmAttributes, $cmValues);
+
+        if ($scope = $relation->getScope())
+        {
+            $this->applyScopes($scope);
+        }
+
+        $lmInstances = $this->all($relation->filter ?: array('*'), $q);
+
+        return $lmInstances;
+    }
+
+    /*
+     * Return model instances.
+     *
+     * This function is merely a syntaxic sugar for `$builder->limit(<limit>)->all()`.
+     *
+     * Example:
+     * --------
+     *
+     * ```php
+     * Beer::where('type', 'ale')->get(5);
+     * ```
+     *
+     * is equivalent to:
+     * ```php
+     * Beer::where('type', 'ale')->limit(5)->all();
+     * ```
+     *
+     * @param int $limit The number of objects to return. If not given, will 
+     * return all found objects.
+     */
+    public function get($limit = null)
+    {
+        $limit && $this->limit($limit);
+        return $this->all();
     }
 
     /**
@@ -301,9 +448,33 @@ class Builder
     public function count($attribute = '*')
     {
         $q = $this->getQueryOrNewSelect();
+        $q->removeOptions(array('orderBy', 'limit', 'offset', 'with'));
         $q->count($attribute)->run();
 
         return $q->getConnection()->getColumn();
+    }
+
+	/**
+     * Search for object in database. It combines count() and all() functions.
+     *
+	 * This function makes pagination easier.
+	 *
+	 * @param int   $page    Page number. Min: 1.
+	 * @param int   $nbItems Number of items. Min: 1.
+	 */
+    public function search($page, $nbItems)
+    {
+		$page    = $page    >= 1 ? $page    : 1;
+		$nbItems = $nbItems >= 1 ? $nbItems : 1;
+
+        $q  = $this->getQueryOrNewSelect();
+        $q->limit($nbItems, ($page - 1) * $nbItems);
+
+        $res['rows'] = $this->all();
+        $q->getBuilder()->clearResult();
+        $res['count'] = $this->count();
+
+        return $res;
     }
 
     /**
@@ -329,18 +500,75 @@ class Builder
     }
 
     /**
+     * Apply scopes to the query.
+     *
+     * @param array $scopes The scopes to apply.
+     */
+    public function applyScopes(array $scopes)
+    {
+        $root = $this->_root;
+        foreach ($scopes as $name => $args)
+        {
+            // Check if model has a scope of this name.
+            if ($root::hasScope($name))
+            {
+                return $root::applyScope($name, $this, $args);
+            }
+            else
+            {
+                throw new Exception('Unknown scope "' . $name . '" with args: '
+                    . var_export($args, true));
+            }
+        }
+    }
+
+    /**
+     * Preload a relation.
+     *
+     * Another query will be performed to fetch linked models for the given
+     * relation.
+     *
+     * @param string $relation The relation to preload.
+     */
+    public function preload($relation)
+    {
+        $this->_relationsToPreload[] = $relation;
+    }
+
+    /**
+     * Eager-load a relation.
+     *
+     * Joins will be added to the query to fetch linked models for the given
+     * relation.
+     *
+     * @param string $relation The relation to preload.
+     */
+    public function eagerLoad($relation)
+    {
+        $this->with($relation);
+    }
+
+    /**
      * Redirect method calls.
      *
-     * All unknown method calls are redirected to be called on Query instance.
+     * If method name matches a root model scope, scope is applied, otherwise,
+     * all unknown method calls are redirected to be called on Query instance.
      *
      * Note: The SelectBuilder will be used.
      * -----
      *
-     * @return Query The current query instance.
+     * @return $this
      */
     public function __call($name, $args)
     {
         $q = $this->getQueryOrNewSelect();
+        $root = $this->_root;
+
+        // Check if model has a scope of this name.
+        if ($root::hasScope($name))
+        {
+            return $root::applyScope($name, $this, $args);
+        }
 
         // If 'with()' option is called, query builder has to parse eager loaded
         // models.
@@ -626,6 +854,34 @@ class Builder
 
         $i++;
         return $res;
+    }
+
+    protected function _associateLinkedModels(array $cmInstances, array $lmInstances, Relation $relation)
+    {
+        $cmAttr = $relation->getCmAttributes();
+        $lmAttr = $relation->getLmAttributes();
+        $rName  = $relation->name;
+
+        foreach ($cmInstances as $cm)
+        {
+            foreach ($lmInstances as $lm)
+            {
+                if ($cm->get($cmAttr) === $lm->get($lmAttr))
+                {
+                    if ($relation->isToMany())
+                    {
+                        $tmp = $cm->$rName;
+                        $tmp[] = $lm;
+                        $cm->$rName = $tmp;
+                    }
+                    else
+                    {
+                        $cm->$rName = $lm;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
 }

@@ -18,11 +18,13 @@ class Builder
     const DELETE = 'delete';
 
     /**
-     * The query to build.
+     * The Builder's type.
      *
-     * @var Query
+     * It corresponds to one of the above const values.
+     *
+     * @var string
      */
-    protected $_query;
+    public $type;
 
     /**
      * The "root table" of the query. If set, it means that we are using a model 
@@ -66,46 +68,66 @@ class Builder
      */
     protected $_values = array();
 
-    // @DUNNO_YET
-    protected $_root = '';
-
+    /**
+     * The list of given options.
+     * 
+     * @var array
+     */
     protected $_options = array();
-    protected $_components;
 
     /**
-     * Available options for this builder.
+     * The list of built components.
+     *
+     * When an option is built, the resulting value(s) is stored in 
+     * $_components.
      *
      * @var array
      */
-    public $availableOptions = array(
-        // "root" option can only be a string.
-        // It can be: either a valid model class name, or a any other string, 
-        // interpreted as the root table name. In the second case, many features 
-        // are not available.
-        'root',
-    );
-
-    public $type;
+    protected $_components;
 
     /**
      * Run the build process.
      *
-     * @param array $options Options to build.
+     * @param array $options Options to build. If given, it will erase 
+     * previously set options.
      *
-     * @return array
+     * @return array The built components. Components are to be passed to a 
+     * Compiler.
      */
     public function build(array $options = array())
     {
-        $this->_options = array_merge($this->_options, $options);
+        $this->_options = $options ?: $this->_options;
         $this->_buildOptions($this->_options);
 
         // Allow specific builders to set default values after build.
         $this->_onAfterBuild();
 
-        // Work's done!
         return $this->_components;
     }
 
+    /**
+     * Set an option.
+     *
+     * Options are defined in sub-builders. Options are here to allow the array
+     * way of constructing query. This array way tends to be replaced by 
+     * method-chaining.
+     *
+     * Example:
+     * --------
+     *
+     * With an array:
+     * ```php
+     * MyModel::all(['conditions' => ['myAttr' => 'myVal'], 'limit' => 10]);
+     * ```
+     *
+     * With method-chaining:
+     * ```php
+     * MyModel::where('myAttr', 'myVal')->limit(10)->all();
+     * ```
+     *
+     * If an option is set twice, values will be merged with array_merge().
+     * @see http://php.net/manual/en/function.array-merge.php
+     */
     public function __call($name, $args)
     {
         if (! isset($args[1]) && isset($args[0]))
@@ -113,7 +135,10 @@ class Builder
             $args = $args[0];
         }
 
-        $this->_options[$name] = $args;
+        $this->_options[$name] = isset($this->_options[$name])
+            ? array_merge($this->_options[$name], (array) $args)
+            : $args;
+
         return $this;
     }
 
@@ -140,11 +165,31 @@ class Builder
         $this->_root = $tableName;
     }
 
+    /**
+     * Return the list of options that are waiting to be built.
+     *
+     * @var array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+    /**
+     * Get option values.
+     *
+     * @return array The values.
+     */
     public function getValues()
     {
         return $this->_values;
     }
 
+    /**
+     * Get the root table object.
+     *
+     * @return Table The root Table.
+     */
     public function getRootTable()
     {
         return $this->_table;
@@ -233,33 +278,88 @@ class Builder
         }
     }
 
+    /**
+     * Clear build() result.
+     *
+     * A builder can `build()` options any number of time. But at each run, 
+     * previous result must be cleared.
+     *
+     * It clears components and values.
+     */
+    public function clearResult()
+    {
+        $this->_components = array();
+        $this->_values = array();
+    }
+
+    /**
+     * Remove options from builder.
+     *
+     * @param array $toRemove The options to remove.
+     */
+    public function removeOptions(array $toRemove)
+    {
+        foreach ($toRemove as $option)
+        {
+            unset($this->_options[$option]);
+        }
+    }
+
+    /**
+     * Build all unbuilt options.
+     *
+     * There is unbuilt options when the option-array syntax is used to build 
+     * queries.
+     *
+     * Example:
+     * --------
+     *
+     * When constructing a query as follows:
+     * ```php
+     * MyModel::one(array('limit' => 10, 'offset' => 50));
+     * ```
+     * "limit" and "offset" options will still be not built.
+     *
+     *
+     * Algorithm:
+     * ----------
+     *
+     * For each option name, this function will try to delegate the option 
+     * handling:
+     *
+     * <option>: The option name.
+     *
+     *  1) If a function named "_build<Option>" exists, call it. (Not the 
+     *  capital "O");
+     *  2) Else, if a function named "<optionName>" exists, call it;
+     *  3) Else, ignore the option.
+     *
+     * @param array $options The options to build.
+     */
     protected function _buildOptions(array $options)
     {
-        foreach ($this->availableOptions as $option)
+        foreach ($options as $name => $value)
         {
-            if (isset($options[$option]))
+            $fn = '_build' . ucfirst($name);
+            if (method_exists($this, $fn))
             {
-                $fn = '_build' . ucfirst($option);
-                $this->$fn($options[$option]);
+                $this->$fn($value);
+            }
+            elseif (method_exists($this, $name))
+            {
+                $this->$name($value);
             }
         }
     }
 
     /**
-     * Set the "root" of the query.
+     * Set the query root.
      *
-     * It can be:
-     *  
-     *  * A valid model class name.
-     *  * A table name.
+     * Component: "root"
+     * ----------
      *
-     * @param  string $root The query root.
+     * @param string $root A valid model class name, or a DB table name.
      */
-    protected function _buildRoot($root)
-    {
-        $this->root($root);
-    }
-
     public function root($root)
     {
         if (\SimpleAR\is_valid_model_class($root))
