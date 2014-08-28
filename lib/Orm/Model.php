@@ -2059,7 +2059,7 @@ abstract class Model
         // We don't want an array if relation is *-to-one.
         if (! $relation->isToMany()) {
             // $value is *always* an array.
-            $value = isset($res[0]) ? $res[0] : null;
+            $value = isset($value[0]) ? $value[0] : null;
         }
 
         $this->_attr($relationName, $value);

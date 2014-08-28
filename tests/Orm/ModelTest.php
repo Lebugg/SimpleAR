@@ -271,6 +271,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testLoadRelation()
     {
+        // With a *-to-many relation.
         $articles = array(
             new Article,
             new Article,
@@ -287,6 +288,24 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $attributes = $blog->attributes();
         $this->assertArrayHasKey('articles', $attributes);
         $this->assertEquals($articles, $attributes['articles']);
+
+        // With a *-to-one relation.
+        // QueryBuilder::loadRelation always return an array.
+        $authors = array(
+            new Author,
+        );
+
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('loadRelation'));
+        $qb->expects($this->once())->method('loadRelation')->will($this->returnValue($authors));
+        Article::setQueryBuilder($qb);
+
+        $article = new Article();
+        $article->populate(array('id' => 12)); // In order to be concrete.
+        $article->load('author');
+
+        $attributes = $article->attributes();
+        $this->assertArrayHasKey('author', $attributes);
+        $this->assertEquals($authors[0], $attributes['author']);
     }
 
     public function testLoadRelationManyMany()
