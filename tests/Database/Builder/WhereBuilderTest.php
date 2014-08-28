@@ -194,16 +194,10 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build($opts);
 
         $expected[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['name'], 'op' => '=', 'val' => 'Glob', 'logic' => 'AND', 'not' => false];
-        //$expected[] = new SimpleCond('_', 'name', '=', 'Glob', 'AND');
         $expected[] = ['type' => 'Basic', 'table' => 'articles', 'cols' => ['title'], 'op' => 'LIKE', 'val' => '%beer%', 'logic' => 'AND', 'not' => false];
-        //$expected[] = new SimpleCond('articles', array('title'), 'LIKE', '%beer%', 'AND');
         $nested[] = ['type' => 'In', 'table' => 'articles.author', 'cols' => ['id'], 'val' => [12,15,16], 'logic' => 'AND', 'not' => false];
-        $nested[] = ['type' => 'In', 'table' => 'articles.author', 'cols' => ['first_name'], 'val' => ['John'], 'logic' => 'OR', 'not' => false];
+        $nested[] = ['type' => 'Basic', 'table' => 'articles.author', 'cols' => ['first_name'], 'op' => '=', 'val' => 'John', 'logic' => 'OR', 'not' => false];
         $expected[] = ['type' => 'Nested', 'nested' => $nested, 'logic' => 'AND', 'not' => false];
-        // $expected[] = new NestedCond(array(
-        //     new SimpleCond('articles.author', array('id'), '=', array(12,15,16), 'AND'),
-        //     new SimpleCond('articles.author', array('first_name'), '=', array('John'), 'OR'),
-        // ), 'AND');
 
         $this->assertEquals($expected, $components['where']);
     }
@@ -246,17 +240,24 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($val, $b->getValues());
     }
 
-    public function testWhereMethodWithArrayParameters()
+    public function testWhereWithArrayParameters()
     {
+        // An array with one column will extract the column.
         $b = new WhereBuilder();
         $b->root('Article');
-        $b->where(array('id'), array(12));
+        $b->where(['id'], [12]);
 
         $where[] = ['type' => 'Basic', 'table' => '_', 'cols' => ['id'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
         //$where[] = new SimpleCond('_', 'id', '=', 12);
         $components = $b->build();
 
         $this->assertEquals($where, $components['where']);
+
+        // An array with several columns will call whereTuple.
+        $b = $this->getMock('SimpleAR\Database\Builder\WhereBuilder', ['whereTuple']);
+        $b->expects($this->once())->method('whereTuple')
+            ->with(['a', 'b'], [[1,2], ['x', 'y']]);
+        $b->where(['a', 'b'], [[1,2], ['x', 'y']]);
     }
 
     public function testOperatorArrayficationChangesConditionType()
