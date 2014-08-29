@@ -161,13 +161,11 @@ class Builder
      * getQueryOrNewSelect() to get one.
      * @return $this
      */
-    public function setOptions(array $options, Query $q = null)
+    public function setOptions(array $options)
     {
-        $q = $q ?: $this->getQueryOrNewSelect();
-
         foreach ($options as $name => $value)
         {
-            $q->$name($value);
+            $this->$name($value);
         }
 
         return $this;
@@ -400,7 +398,7 @@ class Builder
         $q = $this->newQuery(new SelectBuilder);
         $this->setQuery($q); // We'll need it for possible scopes.
         $this->root($lmClass);
-        $this->setOptions($options, $q);
+        $this->setOptions($options);
         $q->whereTuple($lmAttributes, $cmValues);
 
         if ($scope = $relation->getScope())
@@ -565,7 +563,7 @@ class Builder
         $root = $this->_root;
 
         // Check if model has a scope of this name.
-        if ($root::hasScope($name))
+        if ($root && $root::hasScope($name))
         {
             return $root::applyScope($name, $this, $args);
         }
