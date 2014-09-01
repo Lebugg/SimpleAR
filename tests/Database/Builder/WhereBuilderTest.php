@@ -10,8 +10,15 @@ use SimpleAR\Database\Query;
 use SimpleAR\Facades\Cfg;
 use SimpleAR\Facades\DB;
 
+/**
+ * @covers SimpleAR\Database\Builder\WhereBuilder
+ */
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @covers SimpleAR\Database\Builder\WhereBuilder::getQueryOptionRelationSeparator
+     * @covers WhereBuilder::setQueryOptionRelationSeparator
+     */
     public function testQueryOptionRelationSeparator()
     {
         $b = new WhereBuilder;
@@ -29,6 +36,9 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         Cfg::set('queryOptionRelationSeparator', '/');
     }
 
+    /**
+     * @covers WhereBuilder::separateAttributeFromRelations
+     */
     public function testSeparateAttributeFromRelations()
     {
         $b = new WhereBuilder;
@@ -354,5 +364,40 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
         $this->assertEquals($where, $components['where']);
         $this->assertEquals($from[1], $b->getJoinClause('blog'));
+    }
+
+    /**
+     * Here we check which joins are made and that they are optimal.
+     *
+     * `Article::where('readers/id')->...` should include only middle table
+     * `Article::where('readers/firstName')->...` should include both middle and
+     * linked tables.
+     *
+     */
+    public function no_testConditionOnManyMany()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->where('readers/id', 12);
+        $b->select(['*']);
+
+        $b->build();
+
+        // "_m" stands for "middle".
+        $middle = (new JoinClause('articles_USERS', 'readers_m'))->on('_', 'id', 'readers_m', 'article_id');
+        $lm = (new JoinClause('USERS', 'readers'))->on('readers_m', 'user_id', 'readers', 'id');
+
+        $this->assertEquals($middle, $b->getJoinClause('readers_m'));
+        $this->assertFalse(@ $b->getJoinClause('readers'));
+
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->where('readers/firstName', 'John');
+        $b->select(['*']);
+
+        $b->build();
+
+        $this->assertEquals($middle, $b->getJoinClause('readers_m'));
+        $this->assertEquals($lm, $b->getJoinClause('readers'));
     }
 }

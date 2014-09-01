@@ -2,8 +2,15 @@
 
 use \SimpleAR\Config;
 
+/**
+ * @covers Config
+ */
 class ConfigTest extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @covers Config::__get
+     * @covers Config::__set
+     */
     public function testOptionGetSet()
     {
         $cfg = new Config();
@@ -42,14 +49,4 @@ class ConfigTest extends PHPUnit_Framework_TestCase
         $this->assertTrue(class_exists('SimpleAR\Model'));
         $this->assertFalse(class_exists('Cfg'));
     }
-
-    /*
-    public function testUnknownOption()
-    {
-        $cfg = new Config();
-
-        $foo = $cfg->optionThatDoesNotExist;
-        $cfg->optionThatDoesNotExist = 'foo';
-    }
-    */
 }

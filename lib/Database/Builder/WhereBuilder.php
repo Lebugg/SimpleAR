@@ -362,7 +362,8 @@ class WhereBuilder extends Builder
      */
     public function isKnownTableAlias($alias)
     {
-        return isset($this->_involvedTables[$alias]);
+        return $alias === $this->getRootAlias()
+            || isset($this->_involvedTables[$alias]);
     }
 
     /**
@@ -395,9 +396,6 @@ class WhereBuilder extends Builder
     /**
      * Return the Table object matching the given table alias.
      *
-     * If the alias is unknown, this function tries to add it using 
-     * addInvolvedTable().
-     *
      * @param string $tableAlias The table alias.
      * @return Table
      * 
@@ -414,11 +412,6 @@ class WhereBuilder extends Builder
             }
 
             return $t;
-        }
-
-        if (! $this->isKnownTableAlias($tableAlias))
-        {
-            $this->addInvolvedTable($tableAlias);
         }
 
         return $this->_involvedTables[$tableAlias];
@@ -447,24 +440,24 @@ class WhereBuilder extends Builder
     }
 
     /**
-     * Add a Table to the list of involved tables according to the given table 
+     * Add a Table to the list of involved tables according to the given table
      * alias.
      *
-     * When parsing a condition, we have to parse the attribute part of the 
-     * condition. This is what we call the "extended attribute string". It is 
+     * When parsing a condition, we have to parse the attribute part of the
+     * condition. This is what we call the "extended attribute string". It is
      * divided in two parts: the relations part and the proper attribute part.
      * The relations part is used as an alias for the attribute's table.
      *
-     * For each table alias we have, we want to fetch the matching Table object: 
-     * we will use it to convert attribute name into column name, get the DB 
+     * For each table alias we have, we want to fetch the matching Table object:
+     * we will use it to convert attribute name into column name, get the DB
      * table name...
      *
      * A table alias, is a dot-separated list of relation names.
-     * At the beginning, we know only one Table: the root Table; but thanks to 
-     * the relations (given by their names), we can know following tables. The 
+     * At the beginning, we know only one Table: the root Table; but thanks to
+     * the relations (given by their names), we can know following tables. The
      * process looks like: Table -> Relation -> next Table -> next Relation ...
      *
-     * @param string $tableAlias The table alias used in the extended attribute 
+     * @param string $tableAlias The table alias used in the extended attribute
      * string (i.e. the <relations> part).
      *
      * @return void
@@ -492,8 +485,8 @@ class WhereBuilder extends Builder
             {
                 // $previousAlias will always be known.
                 $previousModel = $this->getInvolvedModel($previousAlias);
-                $currentRel    = $this->getNextRelationByModel($previousModel, $relName);
-                $currentModel  = $this->getNextModelByRelation($currentRel);
+                $currentRel    = $this->_getNextRelationByModel($previousModel, $relName);
+                $currentModel  = $this->_getNextModelByRelation($currentRel);
 
                 $currentTable = $currentModel::table();
                 $this->setInvolvedModel($alias, $currentModel);
@@ -515,7 +508,7 @@ class WhereBuilder extends Builder
      * @param string $model The model class name to which the relation is bound.
      * @param string $relation The relation name.
      */
-    public function getNextRelationByModel($model, $relation)
+    protected function _getNextRelationByModel($model, $relation)
     {
         return $model::relation($relation);
     }
@@ -526,7 +519,7 @@ class WhereBuilder extends Builder
      * @param Relation $relation The relation
      * @return string The linked model class name.
      */
-    public function getNextModelByRelation(Relation $relation)
+    protected function _getNextModelByRelation(Relation $relation)
     {
         return $relation->lm->class;
     }
@@ -681,7 +674,7 @@ class WhereBuilder extends Builder
     }
 
     /**
-     * Parse an extended attribute string and extract data of it.
+     * Parse an extended attribute string and extract data from it.
      *
      * What is an extended attribute?
      * ------------------------------
@@ -730,6 +723,11 @@ class WhereBuilder extends Builder
         $tableAlias = $relations
             ? $this->relationsToTableAlias($relations)
             : $this->getRootAlias();
+
+        if (! $this->isKnownTableAlias($tableAlias))
+        {
+            $this->addInvolvedTable($tableAlias);
+        }
         $table = $this->getInvolvedTable($tableAlias);
 
         // 3)
