@@ -476,7 +476,7 @@ class WhereBuilder extends Builder
 
         // For each possible table alias, we check whether it known or not. If 
         // not, we get to know it.
-        foreach ($relNames as $key => $relName)
+        foreach ($relNames as $relName)
         {
             $alias .= $alias ? '.' . $relName : $relName;
 
@@ -522,12 +522,6 @@ class WhereBuilder extends Builder
     protected function _getNextModelByRelation(Relation $relation)
     {
         return $relation->lm->class;
-    }
-
-    /**
-     * Determine if a relation is worth to be included
-    protected function _isRelationWorthToBeIncluded(Relation $rel, array $columns)
-    {
     }
 
     /**
