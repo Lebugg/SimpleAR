@@ -324,12 +324,12 @@ class Builder
      * Algorithm:
      * ----------
      *
-     * For each option name, this function will try to delegate the option 
+     * For each option name, this function will try to delegate the option
      * handling:
      *
      * <option>: The option name.
      *
-     *  1) If a function named "_build<Option>" exists, call it. (Not the 
+     *  1) If a function named "_build<Option>" exists, call it. (Note the
      *  capital "O");
      *  2) Else, if a function named "<optionName>" exists, call it;
      *  3) Else, ignore the option.
@@ -376,22 +376,9 @@ class Builder
     }
 
     /**
-     * Generate an alias out of a table name.
-     *
-     * We need a function that will give a unique alias for a given table name.
-     *
-     * @param string $tableName The table name.
-     * @return string The alias.
-     */
-    protected function _getAliasForTableName($tableName)
-    {
-        return strtolower($tableName);
-    }
-
-    /**
      * Event handler called at the end of build and before start of compilation.
      *
-     * It can be overwrittent by builders.
+     * It can be overwritten  by builders.
      *
      * @return void
      */

@@ -8,6 +8,8 @@
          convertNoticesToExceptions="true"
          convertWarningsToExceptions="true"
          stopOnFailure="false"
+         strict="true"
+         verbose="true"
 >
     <testsuites>
         <testsuite name="All">

@@ -32,7 +32,7 @@ class InsertBuilder extends Builder
         // value.
         if ($this->_useModel)
         {
-            $fields = $this->_table->columnRealName($fields);
+            $fields = $this->convertAttributesToColumns($fields, $this->_table);
         }
 
         $this->_components['insertColumns'] = $fields;
