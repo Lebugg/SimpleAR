@@ -3,8 +3,9 @@ destination: ./_site
 plugins:     ./_plugins
 exclude: [bin, CNAME, Gemfile, Gemfile.lock, README.md]
 permalink: /:title
-pygments: true
-markdown: redcarpet
+highlighter: "pygments"
+pygments_options: ["startinline"]
+markdown: "redcarpet"
 redcarpet:
   extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
 
