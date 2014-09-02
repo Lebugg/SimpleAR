@@ -158,15 +158,26 @@ class WhereBuilder extends Builder
      * @param Query $q The Select sub-query.
      * @return $this
      */
-    public function whereExists(Query $query, $logic = 'AND')
+    public function whereExists(Query $query, $logic = 'AND', $not = false)
     {
         $type = 'Exists';
-        $cond = compact('type', 'query', 'logic');
+        $cond = compact('type', 'query', 'logic', 'not');
 
         $this->_addWhere($cond);
         $this->addValueToQuery($query->getComponentValues());
 
         return $this;
+    }
+
+    /**
+     * Add an not exists condition to the query.
+     *
+     * @param Query $q The Select sub-query.
+     * @return $this
+     */
+    public function whereNotExists(Query $query, $logic = 'AND')
+    {
+        return $this->whereExists($query, $logic, true);
     }
 
     /**

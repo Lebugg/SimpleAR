@@ -552,12 +552,7 @@ class BaseCompiler extends Compiler
         $fn  = '_where' . $not . $where['type'];
         $sql = $this->$fn($where);
 
-        // Sometimes, the _where* function returns nothing because it has 
-        // decided that there is no need for a condition.
-        // @see _whereIn()
-        //if (! $sql) { return ''; }
-        $logicalOp = $where['logic'];
-        //$not       = $where->not ? ' NOT ' : ' ';
+        $logicalOp = $where['logic'] ?: 'AND';
 
         $sql = $logicalOp . ' ' . $sql;
         return $sql;
