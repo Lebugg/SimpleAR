@@ -131,7 +131,7 @@ class Builder
         $model = $this->_root;
         $rel   = $model::relation($relation);
 
-        // We construct the sub-query. It can be the sub-query of an Exists 
+        // We construct the sub-query. It can be the sub-query of an Exists
         // clause or a Count (if $op and $value are given).
         $hasQuery = $this->newQuery(new SelectBuilder);
         $hasQuery->getBuilder()->setRootAlias($mainQueryRootAlias . '_');
@@ -154,7 +154,7 @@ class Builder
             //$mainQuery->whereSub($hasQuery, $op, $value);
         }
 
-        // We don't want anything special. This will be a simple Select 
+        // We don't want anything special. This will be a simple Select
         // sub-query.
         else
         {
@@ -187,7 +187,7 @@ class Builder
      * Set several options.
      *
      * @param array $options The options to set.
-     * @param Query $q A query to set options on. If not given, builder will use 
+     * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      * @return $this
      */
@@ -331,7 +331,7 @@ class Builder
      * Return all fetch Model instances.
      *
      * @param array $columns The columns to select.
-     * @param Query $q A query to set options on. If not given, builder will use 
+     * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      */
     public function all(array $columns = array('*'), Query $q = null)
@@ -418,12 +418,13 @@ class Builder
 
         $options['conditions'] = array_merge(
             $relation->conditions,
-            $lmClass::getGlobalConditions(),
-            $localOptions
+            $lmClass::getGlobalConditions()
         );
         if ($orderBy = $relation->getOrderBy()) {
             $options['orderBy'] = $orderBy;
         }
+
+        $options = array_merge($options, $localOptions);
 
         $q = $this->newQuery(new SelectBuilder);
         $this->setQuery($q); // We'll need it for possible scopes.
@@ -458,7 +459,7 @@ class Builder
      * Beer::where('type', 'ale')->limit(5)->all();
      * ```
      *
-     * @param int $limit The number of objects to return. If not given, will 
+     * @param int $limit The number of objects to return. If not given, will
      * return all found objects.
      */
     public function get($limit = null)

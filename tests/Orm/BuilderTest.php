@@ -237,7 +237,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             $return[0], $return[1], false
         ));
 
-        // with() method will set a flag to true to make the query builder 
+        // with() method will set a flag to true to make the query builder
         // parse eager loaded models.
         $articles = $qb->root('Article')->with('author', 'blog')->all();
         foreach ($articles as $i => $article)
@@ -311,7 +311,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             $return[0], $return[1], $return[2], $return[3], false
         ));
 
-        // with() method will set a flag to true to make the query builder 
+        // with() method will set a flag to true to make the query builder
         // parse eager loaded models.
         $blogs = $qb->root('Blog')->with('articles/author')->all();
         $this->assertCount(2, $blogs);

@@ -344,10 +344,10 @@ abstract class Model
     /**
      * Does the object exist?
      *
-     * This property is true as long as the object exist in DB or whatever 
+     * This property is true as long as the object exist in DB or whatever
      * storage layer is used.
      *
-     * It is set to `true` when save() is successful and set to `false` when 
+     * It is set to `true` when save() is successful and set to `false` when
      * object is deleted.
      *
      * @var bool
