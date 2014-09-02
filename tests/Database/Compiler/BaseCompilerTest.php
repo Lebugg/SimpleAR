@@ -247,6 +247,9 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
     }
 
+    /**
+     * @covers ::_whereExists
+     */
     public function testCompileWhereExists()
     {
         $compiler = new BaseCompiler();
@@ -260,6 +263,26 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['where'] = array($where);
 
         $expected = 'WHERE EXISTS (SELECT `id` FROM `articles`)';
+        $result   = $compiler->compileWhere($components);
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * @covers ::_whereNotExists
+     */
+    public function testCompileWhereNotExists()
+    {
+        $compiler = new BaseCompiler();
+
+        $select = new Query();
+        $select->setComponent('columns', ['a' => ['columns' => ['id']]]);
+        $select->setComponent('from', [new JoinClause('articles')]);
+
+        $where = ['type' => 'Exists', 'query' => $select, 'logic' => 'AND', 'not' => true];
+        //$where = new ExistsCond($select);
+        $components['where'] = [$where];
+
+        $expected = 'WHERE NOT EXISTS (SELECT `id` FROM `articles`)';
         $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
     }

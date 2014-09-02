@@ -11,7 +11,7 @@ use SimpleAR\Facades\Cfg;
 use SimpleAR\Facades\DB;
 
 /**
- * @covers SimpleAR\Database\Builder\WhereBuilder
+ * @coversDefaultClass SimpleAR\Database\Builder\WhereBuilder
  */
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -211,6 +211,9 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($where, $components['where']);
     }
 
+    /**
+     * @covers ::whereExists
+     */
     public function testWhereExists()
     {
         $subQuery = new Query(new SelectBuilder);
@@ -225,7 +228,32 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
 
-        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND'];
+        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND', 'not' => false];
+        // There is a sub array because Builders do not flatten value array.
+        $val['where'] = [['Article 1']];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals($val, $b->getValues());
+    }
+
+    /**
+     * @covers ::whereNotExists
+     */
+    public function testWhereNotExists()
+    {
+        $subQuery = new Query(new SelectBuilder);
+        $subQuery->setInvolvedTable('_', Blog::table());
+        $subQuery->setRootAlias('__')
+            ->root('Article')
+            ->where('title', 'Article 1')
+            ->whereAttr('blogId', '_/id');
+
+        $b = new WhereBuilder;
+        $b->root('Blog')->whereNotExists($subQuery);
+
+        $components = $b->build();
+
+        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND', 'not' => true];
         // There is a sub array because Builders do not flatten value array.
         $val['where'] = [['Article 1']];
 

@@ -1,9 +1,12 @@
 <?php
 
-use SimpleAR\Orm\Builder as QueryBuilder;
-use SimpleAR\Database\Builder\SelectBuilder;
-use SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Orm\Builder as QueryBuilder;
+use \SimpleAR\Database\Builder\SelectBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
 
+/**
+ * @coversDefaultClass \SimpleAR\Orm\Builder
+ */
 class BuilderTest extends PHPUnit_Framework_TestCase
 {
     /**
@@ -327,6 +330,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('First', $sec->articles[0]->author->firstName);
     }
 
+    /**
+     * @covers ::has
+     */
     public function testHas()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
@@ -339,6 +345,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
     }
 
+    /**
+     * @covers ::has
+     */
     public function testHasWithCount()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
@@ -352,6 +361,21 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $val[] = 3;
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
         $this->assertEquals($val, $qb->getQuery()->getValues());
+    }
+
+    /**
+     * @covers ::hasNot
+     */
+    public function testHasNot()
+    {
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+        $qb = new QueryBuilder;
+        $qb->setConnection($conn);
+
+        $qb->root('Blog')->hasNot('articles')->select(array('*'), false);
+
+        $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE NOT EXISTS (SELECT `__`.* FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`)';
+        $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
     }
 
     public function testSetRoot()

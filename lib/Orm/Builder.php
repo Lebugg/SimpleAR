@@ -98,13 +98,32 @@ class Builder
     }
 
     /**
-     * Add a condition that check existence of related model instances for the 
-     * root model.
+     * Add a condition over a related model.
+     *
+     * Usage:
+     * ------
+     *
+     * There is two calling form for this function.
+     *
+     *  * Check existence of related models. This is a merely a WHERE EXISTS
+     *  clause in SQL:
+     *
+     *      `$query->root('Blog')->has('articles');`
+     *
+     *  * Perform a condition over the *number* of related models:
+     *
+     *      `$query->root('Blog')->where('articles', '>', 100);`
+     *
+     *      This would retrieve blogs instance which contains at least one hundred
+     *      articles.
      *
      * @param string $relation The name of the relation to check on.
+     * @param string $op       Optional. The operator for the second use form.
+     * @param mixed $value     Optional. The value for the second use form.
+     *
      * @return $this
      */
-    public function has($relation, $op = null, $value = null, \Closure $callback = null)
+    public function has($relation, $op = null, $value = null, $not = false)
     {
         $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
@@ -127,11 +146,11 @@ class Builder
         }
 
         // We want a Count sub-query.
-        if (func_num_args() >= 3)
+        if ($op !== null && $value !== null)
         {
             $hasQuery->count();
             $mainQuery->selectSub($hasQuery, '#' . $relation);
-            $mainQuery->where(DB::expr('#' . $relation), $op, $value);
+            $mainQuery->where(DB::expr('#' . $relation), $op, $value, null, $not);
             //$mainQuery->whereSub($hasQuery, $op, $value);
         }
 
@@ -140,17 +159,28 @@ class Builder
         else
         {
             $hasQuery->select(array('*'), false);
-            $mainQuery->whereExists($hasQuery);
+            $mainQuery->whereExists($hasQuery, null, $not);
         }
-
-        if ($callback !== null || ($callback = $op) instanceof \Closure)
-        {
-            $callback($hasQuery);
-        }
-
-        $mainQuery->getCompiler()->useTableAlias = true;
 
         return $this;
+    }
+
+    /**
+     * Add a condition over a related model.
+     *
+     * Inverse `has()` method.
+     *
+     * @see ::has()
+     *
+     * @param string $relation The name of the relation to check on.
+     * @param string $op       Optional. The operator for the second use form.
+     * @param mixed $value     Optional. The value for the second use form.
+     *
+     * @return $this
+     */
+    public function hasNot($relation, $op = null, $value = null)
+    {
+        return $this->has($relation, $op, $value, true);
     }
 
     /**
