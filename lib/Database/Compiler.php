@@ -2,6 +2,7 @@
 
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
 
 abstract class Compiler
 {
@@ -198,23 +199,61 @@ abstract class Compiler
             : '?';
     }
 
-    public function column($column, $tablePrefix = '', $alias = '')
+    /**
+     * Compile a <column> AS <alias> SQL string.
+     *
+     * @param string $column
+     * @param string $alias
+     */
+    public function columnAs($column, $alias = '')
     {
-        $tablePrefix = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
         $alias = $alias ? ' AS ' . $this->wrap($alias) : '';
-
-        return $tablePrefix . $this->wrap($column) . $alias;
+        return $this->wrap($column) . $alias;
     }
 
-    public function columnize(array $columns, $tablePrefix = '')
+    /**
+     * Wrap a column with backquotes.
+     *
+     * @param string $column
+     * @param string $tPrefix The table prefix.
+     * @param string $fn An optional SQL function.
+     */
+    public function column($column, $tPrefix = '', $fn = '')
     {
-        $tablePrefix = $tablePrefix && is_string($tablePrefix) ? $this->wrap($tablePrefix) . '.' : $tablePrefix;
+        if ($column instanceof FuncExpr)
+        {
+            return $this->column($column->val(), $tPrefix, $column->getFunc());
+        }
 
+        $tPrefix = $tPrefix ? $this->wrap($tPrefix) . '.' : '';
+        $wrapper = is_string($column) ? 'wrap' : 'wrapArrayToString';
+        $sql = $tPrefix . $this->$wrapper($column);
+
+        if ($fn)
+        {
+            $sql = $fn . '(' . $sql . ')';
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Quote a bunch of columns at once.
+     *
+     * @param array $columns
+     * @param string|array $tPrefix The table prefix. If string, it will be used
+     * for every column. If array first column will use first table prefix,
+     * second column will use second table prefix etc. If there is not as much
+     * prefixes as columns, no prefix will be used for the last columns.
+     */
+    public function columnize(array $columns, $tPrefix = '')
+    {
         $cols = array();
         foreach($columns as $i => $column)
         {
-            $prefix = is_array($tablePrefix) ? $this->wrap($tablePrefix[$i]) . '.' : $tablePrefix;
-            $cols[] = $prefix . $this->wrap($column);
+            // The '@' is intentionaly used. No risk of error here.
+            $prefix = is_string($tPrefix) ? $tPrefix : (@ $tPrefix[$i] ?: '');
+            $cols[] = $this->column($column, $prefix);
         }
 
         return implode(',', $cols);

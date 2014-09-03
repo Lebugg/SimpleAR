@@ -4,6 +4,7 @@ use SimpleAR\Database\Builder\WhereBuilder;
 use SimpleAR\Database\Builder\SelectBuilder;
 use SimpleAR\Database\Compiler\BaseCompiler;
 use SimpleAR\Database\Expression;
+use SimpleAR\Database\Expression\Func as FuncExpr;
 use SimpleAR\Database\JoinClause;
 use SimpleAR\Database\Query;
 
@@ -427,5 +428,66 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($middle, $b->getJoinClause('readers_m'));
         $this->assertEquals($lm, $b->getJoinClause('readers'));
+    }
+
+    /**
+     * Test the usage of FuncExpression in conditions.
+     *
+     * It validates the following syntax:
+     *
+     *  `$builder->where('DB::avg('articles/author/age'), '>', 25);`
+     *  `$builder->whereAttr('thisOne', '<', DB::max('this/otherOne'));`
+     *
+     * @covers ::where
+     * @covers ::whereAttr
+     */
+    public function testWhereFuncExpression()
+    {
+        $b = new WhereBuilder;
+        $b->root('Blog');
+        $b->where(DB::avg('articles/author/age'), '>', 25);
+        $components = $b->getComponents();
+
+        $expr = new FuncExpr('articles/author/age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [[
+            'type' => 'Basic', 'table' => 'articles.author', 'cols' => [$expr],
+            'op' => '>', 'val' => 25, 'logic' => 'AND', 'not' => false
+        ]];
+        $this->assertEquals($where, $components['where']);
+
+        // - - -
+
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->whereAttr('author/age', '<', DB::avg('readers/age'));
+
+        $components = $b->getComponents();
+        $expr = new FuncExpr('readers/age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [[
+            'type' => 'Attribute', 'lTable' => 'author', 'lCols' => ['age'],
+            'op' => '<', 'rTable' => 'readers', 'rCols' => [$expr], 'logic' => 'AND'
+        ]];
+        $this->assertEquals($where, $components['where']);
+    }
+
+    /**
+     * @covers ::whereFunc
+     */
+    public function testWhereFunc()
+    {
+        $b = new WhereBuilder;
+        $b->root('Author');
+        $b->whereFunc(DB::avg('age'), '>', 30);
+
+        $components = $b->build();
+        $expr = new FuncExpr('age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [
+            ['type' => 'Basic', 'table' => '_', 'cols' => [$expr], 'op' => '>', 'val' => 30, 'logic' => 'AND', 'not' => false],
+        ];
+
+        $this->assertEquals($where, $components['where']);
     }
 }

@@ -53,6 +53,12 @@ class SelectBuilder extends WhereBuilder
         $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
     }
 
+    /**
+     * Select result of a sub-query.
+     *
+     * @param Query  $sub The query of which to select result.
+     * @param string $alias The alias to give to the sub-result.
+     */
     public function selectSub(Query $sub, $alias)
     {
         $this->addValueToQuery($sub->getValues());

@@ -246,7 +246,7 @@ class BaseCompiler extends Compiler
 
             else
             {
-                $sql[] = $this->column($data['column'], '', $data['alias']);
+                $sql[] = $this->columnAs($data['column'], $data['alias']);
             }
         }
 
@@ -570,7 +570,7 @@ class BaseCompiler extends Compiler
     {
         if ($where['val'] === null)
         {
-            return $this->_whereIsNull($where);
+            return $this->_whereNull($where);
         }
 
         $alias = $this->useTableAlias ? $where['table'] : '';

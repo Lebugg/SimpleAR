@@ -108,6 +108,7 @@ class User extends SimpleAR\Orm\Model
         'firstName',
         'lastName' => 'name',
         'name' => 'name',
+        'age',
     );
 }
 

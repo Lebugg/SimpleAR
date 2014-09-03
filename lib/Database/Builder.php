@@ -102,7 +102,7 @@ class Builder
         // Allow specific builders to set default values after build.
         $this->_onAfterBuild();
 
-        return $this->_components;
+        return $this->getComponents();
     }
 
     /**
@@ -143,36 +143,23 @@ class Builder
     }
 
     /**
-     * Set the root model class.
-     *
-     * @param  string $class A valid model class name.
-     */
-    public function useRootModel($class)
-    {
-        $this->_useModel = true;
-        $this->setRootModel($class);
-    }
-
-    /**
-     * Set the name of table on which to execute the query.
-     *
-     * @param  string $tableName The table name.
-     * @return $this
-     */
-    public function useRootTableName($tableName)
-    {
-        $this->_useModel = false;
-        $this->_root = $tableName;
-    }
-
-    /**
      * Return the list of options that are waiting to be built.
      *
-     * @var array
+     * @return array
      */
     public function getOptions()
     {
         return $this->_options;
+    }
+
+    /**
+     * Return currently built components.
+     *
+     * @return array
+     */
+    public function getComponents()
+    {
+        return $this->_components;
     }
 
     /**
@@ -226,16 +213,51 @@ class Builder
     }
 
     /**
-     * Set the root model class name.
+     * Set the query root.
+     *
+     * Component: "root"
+     * ----------
+     *
+     * @param string $root A valid model class name, or a DB table name.
+     */
+    public function root($root)
+    {
+        if (\SimpleAR\is_valid_model_class($root))
+        {
+            $this->setRootModel($root);
+        }
+        else
+        {
+            $this->setRootTableName($root);
+        }
+
+        $this->_components['root'] = $root;
+        return $this;
+    }
+
+    /**
+     * Set the root model.
      *
      * @param string $model The model class name.
-     * @return void
      */
     public function setRootModel($model)
     {
         $this->_model    = $model;
         $this->_table    = $model::table();
         $this->_useModel = true;
+    }
+
+    /**
+     * Set the name of table on which to execute the query.
+     *
+     * @param  string $tableName The table name.
+     * @return $this
+     */
+    public function setRootTableName($tableName)
+    {
+        $this->_model    = null;
+        $this->_table    = $tableName;
+        $this->_useModel = false;
     }
 
     /**
@@ -350,29 +372,6 @@ class Builder
                 $this->$name($value);
             }
         }
-    }
-
-    /**
-     * Set the query root.
-     *
-     * Component: "root"
-     * ----------
-     *
-     * @param string $root A valid model class name, or a DB table name.
-     */
-    public function root($root)
-    {
-        if (\SimpleAR\is_valid_model_class($root))
-        {
-            $this->useRootModel($root);
-        }
-        else
-        {
-            $this->useRootTableName($root);
-        }
-
-        $this->_components['root'] = $root;
-        return $this;
     }
 
     /**
