@@ -322,13 +322,7 @@ class Query
      */
     protected function compile()
     {
-        // if (! $this->_built)
-        // {
-        //     throw new Exception('Cannot compile query: it is not built.');
-        // }
         $this->_built || $this->build();
-
-        //$compiler->useTablePrefix = $this->_useAlias;
 
         list($this->_sql, $this->_values) = $this->getCompiler()->compile($this);
 

@@ -363,6 +363,21 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($val, $qb->getQuery()->getValues());
     }
 
+    public function testHasWithQuery()
+    {
+        $qb = new QueryBuilder;
+
+        $qb->root('Blog')->has('articles', function ($q) {
+            $q->where('authorId', 12);
+        })->select(array('*'), false);
+
+        $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE EXISTS (SELECT `__`.* FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id` AND `__`.`author_id` = ?)';
+        $val = [[12]];
+        $q = $qb->getQuery()->compile();
+        $this->assertEquals($sql, $q->getSql());
+        $this->assertEquals($val, $q->getValues());
+    }
+
     /**
      * @covers ::hasNot
      */
