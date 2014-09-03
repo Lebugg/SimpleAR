@@ -85,7 +85,7 @@ class WhereBuilder extends Builder
         // Maybe user wants a IN condition?
         if (is_array($val))
         {
-            // Let's dereference $val too if it contains a single element. It'll 
+            // Let's dereference $val too if it contains a single element. It'll
             // avoid a IN condition.
             if (! isset($val[1]) && isset($val[0])) { $val = $val[0]; }
 
@@ -258,7 +258,7 @@ class WhereBuilder extends Builder
     /**
      * Get the separation character of relation names in options.
      *
-     * If the separator is not set yet, it fetches it from Config and cache it 
+     * If the separator is not set yet, it fetches it from Config and cache it
      * in current builder instance.
      *
      * @return string The separator.
@@ -298,7 +298,7 @@ class WhereBuilder extends Builder
     }
 
     /**
-     * Split the attribute string in two parts: proper attribute and relations 
+     * Split the attribute string in two parts: proper attribute and relations
      * string.
      *
      * An extended attribute string respects the following syntax:
@@ -311,7 +311,7 @@ class WhereBuilder extends Builder
      *  <SEP>       is: Config::$_queryOptionRelationSeparator
      *  <attribute> is: `<attribute name>(,<attribute name>)*`
      *
-     * We just have to find the last occurence of the separator and split the 
+     * We just have to find the last occurence of the separator and split the
      * string there.
      *
      * @param string $extendedAttributeString
@@ -357,7 +357,7 @@ class WhereBuilder extends Builder
      */
     public function relationsToTableAlias($relations)
     {
-        // Alias separators is a dot: '.', so we just have to replace relation 
+        // Alias separators is a dot: '.', so we just have to replace relation
         // separators with dots.
         return str_replace($this->getQueryOptionRelationSeparator(), '.', $relations);
     }
@@ -409,7 +409,7 @@ class WhereBuilder extends Builder
      *
      * @param string $tableAlias The table alias.
      * @return Table
-     * 
+     *
      * @see addInvolvedTable()
      * @see $_involvedTables
      */
@@ -485,7 +485,7 @@ class WhereBuilder extends Builder
         // The first alias is the root table's alias.
         $previousAlias = $this->getRootAlias();
 
-        // For each possible table alias, we check whether it known or not. If 
+        // For each possible table alias, we check whether it known or not. If
         // not, we get to know it.
         foreach ($relNames as $relName)
         {
@@ -538,7 +538,7 @@ class WhereBuilder extends Builder
     /**
      * Add a JoinClause to the list of join to make.
      *
-     * We have to create a new JoinClause to join $new Table. $new Table will be 
+     * We have to create a new JoinClause to join $new Table. $new Table will be
      * tied to $joined Table.
      *
      * @param Table
@@ -554,7 +554,7 @@ class WhereBuilder extends Builder
         // If relation cardinality is many-to-many, we must join middle table.
         if ($rel instanceof ManyMany)
         {
-            // _addJoinClauseManyMany returns the alias of the middle table. We 
+            // _addJoinClauseManyMany returns the alias of the middle table. We
             // are going to use it to join the middle table with the LM table.
             $cmAlias = $this->_addJoinClauseManyMany($rel, $cmAlias, $joinType);
         }
@@ -612,11 +612,11 @@ class WhereBuilder extends Builder
     /**
      * Parse a condition array.
      *
-     * This function is only a syntax analyzer. It does not make any assumption 
+     * This function is only a syntax analyzer. It does not make any assumption
      * about used tables, attribute names, value type.
      *
      * @param array $conditions The condition array
-     * @return array An array of Condition constructed out of given raw 
+     * @return array An array of Condition constructed out of given raw
      * conditions.
      */
     public function parseConditionArray(array $conditions, $defaultLogic = 'AND')
@@ -654,7 +654,7 @@ class WhereBuilder extends Builder
                 // We are facing a "complete" condition form.
                 // [0]: <attribute> ; [1]: <operator> ; [2]: <value>
                 //
-                // We check that [0] is a string to be a bit surer that it is a 
+                // We check that [0] is a string to be a bit surer that it is a
                 // condition array.
                 if (isset($value[0], $value[1]) && (isset($value[2]) || array_key_exists(2, $value))
                     && (is_string($value[0]) || $value[0] instanceof Expression)
@@ -662,8 +662,8 @@ class WhereBuilder extends Builder
                     $wheres[] = $this->where($value[0], $value[1], $value[2], $logic);
                 }
 
-                // This is (at least, we suppose this is) a condition group. 
-                // That means that we are wrapping following conditions with 
+                // This is (at least, we suppose this is) a condition group.
+                // That means that we are wrapping following conditions with
                 // parenthesis.
                 else
                 {
@@ -701,7 +701,7 @@ class WhereBuilder extends Builder
      *  <attribute> is: `<attribute name>(,<attribute name>)*`
      *
      *
-     * The goal of this function is to find out the table to which the 
+     * The goal of this function is to find out the table to which the
      * attribute belongs.
      *
      * Here are the steps to make it:
@@ -762,23 +762,23 @@ class WhereBuilder extends Builder
     /**
      * Build a condition.
      *
-     * The goal of this function is to build a Condition out of given 
+     * The goal of this function is to build a Condition out of given
      * parameters and add it to query's components.
      *
-     * To correctly build this Condition, we need to know on which table we 
-     * have to apply it, on which attribute-s and we need to know what kind of 
+     * To correctly build this Condition, we need to know on which table we
+     * have to apply it, on which attribute-s and we need to know what kind of
      * condition this is.
      *
-     * The two first requirements will be resolved thanks to $attribute 
+     * The two first requirements will be resolved thanks to $attribute
      * parameter. The last will be guess with all parameters.
      *
      * @param string $attribute The complete attribute string.
      * @param string $operator  The condition operator to use ('=', '<='...).
      * @param mixed  $value
-     * @param string $logic The logical operator to use to link this 
+     * @param string $logic The logical operator to use to link this
      * condition to the previous one ('AND', 'OR').
      *
-     * @param string $findAName @TODO Flag to tell whether to do a 'any' or a 
+     * @param string $findAName @TODO Flag to tell whether to do a 'any' or a
      * 'all' condition.
      *
      * @return Condition
@@ -799,31 +799,31 @@ class WhereBuilder extends Builder
      * Build a condition group (i.e. a nested condition).
      *
      * @param array  $conditions The nested raw conditions.
-     * @param string $logic The logical operator to use to link this 
+     * @param string $logic The logical operator to use to link this
      * condition to the previous one ('AND', 'OR').
      */
     protected function _buildConditionGroup(array $conditions, $logic, $not = false)
     {
-        // where() method updates $_components['where'] without 
-        // returning anything. In order to construct the nested 
+        if (! $conditions) { return; }
+
+        // where() method updates $_components['where'] without
+        // returning anything. In order to construct the nested
         // conditions. We are going to bufferize it.
         $components = &$this->_components;
         $currentWhere = isset($components['where']) ? $components['where'] : array();
         unset($components['where']);
 
-        // $conditions is an array of raw conditions. We need to parse them 
+        // $conditions is an array of raw conditions. We need to parse them
         // before create the nested condition.
         $this->parseConditionArray($conditions);
 
         // Now, nested conditions are in $_components['where'].
         // We have to construct our nested condition and restore components.
-        $nested = $this->_components['where'];
-        $type = 'Nested';
-        $cond = compact('type', 'nested', 'logic', 'not');
+        $nested = isset($components['where'])? $components['where'] : array();
+        $type   = 'Nested';
+        $cond   = compact('type', 'nested', 'logic', 'not');
 
-        $currentWhere[] = $cond;
-        $this->_components['where'] = $currentWhere;
-
-        return $cond;
+        $currentWhere[]      = $cond;
+        $components['where'] = $currentWhere;
     }
 }
