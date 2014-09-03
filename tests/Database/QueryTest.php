@@ -163,7 +163,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $exp = [1, 3];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
 
-        $val = [1, 2, [3], [new Expression, 3, [4, new Expression]]];
+        $val = [1, 2, [3], [new Expression(''), 3, [4, new Expression('')]]];
         $exp = [1, 2, 3, 3, 4];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
     }

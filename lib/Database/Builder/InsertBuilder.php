@@ -6,18 +6,6 @@ class InsertBuilder extends Builder
 {
     public $type = Builder::INSERT;
 
-    public function useRootModel($class)
-    {
-        parent::useRootModel($class);
-        $this->_components['into'] = $this->_table->name;
-    }
-
-    public function useRootTableName($table)
-    {
-        parent::useRootTableName($table);
-        $this->_components['into'] = $table;
-    }
-
     /**
      * Set the attributes in which to insert values.
      *
@@ -52,4 +40,10 @@ class InsertBuilder extends Builder
         $this->addValueToQuery($values, 'values');
     }
 
+    protected function _onAfterBuild()
+    {
+        $this->_components['into'] = $this->_useModel
+            ? $this->_table->name
+            : $this->_table;
+    }
 }
