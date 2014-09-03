@@ -1,7 +1,6 @@
 <?php namespace SimpleAR\Database;
-/**
- * This file contains the Expression class.
- */
+
+require __DIR__ . '/Expression/Func.php';
 
 /**
  * Represent a raw SQL expresion.
@@ -15,13 +14,28 @@ class Expression
      */
     protected $_value;
 
-    public function __construct($value = null)
+    public function __construct($value)
     {
-        $this->_value = $value;
+        $this->setValue($value);
     }
 
+    /**
+     * Get expression value.
+     *
+     * @return mixed
+     */
     public function val()
     {
         return $this->_value;
+    }
+
+    /**
+     * Set expression value.
+     *
+     * @param mixed $value
+     */
+    public function setValue($value)
+    {
+        $this->_value = $value;
     }
 }

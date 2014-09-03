@@ -2,6 +2,7 @@
 
 use SimpleAR\Database\Compiler\BaseCompiler;
 use SimpleAR\Database\Expression;
+use SimpleAR\Database\Expression\Func as FuncExpr;
 use SimpleAR\Database\JoinClause;
 use SimpleAR\Database\Query;
 
@@ -245,6 +246,32 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $expected = 'WHERE `author_id` IN (?,?,?)';
         $result   = $compiler->compileWhere($components);
         $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * @covers Compiler::column
+     */
+    public function testWhereBasicWithAFuncExpr()
+    {
+        $c = new BaseCompiler();
+        $c->useTableAlias = true;
+
+        $expr = new FuncExpr('articles/author/age', 'AVG');
+        $expr->setValue(['age']);
+        $components['where'][] = [
+            'type' => 'Basic', 'table' => 'articles.author', 'cols' => [$expr],
+            'op' => '>', 'val' => 25, 'logic' => 'AND', 'not' => false
+        ];
+
+        $expr = new FuncExpr('readers/age', 'AVG');
+        $expr->setValue(['age']);
+        $components['where'][] = [
+            'type' => 'Attribute', 'lTable' => 'author', 'lCols' => ['age'],
+            'op' => '<', 'rTable' => 'readers', 'rCols' => [$expr], 'logic' => 'AND'
+        ];
+
+        $expected = 'WHERE AVG(`articles.author`.`age`) > ? AND `author`.`age` < AVG(`readers`.`age`)';
+        $this->assertEquals($expected, $c->compileWhere($components));
     }
 
     /**
@@ -615,4 +642,5 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $expected = 'SELECT * FROM `articles` `_` INNER JOIN `blogs` `blog` ON `_`.`blog_id` = `blog`.`id` WHERE (`_`.`author_id`,`blog`.`id`) IN ((?,?),(?,?),(?,?))';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
+
 }

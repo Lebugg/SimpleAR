@@ -103,7 +103,7 @@ class Builder
      * Usage:
      * ------
      *
-     * There is two calling form for this function.
+     * There is different calling form for this function.
      *
      *  * Check existence of related models. This is a merely a WHERE EXISTS
      *  clause in SQL:
@@ -116,6 +116,13 @@ class Builder
      *
      *      This would retrieve blogs instance which contains at least one hundred
      *      articles.
+     *
+     *  * Use a Closure to add conditions to the subquery:
+     *
+     *      ```php
+     *      $query->root('Blog')->has('articles', function ($q) {
+     *          $q->where('online', true);
+     *      });
      *
      * @param string $relation The name of the relation to check on.
      * @param string $op       Optional. The operator for the second use form.
@@ -158,6 +165,11 @@ class Builder
         // sub-query.
         else
         {
+            if ($op instanceof \Closure)
+            {
+                $op($hasQuery);
+            }
+
             $hasQuery->select(array('*'), false);
             $mainQuery->whereExists($hasQuery, null, $not);
         }

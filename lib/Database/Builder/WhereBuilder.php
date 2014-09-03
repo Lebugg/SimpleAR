@@ -2,6 +2,7 @@
 
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
 use \SimpleAR\Exception\MalformedOptionException;
@@ -51,11 +52,21 @@ class WhereBuilder extends Builder
     /**
      * Add a condition.
      *
+     * The goal of this function is to create a condition  out of given
+     * parameters and add it to query's components.
+     *
+     * To correctly build this condition, we need to know on which table we
+     * have to apply it, on which attribute-s and we need to know what kind of
+     * condition this is.
+     *
+     * The two first requirements will be resolved thanks to $attribute
+     * parameter. The last will be guess with all parameters.
+     *
      * @param string $attribute
      * @param mixed  $val
      * @param mixed  $op
-     *
-     * @return void
+     * @param string $logic The logical operator to use to link this 
+     * condition to the previous one ('AND', 'OR').
      */
     public function where($attribute, $op = null, $val = null, $logic = 'AND', $not = false)
     {
@@ -81,7 +92,6 @@ class WhereBuilder extends Builder
             $attribute = $attribute[0];
         }
 
-
         // Maybe user wants a IN condition?
         if (is_array($val))
         {
@@ -102,7 +112,7 @@ class WhereBuilder extends Builder
             return;
         }
 
-        list($table, $cols) = $this->_processExtendedAttribute($attribute);
+        list($table, $cols) = $this->_processAttribute($attribute);
 
         $type = 'Basic';
         $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
@@ -124,8 +134,8 @@ class WhereBuilder extends Builder
             list($rightAttr, $op) = array($op, '=');
         }
 
-        list($lTable, $lCols) = $this->_processExtendedAttribute($leftAttr);
-        list($rTable, $rCols) = $this->_processExtendedAttribute($rightAttr);
+        list($lTable, $lCols) = $this->_processAttribute($leftAttr);
+        list($rTable, $rCols) = $this->_processAttribute($rightAttr);
 
         $type = 'Attribute';
         $cond = compact('type', 'lTable', 'lCols', 'op', 'rTable', 'rCols', 'logic');
@@ -139,7 +149,7 @@ class WhereBuilder extends Builder
      *
      * @param Query  $query The sub-query.
      * @param string $op The condition operator.
-     * @param mixed  $value The condition value.
+     * @param mixed  $val The condition value.
      */
     public function whereSub(Query $query, $op = null, $val = null, $logic = 'AND')
     {
@@ -236,6 +246,27 @@ class WhereBuilder extends Builder
         $this->_addWhere($cond);
     }
 
+    /**
+     * @param FuncExpr $fnExpr The extended attribute.
+     * @param string $op The condition operator.
+     * @param mixed  $val The condition value.
+     */
+    public function whereFunc(FuncExpr $fnExpr, $op, $val, $logic = 'AND', $not = false)
+    {
+        list($table, $cols) = $this->_processFunctionExpression($fnExpr);
+
+        $type = 'Basic';
+        $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
+        $this->_addWhere($cond, $val);
+    }
+
+    /**
+     * Add a condition over a tuple of attributes.
+     *
+     * @param array $attributes An array of extended attributes.
+     * @param mixed $val The value to compare to.
+     * @param string $logic The logical operator.
+     */
     public function whereTuple(array $attributes, $val, $logic = 'AND', $not = false)
     {
         $cols  = array();
@@ -685,6 +716,25 @@ class WhereBuilder extends Builder
     }
 
     /**
+     * Process an attribute.
+     *
+     * The goal of this function is to choose the correct attribute processor 
+     * according to parameter's type.
+     *
+     * @param  mixed $attribute
+     * @return array [<table alias>, <cols>] (To put in condition array).
+     */
+    protected function _processAttribute($attribute)
+    {
+        if ($attribute instanceof FuncExpr)
+        {
+            return $this->_processFunctionExpression($attribute);
+        }
+
+        return $this->_processExtendedAttribute($attribute);
+    }
+
+    /**
      * Parse an extended attribute string and extract data from it.
      *
      * What is an extended attribute?
@@ -710,7 +760,7 @@ class WhereBuilder extends Builder
      *  2) Retrieve the involved Table by <relations>. @see getInvolvedTable()
      *  3) Decompose <attribute> and convert it to column(s).
      *
-     * @param string $attribute The extended attribute string to process.
+     * @param mixed $attribute The extended attribute string to process.
      *
      * @return array [tableAlias, [columns]].
      */
@@ -749,6 +799,14 @@ class WhereBuilder extends Builder
         return array($tableAlias, $columns);
     }
 
+    protected function _processFunctionExpression(FuncExpr $expr)
+    {
+        list($table, $cols) = $this->_processExtendedAttribute($expr->getAttribute());
+        $expr->setValue($cols);
+
+        return array($table, array($expr));
+    }
+
     /**
      * Build 'conditions' option.
      *
@@ -762,15 +820,6 @@ class WhereBuilder extends Builder
     /**
      * Build a condition.
      *
-     * The goal of this function is to build a Condition out of given
-     * parameters and add it to query's components.
-     *
-     * To correctly build this Condition, we need to know on which table we
-     * have to apply it, on which attribute-s and we need to know what kind of
-     * condition this is.
-     *
-     * The two first requirements will be resolved thanks to $attribute
-     * parameter. The last will be guess with all parameters.
      *
      * @param string $attribute The complete attribute string.
      * @param string $operator  The condition operator to use ('=', '<='...).
