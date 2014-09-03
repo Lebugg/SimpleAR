@@ -343,7 +343,7 @@ class Builder
         while ($one = $this->_fetchModelInstance())
         {
             $all[] = $one;
-            $ids[] = $one->id;
+            $ids[] = $one->id();
         }
 
         $this->_relationsToPreload && $this->preloadRelations($all);
