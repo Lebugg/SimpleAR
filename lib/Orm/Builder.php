@@ -602,7 +602,7 @@ class Builder
      */
     public function __call($name, $args)
     {
-        $q = $this->getQueryOrNewSelect();
+        $q    = $this->getQueryOrNewSelect();
         $root = $this->_root;
 
         // Check if model has a scope of this name.

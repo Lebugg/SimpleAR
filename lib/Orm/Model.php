@@ -1066,7 +1066,7 @@ abstract class Model
      * @see Model::addTo()
      * @see Model::removeFrom()
      */
-    public function has($relation, $what = null)
+    /*public function has($relation, $what = null)
     {
         $lms = $this->__get($relation);
 
@@ -1102,7 +1102,7 @@ abstract class Model
         }
 
         return false;
-    }
+    }*/
 
     /**
      * Is the object dirty?
