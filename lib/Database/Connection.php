@@ -1,8 +1,10 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Compiler.php';
+
 use \SimpleAR\Config;
-use \SimpleAR\Exception\Database as DatabaseEx;
 use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Exception\Database as DatabaseEx;
 
 /**
  * This class abstracts a database connection.

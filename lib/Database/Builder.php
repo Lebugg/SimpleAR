@@ -219,9 +219,13 @@ class Builder
      * ----------
      *
      * @param string $root A valid model class name, or a DB table name.
+     * @param string $alias An alias for the root. It will override the default 
+     * that you can find here: @see ::$_rootAlias.
      */
-    public function root($root)
+    public function root($root, $alias = null)
     {
+        $alias && $this->setRootAlias($alias);
+
         if (\SimpleAR\is_valid_model_class($root))
         {
             $this->setRootModel($root);
@@ -275,8 +279,12 @@ class Builder
     /**
      * Add query value to value list.
      *
-     * If $component is not given, it expects $value to be an array of 
+     * If $component is not given, it expects $value to be an array of
      * components' values.
+     *
+     * If value is a subquery, its values will be added to the current query;
+     * but it won't be compiled. This is the Compiler's role. @see
+     * Compiler::parameterize().
      *
      * @param mixed $value The value to add to the value list.
      * @param string $component The component type ('set', 'where'...).
@@ -285,6 +293,11 @@ class Builder
      */
     public function addValueToQuery($value, $component = '')
     {
+        if ($value instanceof Query)
+        {
+            $this->addValueToQuery($value->getComponentValues(), $component);
+        }
+
         if ($component)
         {
             // Any check on value type (Model instance, Expression...) is made

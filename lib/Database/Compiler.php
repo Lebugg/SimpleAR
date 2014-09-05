@@ -1,5 +1,7 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Compiler/BaseCompiler.php';
+
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;
@@ -192,6 +194,11 @@ abstract class Compiler
             // @see https://github.com/illuminate/database/blob/master/Grammar.php
             $list = implode(',', array_map(array($this, 'parameterize'), $value));
             return '(' . $list . ')';
+        }
+
+        if ($value instanceof Query)
+        {
+            return '(' . $this->compileSelect($value->getComponents()) . ')';
         }
 
         return $value instanceof Expression

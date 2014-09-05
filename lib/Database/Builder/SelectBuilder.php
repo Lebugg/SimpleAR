@@ -11,15 +11,15 @@ class SelectBuilder extends WhereBuilder
     public $type = Builder::SELECT;
 
     /**
-     * Set query root.
-     *
+     * @override
      */
-    public function root($root)
+    public function root($root, $alias = null)
     {
-        parent::root($root);
+        parent::root($root, $alias);
 
-        $joinClause = new JoinClause($this->_table->name, $this->getRootAlias());
-        $this->_joinClauses[$this->getRootAlias()] = $joinClause;
+        $table = $this->_table->name;
+        $alias = $alias ?: $this->getRootAlias();
+        $this->setJoinClause($alias, new JoinClause($table, $alias));
 
         return $this;
     }
@@ -51,6 +51,14 @@ class SelectBuilder extends WhereBuilder
         }
 
         $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
+    }
+
+    /**
+     * Alias for select().
+     */
+    public function get($attributes, $expand = true)
+    {
+        $this->select($attributes, $expand);
     }
 
     /**
@@ -234,11 +242,6 @@ class SelectBuilder extends WhereBuilder
         );
     }
 
-    protected function _onAfterBuild()
-    {
-        $this->_components['from'] = array_values($this->_joinClauses);
-    }
-
     protected function _buildOrder_by($orderBy)
     {
         $this->orderBy($orderBy);
@@ -247,5 +250,10 @@ class SelectBuilder extends WhereBuilder
     protected function _buildGroup_by($groupBy)
     {
         $this->groupBy($groupBy);
+    }
+
+    protected function _onAfterBuild()
+    {
+        $this->_components['from'] = array_values($this->_joinClauses);
     }
 }

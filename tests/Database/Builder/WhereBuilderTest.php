@@ -198,6 +198,24 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['where']);
     }
 
+    public function testWhereWithQueryAsValue()
+    {
+        $b = new SelectBuilder;
+        $b->root('Blog');
+        $subQuery = User::query(null, 'articles.readers')
+            ->whereRelation(Article::relation('readers'), 'articles')
+            ->aggregate('AVG', 'age')->getQuery();
+        $b->where('articles/author/age', '>', $subQuery);
+
+        $components = $b->build();
+
+        $c = new BaseCompiler();
+        $sql = $c->compileComponents($components, 'select');
+
+        $expected = 'SELECT FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` WHERE `articles.readers`.`id` = `articles`.`id`)';
+        $this->assertEquals($expected, $sql);
+    }
+
     public function testWhereAttribute()
     {
         $b = new WhereBuilder();
@@ -206,7 +224,6 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Article')->whereAttr('blogId', '_/id');
 
         $components = $b->build();
-
         $where[] = ['type' => 'Attribute', 'lTable' => '__', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
 
         $this->assertEquals($where, $components['where']);
@@ -489,5 +506,18 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         ];
 
         $this->assertEquals($where, $components['where']);
+    }
+
+    public function testWhereRelation()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article', 'articles');
+        $b->whereRelation(Blog::relation('articles'), '_');
+
+        $components = $b->build();
+        $where[] = ['type' => 'Attribute', 'lTable' => 'articles', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals(Blog::table(), $b->getInvolvedTable('_'));
     }
 }

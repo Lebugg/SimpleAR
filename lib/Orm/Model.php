@@ -361,8 +361,6 @@ abstract class Model
      */
     protected $_currentFilter;
 
-    protected static $_queryBuilder;
-
     /**
      * This array contains the list of declared Table objects.
      *
@@ -638,7 +636,7 @@ abstract class Model
 
         $table  = $relation->jm->table;
         $fields = array($relation->jm->from, $relation->jm->to);
-        self::query()->insertInto($table, $fields)
+        self::query()->insert($table, $fields)
             ->values(array($this->id(), $id))
             ->run();
     }
@@ -827,9 +825,8 @@ abstract class Model
 
         $pk = self::table()->getPrimaryKey();
         $count = self::query()->delete()->where($pk, $this->id())->rowCount();
-        //$count = self::query('delete')->conditions(array('id' => $this->_id))->rowCount();
 
-        // Was not here? Weird. Tell user.
+        // Was not here? Tell user.
         if ($count === 0)
         {
             throw new RecordNotFound($this->id());
@@ -1235,8 +1232,7 @@ abstract class Model
      */
     public static function remove(array $conditions = null)
     {
-        return self::query()
-                ->delete()
+        return self::query()->delete()
                 ->conditions($conditions)
                 ->rowCount();
     }
@@ -1411,17 +1407,6 @@ abstract class Model
 
     public static function boot()
     {
-        self::setQueryBuilder(new QueryBuilder());
-    }
-
-    /**
-     * Set the QueryBuilder to use.
-     *
-     * @param QueryBuilder $qb The builder.
-     */
-    public static function setQueryBuilder(QueryBuilder $qb)
-    {
-        self::$_queryBuilder = $qb;
     }
 
     /**
@@ -1483,7 +1468,7 @@ abstract class Model
         }
 
         $table = new Table($tableName, $primaryKey, $columns);
-        $table->order       = static::$_orderBy;
+        $table->order = static::$_orderBy;
         $table->modelBaseName = $modelBaseName;
 
         self::setTable($fqcn, $table);
@@ -1494,12 +1479,10 @@ abstract class Model
      *
      * @return QueryBuilder
      */
-    public static function query()
+    public static function query($root = null, $rootAlias = null, Relation $rel = null)
     {
-        self::$_queryBuilder->reset();
-        self::$_queryBuilder->root(get_called_class());
-
-        return self::$_queryBuilder;
+        $root = $root ?: get_called_class();
+        return new QueryBuilder($root, $rootAlias, $rel);
     }
 
     /**
@@ -1943,7 +1926,10 @@ abstract class Model
 
         try
         {
-            $lastId = self::query()->insert(array_keys($fields), array_values($fields));
+            $lastId = self::query()->insert()
+                ->fields(array_keys($fields))
+                ->values($fields)
+                ->lastInsertId();
 
             if ($lastId)
             {
@@ -2012,7 +1998,8 @@ abstract class Model
                     if ($values)
                     {
                         $fields = array($relation->jm->from, $relation->jm->to);
-                        self::query()->insertInto($relation->jm->table, $fields)
+                        self::query()->insert($relation->jm->table)
+                            ->fields($fields)
                             ->values($values)->run();
                     }
                 }
@@ -2303,8 +2290,8 @@ abstract class Model
                     if ($values)
                     {
                         $fields = array($relation->jm->from, $relation->jm->to);
-                        $query = self::query()
-                            ->insertInto($relation->jm->table, $fields)
+                        $query = self::query()->insert($relation->jm->table)
+                            ->fields($fields)
                             ->values($values)
                             ->run();
                     }
