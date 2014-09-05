@@ -196,6 +196,11 @@ abstract class Compiler
             return '(' . $list . ')';
         }
 
+        if ($value instanceof Query)
+        {
+            return '(' . $this->compileSelect($value->getComponents()) . ')';
+        }
+
         return $value instanceof Expression
             ?  $value->val()
             : '?';

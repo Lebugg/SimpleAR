@@ -150,6 +150,8 @@ class WhereBuilder extends Builder
      * @param Query  $query The sub-query.
      * @param string $op The condition operator.
      * @param mixed  $val The condition value.
+     *
+     * Deprecated?
      */
     public function whereSub(Query $query, $op = null, $val = null, $logic = 'AND')
     {
@@ -277,7 +279,7 @@ class WhereBuilder extends Builder
      * @param Relation $rel
      * @param string   $alias An alias for the linked model.
      */
-    public function whereRelation(Relation $rel, $lmAlias)
+    public function whereRelation(Relation $rel, $lmAlias = '_')
     {
         $lmTable = $rel->cm->t;
         $this->setInvolvedTable($lmAlias, $lmTable);

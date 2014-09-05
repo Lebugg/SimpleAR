@@ -279,8 +279,12 @@ class Builder
     /**
      * Add query value to value list.
      *
-     * If $component is not given, it expects $value to be an array of 
+     * If $component is not given, it expects $value to be an array of
      * components' values.
+     *
+     * If value is a subquery, its values will be added to the current query;
+     * but it won't be compiled. This is the Compiler's role. @see
+     * Compiler::parameterize().
      *
      * @param mixed $value The value to add to the value list.
      * @param string $component The component type ('set', 'where'...).
@@ -289,6 +293,11 @@ class Builder
      */
     public function addValueToQuery($value, $component = '')
     {
+        if ($value instanceof Query)
+        {
+            $this->addValueToQuery($value->getComponentValues(), $component);
+        }
+
         if ($component)
         {
             // Any check on value type (Model instance, Expression...) is made

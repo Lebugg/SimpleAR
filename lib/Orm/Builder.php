@@ -66,9 +66,7 @@ class Builder
      */
     public function __construct($root = null, $rootAlias = null, Relation $rel = null)
     {
-        $root && $this->setRoot($root);
-
-        $rootAlias && $this->getQueryOrNewSelect()->setRootAlias($rootAlias);
+        $root && $this->setRoot($root, $rootAlias);
         $rel && $this->getQueryOrNewSelect()->whereRelation($rel);
     }
 
@@ -87,12 +85,12 @@ class Builder
      *
      * @return $this
      */
-    public function setRoot($root)
+    public function setRoot($root, $rootAlias = null)
     {
         $this->_root = $root;
 
         // If a query is already instanciated, set root of it.
-        $this->_query && $this->_query->root($root);
+        $this->select($root, $rootAlias);
 
         return $this;
     }
