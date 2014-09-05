@@ -8,7 +8,6 @@
          convertNoticesToExceptions="true"
          convertWarningsToExceptions="true"
          stopOnFailure="false"
-         strict="true"
          verbose="true"
 >
     <testsuites>
@@ -16,4 +15,7 @@
             <directory>./tests/</directory>
         </testsuite>
     </testsuites>
+    <listeners>
+        <listener class="\Mockery\Adapter\Phpunit\TestListener"></listener>
+    </listeners>
 </phpunit>

@@ -24,6 +24,17 @@ class DeleteBuilder extends WhereBuilder
         return $this;
     }
 
+    /**
+     * Alias for root.
+     *
+     * It easier to read "delete()->from('table')->where(...)" rather than 
+     * "delete()->root('table')->where(...)". That's why this function is here.
+     */
+    public function from($root)
+    {
+        return $this->root($root);
+    }
+
     protected function _onAfterBuild()
     {
         // Never used yet. But still, it is possible.

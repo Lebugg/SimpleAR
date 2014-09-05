@@ -1,5 +1,7 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Compiler/BaseCompiler.php';
+
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;

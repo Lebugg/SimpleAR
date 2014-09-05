@@ -490,4 +490,17 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($where, $components['where']);
     }
+
+    public function testWhereRelation()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article', 'articles');
+        $b->whereRelation(Blog::relation('articles'), '_');
+
+        $components = $b->build();
+        $where[] = ['type' => 'Attribute', 'lTable' => 'articles', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals(Blog::table(), $b->getInvolvedTable('_'));
+    }
 }

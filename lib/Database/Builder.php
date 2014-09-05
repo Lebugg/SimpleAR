@@ -219,9 +219,13 @@ class Builder
      * ----------
      *
      * @param string $root A valid model class name, or a DB table name.
+     * @param string $alias An alias for the root. It will override the default 
+     * that you can find here: @see ::$_rootAlias.
      */
-    public function root($root)
+    public function root($root, $alias = null)
     {
+        $alias && $this->setRootAlias($alias);
+
         if (\SimpleAR\is_valid_model_class($root))
         {
             $this->setRootModel($root);

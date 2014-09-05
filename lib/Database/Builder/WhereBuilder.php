@@ -261,6 +261,39 @@ class WhereBuilder extends Builder
     }
 
     /**
+     * Add a condition over a relation.
+     *
+     * This is not the same as perform a join. An involved table will be used
+     * and where conditions given by the relation object will be added.
+     *
+     * This method is particularly useful to connect tables between subquery and
+     * main query.
+     *
+     * Important:
+     * ----------
+     * Current Model (CM) of relation is the table to involve ; Linked Model
+     * (LM) is the current builder's root model.
+     *
+     * @param Relation $rel
+     * @param string   $alias An alias for the linked model.
+     */
+    public function whereRelation(Relation $rel, $lmAlias)
+    {
+        $lmTable = $rel->cm->t;
+        $this->setInvolvedTable($lmAlias, $lmTable);
+
+        // Make the join between both tables:
+
+        $sep = Cfg::get('queryOptionRelationSeparator');
+        // $lmAttr: attribute of the model to link. (The relation CM attr)
+        // $cmAttr: current builder root model attribute. (The relation LM attr)
+        foreach ($rel->getJoinAttributes() as $lmAttr => $cmAttr)
+        {
+            $this->whereAttr($cmAttr, $lmAlias . $sep . $lmAttr);
+        }
+    }
+
+    /**
      * Add a condition over a tuple of attributes.
      *
      * @param array $attributes An array of extended attributes.
@@ -438,15 +471,15 @@ class WhereBuilder extends Builder
     /**
      * Return the Table object matching the given table alias.
      *
-     * @param string $tableAlias The table alias.
+     * @param string $tAlias The table alias.
      * @return Table
      *
      * @see addInvolvedTable()
      * @see $_involvedTables
      */
-    public function getInvolvedTable($tableAlias)
+    public function getInvolvedTable($tAlias)
     {
-        if ($tableAlias === $this->getRootAlias())
+        if ($tAlias === $this->getRootAlias())
         {
             if (($t = $this->getRootTable()) === null)
             {
@@ -456,7 +489,7 @@ class WhereBuilder extends Builder
             return $t;
         }
 
-        return $this->_involvedTables[$tableAlias];
+        return $this->_involvedTables[$tAlias];
     }
 
     /**
@@ -473,12 +506,28 @@ class WhereBuilder extends Builder
     /**
      * Get the JoinClause matching given table alias.
      *
-     * @param string $tableAlias The table alias.
+     * @param string $tAlias The table alias.
      * @return JoinClause
      */
-    public function getJoinClause($tableAlias)
+    public function getJoinClause($tAlias)
     {
-        return $this->_joinClauses[$tableAlias];
+        if (! isset($this->_joinClauses[$tAlias]))
+        {
+            throw new Exception('Undefined join clause for alias "' . $tAlias . '".');
+        }
+
+        return $this->_joinClauses[$tAlias];
+    }
+
+    /**
+     * Set join clause for the given alias.
+     *
+     * @param string $alias
+     * @param JoinClause $jc
+     */
+    public function setJoinClause($alias, JoinClause $jc)
+    {
+        $this->_joinClauses[$alias] = $jc;
     }
 
     /**
@@ -499,15 +548,15 @@ class WhereBuilder extends Builder
      * the relations (given by their names), we can know following tables. The
      * process looks like: Table -> Relation -> next Table -> next Relation ...
      *
-     * @param string $tableAlias The table alias used in the extended attribute
+     * @param string $tAlias The table alias used in the extended attribute
      * string (i.e. the <relations> part).
      *
      * @return void
      */
-    public function addInvolvedTable($tableAlias, $joinType = JoinClause::INNER)
+    public function addInvolvedTable($tAlias, $joinType = JoinClause::INNER)
     {
         $alias   = '';
-        $relNames = explode('.', $tableAlias);
+        $relNames = explode('.', $tAlias);
 
         // $this->_table is the "root" table.
         $currentModel = $this->_model;
@@ -602,7 +651,7 @@ class WhereBuilder extends Builder
             }
         }
 
-        $this->_joinClauses[$lmAlias] = $jc;
+        $this->setJoinClause($lmAlias, $jc);
     }
 
     protected function _addJoinClauseManyMany(ManyMany $rel, $cmAlias, $joinType)
@@ -617,7 +666,7 @@ class WhereBuilder extends Builder
             $jcMiddle->on($cmAlias, $lCol, $mdAlias, $rCol);
         }
 
-        $this->_joinClauses[$mdAlias] = $jcMiddle;
+        $this->setJoinClause($mdAlias, $jcMiddle);
 
         return $mdAlias;
     }
@@ -762,7 +811,7 @@ class WhereBuilder extends Builder
      *
      * @param mixed $attribute The extended attribute string to process.
      *
-     * @return array [tableAlias, [columns]].
+     * @return array [tAlias, [columns]].
      */
     protected function _processExtendedAttribute($attribute)
     {
@@ -781,22 +830,22 @@ class WhereBuilder extends Builder
         list($relations, $attribute) = $this->separateAttributeFromRelations($attribute);
 
         // 2)
-        $tableAlias = $relations
+        $tAlias = $relations
             ? $this->relationsToTableAlias($relations)
             : $this->getRootAlias();
 
-        if (! $this->isKnownTableAlias($tableAlias))
+        if (! $this->isKnownTableAlias($tAlias))
         {
-            $this->addInvolvedTable($tableAlias);
+            $this->addInvolvedTable($tAlias);
         }
-        $table = $this->getInvolvedTable($tableAlias);
+        $table = $this->getInvolvedTable($tAlias);
 
         // 3)
         $attributes = $this->decomposeAttribute($attribute);
         $attributes = isset($attributes[1]) ? $attributes : $attributes[0];
         $columns = (array) $this->convertAttributesToColumns($attributes, $table);
 
-        return array($tableAlias, $columns);
+        return array($tAlias, $columns);
     }
 
     protected function _processFunctionExpression(FuncExpr $expr)
@@ -838,7 +887,7 @@ class WhereBuilder extends Builder
     //
     //     $type = 'Basic';
     //     $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic');
-    //     //$cond = new SimpleCond($tableAlias, $columns, $operator, $value, $logic);
+    //     //$cond = new SimpleCond($tAlias, $columns, $operator, $value, $logic);
     //     $this->addValueToQuery($val, 'where');
     //
     //     return $cond;

@@ -1,10 +1,8 @@
 <?php namespace SimpleAR\Database\Compiler;
 
 use \SimpleAR\Database\Compiler;
-
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\JoinClause;
-//use \SimpleAR\Database\Condition as WhereClause;
 
 /**
  * This is the base SQL compiler.

@@ -6,17 +6,12 @@
  */
 
 require __DIR__ . '/Builder.php';
-require __DIR__ . '/Compiler.php';
 require __DIR__ . '/JoinClause.php';
-require __DIR__ . '/Compiler/BaseCompiler.php';
-
-use \SimpleAR\Exception;
 
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Compiler;
 use \SimpleAR\Database\Connection;
-// To be removed as soon as getCompiler() does not use DB.
-use \SimpleAR\Facades\DB;
+use \SimpleAR\Exception;
 
 /**
  * This class is the superclass of all SQL queries.
@@ -111,16 +106,9 @@ class Query
      */
     protected $_type;
 
-    public function __construct(Builder $builder = null,
-        Compiler $compiler = null,
-        Connection $conn = null,
-        $criticalQuery = false
-    ) {
-        $builder && $this->setBuilder($builder);
-        $this->_compiler = $compiler;
-        $this->_connection = $conn;
-
-        $this->setCriticalQuery($criticalQuery);
+    public function __construct(Builder $b = null, Connection $conn = null) {
+        $b && $this->setBuilder($b);
+        $conn && $this->setConnection($conn);
     }
 
     /**
@@ -245,8 +233,22 @@ class Query
      */
     public function getCompiler()
     {
-        // Te be change. We *have* to use Connections.
-        return $this->_compiler = ($this->_compiler ?: DB::compiler());
+        if (! $this->_compiler)
+        {
+            $this->_compiler = $this->getConnection()->getCompiler();
+        }
+
+        return $this->_compiler;
+    }
+
+    /**
+     * Set compiler to user.
+     *
+     * @param Compiler $c
+     */
+    public function setCompiler(Compiler $c)
+    {
+        $this->_compiler = $c;
     }
 
     /**
@@ -259,11 +261,31 @@ class Query
         return $this->_connection;
     }
 
+    /**
+     * Set connection to use.
+     *
+     * @param Connection $conn
+     */
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
+    }
+
+    /**
+     * Is this query critical?
+     *
+     * @return bool
+     */
     public function isCriticalQuery()
     {
         return $this->_isCriticalQuery;
     }
 
+    /**
+     * Mark this query as critical or not.
+     *
+     * @param bool $bool
+     */
     public function setCriticalQuery($bool = true)
     {
         $this->_isCriticalQuery = $bool;

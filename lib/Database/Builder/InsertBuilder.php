@@ -7,12 +7,26 @@ class InsertBuilder extends Builder
     public $type = Builder::INSERT;
 
     /**
+     * Set in which table to insert.
+     *
+     * @param string $table The root table name.
+     * @param array  $fields The fields targetted by the query.
+     * @return $this
+     */
+    public function into($table, $fields)
+    {
+        return $this->root($table)
+            ->fields($fields);
+    }
+
+    /**
      * Set the attributes in which to insert values.
      *
      * Component: "insertColumns"
      * ----------
      *
      * @param array $fields The attributes.
+     * @return $this
      */
     public function fields(array $fields)
     {
@@ -24,6 +38,8 @@ class InsertBuilder extends Builder
         }
 
         $this->_components['insertColumns'] = $fields;
+
+        return $this;
     }
 
     /**
