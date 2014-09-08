@@ -88,7 +88,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testGetter()
     {
-        $stub = $this->getMock('Blog', array('get_x'));
+        $stub = $this->getMock('Blog', ['get_x']);
 
         $stub->expects($this->exactly(2))
              ->method('get_x');
@@ -99,11 +99,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testSetter()
     {
-        $stub = $this->getMock('Blog', array('set_x'));
+        $stub = $this->getMock('Blog', ['set_x']);
 
         $stub->expects($this->exactly(2))
             ->method('set_x')
-            ->withConsecutive(array(12), array(15));
+            ->withConsecutive([12], [15]);
 
         $stub->x = 12;
         $stub->x = 15;
@@ -263,10 +263,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
     public function no_testLoadRelation()
     {
         // With a *-to-many relation.
-        $articles = array(
-            new Article,
-            new Article,
-        );
+        $articles = [new Article, new Article];
 
         $qb = $this->getMock('\SimpleAR\Orm\Builder', array('all'));
         $qb->expects($this->once())->method('all')->will($this->returnValue($articles));

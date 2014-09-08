@@ -1,5 +1,7 @@
 <?php
 
+use \Mockery as m;
+
 use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Builder\InsertBuilder;
 use \SimpleAR\Database\Builder\DeleteBuilder;
@@ -63,8 +65,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testInsert()
     {
-        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery']);
-        $qb->expects($this->once())->method('newQuery')
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['initQuery']);
+        $qb->expects($this->once())->method('initQuery')
             ->with(new InsertBuilder, null, null, false, true);
         $qb->insert();
     }
@@ -128,11 +130,11 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testOne()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
-        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'run'], [null, $conn]);
-        $qb = new QueryBuilder;
+        $conn = $this->getMock('\SimpleAR\Database\Connection', ['query', 'getNextRow']);
+        $q = $this->getMock('\SimpleAR\Database\Query', ['__call', 'run'], [null, $conn]);
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
         $qb->setConnection($conn);
-        $qb->setQuery($q);
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
 
         $row = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
         $conn->expects($this->once())->method('getNextRow')->will($this->returnValue($row));
@@ -180,9 +182,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
         $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'run'], [null, $conn]);
-        $qb = new QueryBuilder;
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
         $qb->setConnection($conn);
-        $qb->setQuery($q);
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
 
         $return[] = ['id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2];
         $return[] = ['id' => 11, 'title' => 'My Book', 'authorId' => 1, 'blogId' => 4];
@@ -486,14 +488,13 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $articles[] = new Article(['id' => 4, 'blogId' => 3]);
         $articles[] = new Article(['id' => 5, 'blogId' => 2]);
 
-        $q = $this->getMock('SimpleAR\Database\Query', ['root', '__call', 'whereTuple']);
-        $q->expects($this->once())->method('__call')->with('conditions', [[]]);
+        $q = $this->getMock('SimpleAR\Database\Query', ['whereTuple']);
         $q->expects($this->once())->method('whereTuple')->with(['blogId'], [[1],[2],[3]]);
 
-        $qb = $this->getMock('SimpleAR\Orm\Builder', ['root', 'newQuery', 'all']);
-        $qb->expects($this->once())->method('root')->with('Article');
-        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
-        $qb->expects($this->once())->method('all')->with(['*'], $q)->will($this->returnValue($articles));
+        $qb = m::mock('SimpleAR\Orm\Builder[select,setOptions,all]');
+        $qb->shouldReceive('select')->once()->withNoArgs()->andReturn($q);
+        $qb->shouldReceive('setOptions')->once()->with(['conditions' => []]);
+        $qb->shouldReceive('all')->once()->with(['*'], $q)->andReturn($articles);
         $this->assertEquals($articles, $qb->loadRelation($relation, $blogs));
     }
 

@@ -34,6 +34,7 @@ class Builder
      * @var string
      */
     protected $_root;
+    protected $_rootAlias;
 
     /**
      * Do we have eager loading processing?
@@ -66,7 +67,7 @@ class Builder
      */
     public function __construct($root = null, $rootAlias = null, Relation $rel = null)
     {
-        $root && $this->setRoot($root, $rootAlias);
+        $this->setRoot($root, $rootAlias);
         $rel && $this->getQueryOrNewSelect()->whereRelation($rel);
     }
 
@@ -88,8 +89,9 @@ class Builder
     public function setRoot($root, $rootAlias = null)
     {
         // If a query is already instanciated, set root of it.
-        $this->getQueryOrNewSelect()->root($root, $rootAlias);
+        //$this->getQueryOrNewSelect()->root($root, $rootAlias);
         $this->_root = $root;
+        $this->_rootAlias = $rootAlias;
 
         return $this;
     }
@@ -209,7 +211,7 @@ class Builder
      */
     public function insert($root = null, $rootAlias = null, $storeIt = true)
     {
-        return $this->newQuery(new InsertBuilder, $root, $rootAlias, false, $storeIt);
+        return $this->initQuery(new InsertBuilder, $root, $rootAlias, false, $storeIt);
     }
 
     /**
@@ -220,7 +222,7 @@ class Builder
      */
     public function select($root = null, $rootAlias = null, $storeIt = true)
     {
-        return $this->newQuery(new SelectBuilder, $root, $rootAlias, false, $storeIt);
+        return $this->initQuery(new SelectBuilder, $root, $rootAlias, false, $storeIt);
     }
 
     /**
@@ -231,7 +233,7 @@ class Builder
      */
     public function update($root = null, $rootAlias = null, $storeIt = true)
     {
-        return $this->newQuery(new UpdateBuilder, $root, $rootAlias, true, $storeIt);
+        return $this->initQuery(new UpdateBuilder, $root, $rootAlias, true, $storeIt);
     }
 
     /**
@@ -242,7 +244,38 @@ class Builder
      */
     public function delete($root = null, $rootAlias = null, $storeIt = true)
     {
-        return $this->newQuery(new DeleteBuilder, $root, $rootAlias, true, $storeIt);
+        return $this->initQuery(new DeleteBuilder, $root, $rootAlias, true, $storeIt);
+    }
+
+    /**
+     * Return a new Query instance.
+     *
+     * @param Builder $b The builder to use.
+     * @return Query
+     */
+    public function initQuery(QueryBuilder $b = null,
+        $root = null, $rootAlias = null,
+        $critical = false, $storeIt = false)
+    {
+        $q = $this->newQuery($b);
+
+        $q->root($root ?: $this->_root, $rootAlias ?: $this->_rootAlias);
+        $critical && $q->setCriticalQuery($critical);
+
+        $storeIt && $this->setQuery($q);
+
+        return $q;
+    }
+
+    /**
+     * Instanciate a new Query object with the given builder.
+     *
+     * @param  QueryBuilder $b The builder to use.
+     * @return Query
+     */
+    public function newQuery(QueryBuilder $b)
+    {
+        return new Query($b, $this->getConnection());
     }
 
     /**
@@ -379,6 +412,7 @@ class Builder
         // Our object is already saved. It has an ID. We are going to
         // fetch potential linked objects from DB.
 		$lmClass = $relation->lm->class;
+        $this->setRoot($lmClass);
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
@@ -416,8 +450,6 @@ class Builder
         $options = array_merge($options, $localOptions);
 
         $q = $this->select();
-        $this->setQuery($q); // We'll need it for possible scopes.
-        $this->root($lmClass);
         $this->setOptions($options);
         $q->whereTuple($lmAttributes, $cmValues);
 
@@ -605,31 +637,11 @@ class Builder
     }
 
     /**
-     * Return a new Query instance.
-     *
-     * @param Builder $b The builder to use.
-     * @return Query
-     */
-    public function newQuery(QueryBuilder $b = null,
-        $root = null, $rootAlias = null,
-        $critical = false, $storeIt = false)
-    {
-        $q = new Query($b, $this->getConnection());
-
-        ($root = $root ?: $this->_root) && $q->root($root, $rootAlias);
-        $critical && $q->setCriticalQuery($critical);
-
-        $storeIt && $this->setQuery($q);
-
-        return $q;
-    }
-
-    /**
      * Return the current query instance or a new Select query if there is no
      * query yet.
      *
      * @see getQuery()
-     * @see newQuery()
+     * @see select()
      */
     public function getQueryOrNewSelect()
     {
