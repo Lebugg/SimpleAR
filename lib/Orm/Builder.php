@@ -129,7 +129,7 @@ class Builder
      *
      * @return $this
      */
-    public function has($relation, $op = null, $value = null, $not = false)
+    public function whereHas($relation, $op = null, $value = null, $not = false)
     {
         $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
@@ -168,6 +168,16 @@ class Builder
     }
 
     /**
+     * Alias for whereHas()
+     *
+     * @deprecated
+     */
+    public function has($relation, $op = null, $value = null, $not = false)
+    {
+        return $this->whereHas($relation, $op, $value, $not);
+    }
+
+    /**
      * Add a condition over a related model.
      *
      * Inverse `has()` method.
@@ -180,11 +190,20 @@ class Builder
      *
      * @return $this
      */
-    public function hasNot($relation, $op = null, $value = null)
+    public function whereHasNot($relation, $op = null, $value = null)
     {
-        return $this->has($relation, $op, $value, true);
+        return $this->whereHas($relation, $op, $value, true);
     }
 
+    /**
+     * Alias for whereHasNot()
+     *
+     * @deprecated
+     */
+    public function hasNot($relation, $op = null, $value = null)
+    {
+        return $this->whereHasNot($relation, $op, $value);
+    }
     /**
      * Set several options.
      *
