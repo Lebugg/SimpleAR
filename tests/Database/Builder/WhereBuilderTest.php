@@ -206,6 +206,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
             ->whereRelation(Article::relation('readers'), 'articles')
             ->aggregate('AVG', 'age')->getQuery();
         $b->where('articles/author/age', '>', $subQuery);
+        $b->get(['*'], false);
 
         $components = $b->build();
         $values = $b->getValues();
@@ -214,7 +215,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $sql = $c->compileComponents($components, 'select');
         $val = $c->compileValues($values, 'select');
 
-        $expected = 'SELECT FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` WHERE `articles.readers`.`id` = `articles`.`id`)';
+        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` WHERE `articles.readers`.`id` = `articles`.`id`)';
         $expectedValues = [[]];
         $this->assertEquals($expected, $sql);
         $this->assertEquals($expectedValues, $val);
