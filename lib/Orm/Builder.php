@@ -87,10 +87,9 @@ class Builder
      */
     public function setRoot($root, $rootAlias = null)
     {
-        $this->_root = $root;
-
         // If a query is already instanciated, set root of it.
-        $this->select($root, $rootAlias);
+        $this->getQueryOrNewSelect()->root($root, $rootAlias);
+        $this->_root = $root;
 
         return $this;
     }
@@ -634,11 +633,7 @@ class Builder
      */
     public function getQueryOrNewSelect()
     {
-        $q = $this->getQuery() ?: $this->select();
-
-        $this->setQuery($q);
-
-        return $q;
+        return $this->getQuery() ?: $this->select();
     }
 
     /**

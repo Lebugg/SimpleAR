@@ -63,9 +63,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testInsert()
     {
-        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery'], ['Article']);
+        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery']);
         $qb->expects($this->once())->method('newQuery')
-            ->with(new InsertBuilder, null, false);
+            ->with(new InsertBuilder, null, null, false, true);
         $qb->insert();
     }
 
@@ -117,11 +117,12 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testSetOptions()
     {
-        $qb = $this->getMock('SimpleAR\Orm\Builder', ['newQuery']);
         $q = $this->getMock('SimpleAR\Database\Query', ['__call']);
-        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
-
         $q->expects($this->exactly(3))->method('__call');
+
+        $qb = new QueryBuilder;
+        $qb->setQuery($q);
+
         $qb->setOptions(['limit' => 3, 'offset' => 12, 'orderBy' => 'name']);
     }
 
@@ -136,7 +137,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $row = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
         $conn->expects($this->once())->method('getNextRow')->will($this->returnValue($row));
         $q->expects($this->exactly(2))->method('__call')->withConsecutive(
-            ['root', ['Article']],
+            ['root', ['Article', null]],
             ['get', [['*']]]
         )->will($this->returnValue($q));
         $q->expects($this->once())->method('run');
@@ -191,7 +192,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             $return[0], $return[1], $return[2], false
         ));
         $q->expects($this->exactly(2))->method('__call')->withConsecutive(
-            ['root', ['Article']],
+            ['root', ['Article', null]],
             ['get', [['*']]]
         )->will($this->returnValue($q));
         $q->expects($this->once())->method('run');
