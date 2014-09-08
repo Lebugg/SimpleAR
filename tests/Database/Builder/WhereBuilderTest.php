@@ -208,12 +208,16 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->where('articles/author/age', '>', $subQuery);
 
         $components = $b->build();
+        $values = $b->getValues();
 
         $c = new BaseCompiler();
         $sql = $c->compileComponents($components, 'select');
+        $val = $c->compileValues($values, 'select');
 
         $expected = 'SELECT FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` WHERE `articles.readers`.`id` = `articles`.`id`)';
+        $expectedValues = [[]];
         $this->assertEquals($expected, $sql);
+        $this->assertEquals($expectedValues, $val);
     }
 
     public function testWhereAttribute()

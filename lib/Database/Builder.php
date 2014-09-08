@@ -296,6 +296,7 @@ class Builder
         if ($value instanceof Query)
         {
             $this->addValueToQuery($value->getComponentValues(), $component);
+            return;
         }
 
         if ($component)
