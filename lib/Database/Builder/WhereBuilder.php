@@ -137,9 +137,23 @@ class WhereBuilder extends Builder
         list($lTable, $lCols) = $this->_processAttribute($leftAttr);
         list($rTable, $rCols) = $this->_processAttribute($rightAttr);
 
+        $this->whereCol($lTable, $lCols, $op, $rTable, $rCols, $logic);
+    }
+
+    /**
+     * Add a condition between two columns.
+     *
+     * @param string $lTable The left table alias.
+     * @param string $lCols The left column name.
+     * @param string $op A conditional operator.
+     * @param string $rTable The right table alias.
+     * @param string $rCols The right column name.
+     * @param string $logic The logical operator (AND, OR).
+     */
+    public function whereCol($lTable, $lCols, $op, $rTable, $rCols, $logic = 'AND')
+    {
         $type = 'Attribute';
         $cond = compact('type', 'lTable', 'lCols', 'op', 'rTable', 'rCols', 'logic');
-        //$cond = new AttrCond($leftAlias, $leftCols, $op, $rightAlias, $rightCols, $logic);
 
         $this->_addWhere($cond);
     }
@@ -287,12 +301,31 @@ class WhereBuilder extends Builder
         // Make the join between both tables:
 
         $sep = Cfg::get('queryOptionRelationSeparator');
-        // $lmAttr: attribute of the model to link. (The relation CM attr)
-        // $cmAttr: current builder root model attribute. (The relation LM attr)
-        foreach ($rel->getJoinAttributes() as $lmAttr => $cmAttr)
+        if ($rel instanceof ManyMany)
         {
-            $this->whereAttr($cmAttr, $lmAlias . $sep . $lmAttr);
+            $mdTable = $rel->getMiddleTableName();
+            $mdAlias = $rel->getMiddleTableAlias();
+            $cmAlias = $this->getRootAlias();
+
+            // Join middle table.
+            $jc = new JoinClause($mdTable, $mdAlias);
+            $jc->on($cmAlias, $rel->lm->column, $mdAlias, $rel->jm->to);
+            $this->setJoinClause($mdAlias, $jc);
+
+            // Where on relation.
+            $lmCols = $rel->cm->column; $mdCols = $rel->jm->from;
+            $this->whereCol($mdAlias, $mdCols, '=', $lmAlias, $lmCols);
         }
+        else
+        {
+            // $lmAttr: attribute of the model to link. (The relation CM attr)
+            // $cmAttr: current builder root model attribute. (The relation LM attr)
+            foreach ($rel->getJoinAttributes() as $lmAttr => $cmAttr)
+            {
+                $this->whereAttr($cmAttr, $lmAlias . $sep . $lmAttr);
+            }
+        }
+
     }
 
     /**
@@ -656,6 +689,13 @@ class WhereBuilder extends Builder
         $this->setJoinClause($lmAlias, $jc);
     }
 
+    /**
+     * Join on middle table of a many-to-many relation.
+     *
+     * @param ManyMany $rel The relation.
+     * @param string   $cmAlias The current model alias.
+     * @param int      $joinType
+     */
     protected function _addJoinClauseManyMany(ManyMany $rel, $cmAlias, $joinType)
     {
         // $md stands for "middle".
@@ -663,11 +703,7 @@ class WhereBuilder extends Builder
         $mdAlias = $rel->getMiddleTableAlias();
         $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
 
-        foreach ($rel->getMiddleJoinColumns() as $lCol => $rCol)
-        {
-            $jcMiddle->on($cmAlias, $lCol, $mdAlias, $rCol);
-        }
-
+        $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);
         $this->setJoinClause($mdAlias, $jcMiddle);
 
         return $mdAlias;

@@ -45,21 +45,26 @@ class JoinClause
     /**
      * Add an ON clause to the current JoinClause.
      *
-     * @param string $leftTable The left table's alias or name.
-     * @param string $leftAttr  The left table's column.
-     * @param string $rightTable The right table's alias or name.
-     * @param string $rightAttr  The right table's column.
-     * @param string $operator The operator to use.
+     * @param string $lAlias The left table's alias or name.
+     * @param string $lCols  The left table's column.
+     * @param string $rAlias The right table's alias or name.
+     * @param string $rCols  The right table's column.
+     * @param string $op The operator to use.
      *
      * @return $this
      */
-    public function on($leftTable, $leftAttr,
-        $rightTable = '', $rightAttr = '', $operator = '=')
+    public function on($lAlias, $lCols,
+        $rAlias = '', $rCols = ['id'], $op = '=')
     {
-        $rightTable = $rightTable ?: $this->alias;
-        $rightAttr  = $rightAttr ?: 'id';
+        $rAlias = $rAlias ?: $this->alias;
+        $lCols = (array) $lCols;
+        $rCols = (array) $rCols;
 
-        $this->ons[] = array($leftTable, $leftAttr, $rightTable, $rightAttr, $operator);
+        foreach ($lCols as $i => $lCol)
+        {
+            $this->ons[] = array($lAlias, $lCol, $rAlias, $rCols[$i], $op);
+        }
+
         return $this;
     }
 }

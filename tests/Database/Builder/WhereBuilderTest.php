@@ -215,7 +215,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $sql = $c->compileComponents($components, 'select');
         $val = $c->compileValues($values, 'select');
 
-        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` WHERE `articles.readers`.`id` = `articles`.`id`)';
+        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `readers_m` ON `articles.readers`.`id` = `readers_m`.`user_id` WHERE `readers_m`.`article_id` = `articles`.`id`)';
         $expectedValues = [[]];
         $this->assertEquals($expected, $sql);
         $this->assertEquals($expectedValues, $val);
@@ -524,5 +524,33 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($where, $components['where']);
         $this->assertEquals(Blog::table(), $b->getInvolvedTable('_'));
+
+        // - - -
+
+        // With many-to-many relation.
+        $rel = Article::relation('readers');
+        $mdName  = $rel->getMiddleTableName();
+        $mdAlias = $rel->getMiddleTableAlias();
+
+        $b = new WhereBuilder;
+        $b->root('User', 'readers');
+        $b->whereRelation($rel, '_');
+        $components = $b->build();
+
+        $jc = new JoinClause($mdName, $mdAlias);
+        $jc->on('readers', 'id', $mdAlias, 'user_id');
+        $where = [['type' => 'Attribute', 'lTable' => $mdAlias, 'lCols' => ['article_id'],
+            'op' => '=', 'rTable' => '_', 'rCols' => ['id'],
+            'logic' => 'AND']];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals(Article::table(), $b->getInvolvedTable('_'));
+        $this->assertEquals($jc, $b->getJoinClause($mdAlias));
+        try {
+            $b->getJoinClause('_');
+            $this->fail('Should have thrown an exception.');
+        } catch (Exception $ex) {
+            $this->assertContains('_', $ex->getMessage());
+        }
     }
 }
