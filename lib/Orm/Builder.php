@@ -886,6 +886,10 @@ class Builder
         return $res;
     }
 
+    /**
+     * Associate preloaded linked models to correct current models.
+     *
+     */
     protected function _associateLinkedModels(array $cmInstances, array $lmInstances, Relation $relation)
     {
         $cmAttr = $relation->getCmAttributes();
