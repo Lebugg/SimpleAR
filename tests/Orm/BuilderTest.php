@@ -516,8 +516,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             ->will($this->returnValue($articles));
 
         $qb->setRoot('Blog');
-        $qb->preload('articles');
-        $qb->preloadRelations($blogs);
+        $qb->preloadRelation($blogs, 'articles');
         $this->assertEquals([$a1], $b1->articles);
         $this->assertEquals([$a2, $a5], $b2->articles);
         $this->assertEquals([$a3, $a4], $b3->articles);

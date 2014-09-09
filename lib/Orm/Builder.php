@@ -415,15 +415,35 @@ class Builder
         return $this->all();
     }
 
+    /**
+     * Preload required relations.
+     *
+     * @param array $cmInstances Instances of current model for which to preload 
+     * relations.
+     */
     public function preloadRelations(array $cmInstances)
     {
         $root = $this->getRoot();
         foreach ($this->_relationsToPreload as $relationName)
         {
-            $relation = $root::relation($relationName);
-            $lmInstances = $this->loadRelation($relation, $cmInstances);
-            $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
+            $qb = new self($root);
+            $qb->preloadRelation($cmInstances, $relationName);
         }
+    }
+
+    /**
+     * Preload a relation for an array of model instances.
+     *
+     * @param array  $cmInstances
+     * @param string $relationName
+     */
+    public function preloadRelation(array $cmInstances, $relationName)
+    {
+        $root = $this->getRoot();
+        $relation = $root::relation($relationName);
+
+        $lmInstances = $this->loadRelation($relation, $cmInstances);
+        $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
     }
 
     public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
