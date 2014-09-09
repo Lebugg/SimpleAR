@@ -12,18 +12,18 @@ The project is hosted on GitHub. You can found it
 [here](https://github.com/Lebugg/SimpleAR.git). To install it, just clone the
 repo:
 
-```
+{% highlight bash %}
 git clone https://github.com/Lebugg/SimpleAR.git
-```
+{% endhighlight %}
 
 Then, in your code, include the main file and create a SimpleAR instance:
 
-```php
+{% highlight php startinline %}
 include 'SimpleAR/SimpleAR.php';
 
 $cfg = new SimpleAR\Config();
 $app = new SimpleAR($cfg);
-```
+{% endhighlight %}
 
 And you're done!
 
@@ -34,7 +34,7 @@ model folder(s) in order for the autoloader to load them. All general
 configuration like this is made through the `Config` instance passed to the
 `SimpleAR` object.
 
-```php
+{% highlight php startinline %}
 // All these values are required.
 // You can optionaly set a "charset" entry too.
 $cfg->dsn = array(
@@ -49,7 +49,7 @@ $cfg->dsn = array(
 $cfg->modelDirectory = 'path/to/models/';
 
 $app = new SimpleAR($cfg);
-```
+{% endhighlight %}
 
 There are several configuration options available. You can refer to
 configuration section to find a list of all options.
@@ -61,23 +61,23 @@ Now that SimpleAR is installed and configured, we are able to create our models!
 Let's create an Article model that represents... an article (on a blog, for
 example).
 
-```php
+{% highlight php startinline %}
 // Every model *must* extend SimpleAR\Model class.
 class Article extends SimpleAR\Model
 {
 }
-```
+{% endhighlight %}
 
 And it's done. You are able to manipulate your articles:
 
-```php
+{% highlight php startinline %}
 $articles = Article::all();
 
 $article = Article::find(12);
 $article->title = 'Good Stuff';
 $article->save();
 $article->delete();
-```
+{% endhighlight %}
 
 Since we did not give any information about our model (except the class name!),
 SimpleAR will make assumptions about the database structure:
@@ -94,7 +94,7 @@ configuration option. By default, it uses
 
 You can of course explicitly give information about your models:
 
-```php
+{% highlight php startinline %}
 class Article extends SimpleAR\Model
 {
     protected static $_tableName = 'articles';
@@ -105,4 +105,4 @@ class Article extends SimpleAR\Model
         'author_id',
     );
 }
-```
+{% endhighlight %}
