@@ -14,10 +14,10 @@ class ManyMany extends Relation
         parent::setInformation($info);
 
         $this->cm->attribute = isset($info['key_from']) ? $info['key_from'] : 'id';
-        $this->cm->column    = $this->cm->t->columnRealName($this->cm->attribute);
+        $this->cm->column    = (array) $this->cm->t->columnRealName($this->cm->attribute);
 
         $this->lm->attribute = isset($info['key_to']) ? $info['key_to'] : 'id';
-        $this->lm->column    = $this->lm->t->columnRealName($this->lm->attribute);
+        $this->lm->column    = (array) $this->lm->t->columnRealName($this->lm->attribute);
 
         $this->jm = new \StdClass();
 
@@ -26,25 +26,25 @@ class ManyMany extends Relation
             $this->jm->class = $s = $info['join_model'] . Cfg::get('modelClassSuffix');
             $this->jm->t     = $s::table();
             $this->jm->table = $this->jm->t->name;
-            $this->jm->from  = $this->jm->t->columnRealName(isset($info['join_from'])
+            $this->jm->from  = (array) ($this->jm->t->columnRealName(isset($info['join_from'])
                 ? $info['join_from']
-                : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName));
-            $this->jm->to = $this->jm->t->columnRealName(isset($info['join_to'])
+                : call_user_func(Cfg::get('buildForeignKey'), $this->cm->t->modelBaseName)));
+            $this->jm->to = (array) ($this->jm->t->columnRealName(isset($info['join_to'])
                 ? $info['join_to']
-                : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName));
+                : call_user_func(Cfg::get('buildForeignKey'), $this->lm->t->modelBaseName)));
         }
         else
         {
             $this->jm->class = null;
             $this->jm->table = isset($info['join_table']) ? $info['join_table'] : $this->cm->table . '_' . $this->lm->table;
 
-            $this->jm->from  = isset($info['join_from'])
+            $this->jm->from  = (array) (isset($info['join_from'])
                 ? $info['join_from']
-                : (decamelize($this->cm->t->modelBaseName) . '_id');
+                : (decamelize($this->cm->t->modelBaseName) . '_id'));
 
-            $this->jm->to = isset($info['join_to'])
+            $this->jm->to = (array) (isset($info['join_to'])
                 ? $info['join_to']
-                : (decamelize($this->lm->t->modelBaseName) . '_id');
+                : (decamelize($this->lm->t->modelBaseName) . '_id'));
         }
 
         //$this->jm->alias = '_' . strtolower($this->jm->table);
