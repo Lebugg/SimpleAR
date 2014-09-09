@@ -576,6 +576,8 @@ class Builder
     public function preload($relation)
     {
         $this->_relationsToPreload[] = $relation;
+
+        return $this;
     }
 
     /**
