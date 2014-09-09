@@ -54,7 +54,7 @@ class JoinClause
      * @return $this
      */
     public function on($lAlias, $lCols,
-        $rAlias = '', $rCols = ['id'], $op = '=')
+        $rAlias = '', $rCols = array('id'), $op = '=')
     {
         $rAlias = $rAlias ?: $this->alias;
         $lCols = (array) $lCols;
