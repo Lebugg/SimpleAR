@@ -1928,7 +1928,7 @@ abstract class Model
         {
             $lastId = self::query()->insert()
                 ->fields(array_keys($fields))
-                ->values($fields)
+                ->values(array_values($fields))
                 ->lastInsertId();
 
             if ($lastId)
