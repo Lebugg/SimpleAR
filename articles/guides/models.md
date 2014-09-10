@@ -7,7 +7,7 @@ layout: article
 
 ## Attribute manipulation
 
-### Columns renaming
+### Column aliasing
 
 Here is how to define your model's attributes:
 
@@ -39,10 +39,57 @@ be a better wording:
     in database. But sometimes, you are not able to change it.
 </p>
 
-### Getters and Setters
+### Getters and setters
 
-You can define getters and setters method that will be called when trying to
-access to an attribute.
+SimpleAR\Model class provides some methods to get and set attributes.
+
+### Get all attributes
+
+You can retrieve every object's attribute with their values with the
+`attributes()` method:
+
+{% highlight php startinline %}
+$author = Author::create(['first_name' => 'John', 'age' => 43]);
+print_r($author->attributes());
+
+// Result:
+// array(
+//     'id'         => 1,
+//     'first_name' => 'John',
+//     'last_name'  => null,
+//     'age'        => 43,
+// );
+{% endhighlight %}
+
+### Get and set several attributes at once
+
+You can use `get()` and `set()` methods to respectively get and set several
+attributes at once.
+
+Very handy!
+
+### Get model's columns
+
+Use `columns()` static method to retrieve an associative array between attribute
+names and column names.
+
+Example with `Author` model:
+{% highlight php startinline %}
+print_r(Author::columns());
+
+// Result:
+// array(
+//     'id'         => 'id',
+//     'first_name' => 'first_name',
+//     'last_name'  => 'last_name',
+//     'age'        => 'years_since_birth',
+// );
+{% endhighlight %}
+
+### Custom getters and setters
+
+You can define custom getters and setters method for specific attribute that
+will be called when trying to access to the attribute.
 
 {% highlight php startinline %}
 public function set_password($raw)
@@ -68,6 +115,13 @@ public function get_name()
 {
     return $this->first_name . ' ' . $this->last_name;
 }
+{% endhighlight %}
+
+And then use it in a view as in following example:
+{% highlight html startinline %}
+<p>
+    Hello, <?php $user->name; ?>!
+</p>
 {% endhighlight %}
 
 ## Model configuration
@@ -105,6 +159,13 @@ applied to every query made on this model.
 Article::setGlobalConditions(['status' => 'online']);
 {% endhighlight %}
 
+This way, the condition "status is online" will be applied to each query made
+over Article model.
+
+<p class="alert alert-info">
+You can use `MyModel::getGlobalConditions()` to get current global conditions of
+`MyModel`.
+</p>
 
 ### Callbacks
 
