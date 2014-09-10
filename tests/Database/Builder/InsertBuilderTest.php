@@ -50,4 +50,14 @@ class InsertBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expectedFields, $components['insertColumns']);
         $this->assertEquals($options['values'], $components['values']);
     }
+
+    public function testFieldsOptionFlattenArray()
+    {
+        $b = new InsertBuilder;
+
+        $b->fields([['article_id'], ['user_id']]);
+
+        $components = $b->getComponents();
+        $this->assertEquals(['article_id', 'user_id'], $components['insertColumns']);
+    }
 }

@@ -37,7 +37,7 @@ class InsertBuilder extends Builder
             $fields = $this->convertAttributesToColumns($fields, $this->_table);
         }
 
-        $this->_components['insertColumns'] = $fields;
+        $this->_components['insertColumns'] = flatten_array($fields);
 
         return $this;
     }
