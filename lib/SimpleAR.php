@@ -55,6 +55,7 @@ require __DIR__ . '/Facades/Cfg.php';
 require __DIR__ . '/../tools/array_merge_recursive_distinct.php';
 require __DIR__ . '/../tools/is_valid_model_class.php';
 require __DIR__ . '/../tools/decamelize.php';
+require __DIR__ . '/../tools/flatten_array.php';
 
 use \SimpleAR\Config;
 use \SimpleAR\Database;
