@@ -209,9 +209,17 @@ class Connection
         catch (\PDOException $ex)
         {
             // We must wait for PHP 5.5 to be able to use `finally` block.
-            $this->_debug && $this->logQuery($query, $params, 0);
+            if ($this->_debug)
+            {
+                $this->logQuery($query, $params, 0);
 
-            throw new DatabaseEx($ex->getMessage(), $query, $ex);
+                // If we debug is on, we use debug query in exception message.
+                $log = end($this->_queries);
+                $query = $log['sql'];
+            }
+
+            $log = end($this->_queries);
+            throw new DatabaseEx($ex->getMessage(), $log['sql'], $ex);
         }
 
         return $this->_sth;
