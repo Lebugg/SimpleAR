@@ -211,7 +211,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $conn = m::mock('\SimpleAR\Database\Connection[lastInsertId]');
         $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
 
-        $q = new Query;
+        $q = m::mock('\SimpleAR\Database\Query[run]');
+        $q->shouldReceive('run')->once();
         $q->setConnection($conn);
         $this->assertEquals(12, $q->lastInsertId());
     }

@@ -27,6 +27,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
     {
         $conn = m::mock('\SimpleAR\Database\Connection[query,lastInsertId]');
         $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
+        $conn->shouldReceive('query')->once();
         DB::setConnection($conn);
 
         $article = new Article;

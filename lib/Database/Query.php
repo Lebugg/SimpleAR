@@ -460,6 +460,8 @@ class Query
      */
     public function lastInsertId()
     {
+        $this->run();
+
         return $this->getConnection()->lastInsertId();
     }
 

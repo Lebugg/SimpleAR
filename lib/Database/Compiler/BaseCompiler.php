@@ -162,6 +162,8 @@ class BaseCompiler extends Compiler
      */
     protected function _compileValues(array $values)
     {
+        if (! $values) { return $this->_compileValuesEmpty(); }
+
         $sql   = '';
         $count = count($values);
 
@@ -187,6 +189,11 @@ class BaseCompiler extends Compiler
         }
 
         return 'VALUES' . $sql;
+    }
+
+    protected function _compileValuesEmpty()
+    {
+        return 'VALUES()';
     }
 
     /**
