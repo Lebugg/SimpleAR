@@ -10,24 +10,17 @@ layout: article
 We recommend that you read these guides, if possible, in this order:
 
 
-###  [Getting started]({{ site.baseurl }}/articles/getting_started.html)
+###  [Getting started]({{ site.baseurl }}/articles/tutorials.html)
 
-An overview of {{ site.projectName }} with a quick tutorial that helps you to get started with it. It should take about
-10 minutes to read and study the provided code examples
+An overview of {{ site.projectName }} with a quick tutorial that helps you to
+get started with it. It should take about 10 minutes to read and study the
+provided code examples
 
-### [Another Guide](/)
-
-This guide covers:
-
- * This thing
- * That thing
- * This other thing
-
-
-### [Yet another guide](/)
+### [Taking control of your models]({{ site.baseurl }}/articles/guides/models.html)
 
 This guide covers:
 
- * This awesome feature
- * That common problem
- * How to reach Web Scale
+ * Getters and Setters;
+ * Scopes;
+ * Callbacks.
+

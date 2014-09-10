@@ -188,3 +188,18 @@ Article::find(12)
 {% endhighlight %}
 
 #### Delete
+
+Delete a model instance:
+
+{% highlight php startinline %}
+$article = Article::find(12);
+$article->delete();
+{% endhighlight %}
+
+You also can remove from table without using a model instance:
+
+{% highlight php startinline %}
+// Remove all articles of author 12.
+Article::remove(['author_id' => 12]);
+{% endhighlight %}
+
