@@ -11,3 +11,5 @@ _site/*
 ~*
 _source/*
 _cache
+vendor
+composer.lock
