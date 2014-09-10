@@ -285,6 +285,7 @@ class Connection
      */
     public function lastInsertId()
     {
+        if (! $this->_pdo) throw new \Exception;
         return $this->_pdo->lastInsertId();
     }
 

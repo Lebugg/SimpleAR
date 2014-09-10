@@ -454,6 +454,17 @@ class Query
     }
 
     /**
+     * Get last insert ID.
+     *
+     * @return mixed The last insert ID.
+     */
+    public function lastInsertId()
+    {
+        return $this->getConnection()->lastInsertId();
+    }
+
+
+    /**
      * Allows user to manually set query options.
      *
      * We use __call() magic method in order to avoid code duplication. Without

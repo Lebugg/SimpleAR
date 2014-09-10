@@ -298,17 +298,6 @@ class Builder
     }
 
     /**
-     * Get last insert ID.
-     *
-     * @return mixed The last insert ID.
-     */
-    public function lastInsertId()
-    {
-        $this->getQuery()->run();
-        return $this->getConnection()->lastInsertId();
-    }
-
-    /**
      * Return columns of the given table.
      *
      * This is used by SimpleAR\Orm\Model::wakeup() in order to known model's

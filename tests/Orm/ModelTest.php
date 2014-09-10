@@ -25,19 +25,17 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testIsDirtyFlag()
     {
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', array('insert'));
-        $qb->expects($this->any())->method('insert')->will($this->returnValue(12));
+        $conn = m::mock('\SimpleAR\Database\Connection[query,lastInsertId]');
+        $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
+        DB::setConnection($conn);
 
-        $class = 'Article';
-        $class::setQueryBuilder($qb);
+        $article = new Article;
 
-        $stub = new $class();
-
-        $this->assertFalse($stub->isDirty());
-        $stub->foo = 'bar';
-        $this->assertTrue($stub->isDirty());
-        $stub->save();
-        $this->assertFalse($stub->isDirty());
+        $this->assertFalse($article->isDirty());
+        $article->foo = 'bar';
+        $this->assertTrue($article->isDirty());
+        $article->save();
+        $this->assertFalse($article->isDirty());
     }
 
     public function testGetColumns()

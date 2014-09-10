@@ -1,5 +1,7 @@
 <?php
 
+use \Mockery as m;
+
 use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Builder\InsertBuilder;
 use \SimpleAR\Database\Builder\DeleteBuilder;
@@ -9,6 +11,9 @@ use \SimpleAR\Database\Connection;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Query;
 
+/**
+ * @coversDefaultClass \SimpleAR\Database\Query
+ */
 class QueryTest extends PHPUnit_Framework_TestCase
 {
     public function testGetConnection()
@@ -196,5 +201,18 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $q = new Query();
         $q->setBuilder($b);
         $q->select(['title', 'authorId', 'created_at']);
+    }
+
+    /**
+     * @covers ::lastInsertId()
+     */
+    public function testLastInsertId()
+    {
+        $conn = m::mock('\SimpleAR\Database\Connection[lastInsertId]');
+        $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
+
+        $q = new Query;
+        $q->setConnection($conn);
+        $this->assertEquals(12, $q->lastInsertId());
     }
 }
