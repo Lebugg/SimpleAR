@@ -17,6 +17,8 @@ class Builder
     const UPDATE = 'update';
     const DELETE = 'delete';
 
+    const DEFAULT_ROOT_ALIAS = '_';
+
     /**
      * The Builder's type.
      *
@@ -59,7 +61,7 @@ class Builder
      *
      * @var string
      */
-    protected $_rootAlias = '_';
+    protected $_rootAlias;
 
     /**
      * The list of values to pass the query executor.
@@ -84,6 +86,11 @@ class Builder
      * @var array
      */
     protected $_components;
+
+    public function __construct()
+    {
+        $this->_rootAlias = self::DEFAULT_ROOT_ALIAS;
+    }
 
     /**
      * Run the build process.

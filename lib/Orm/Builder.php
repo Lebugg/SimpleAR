@@ -97,6 +97,16 @@ class Builder
     }
 
     /**
+     * Get the root alias.
+     *
+     * @return string The current root alias.
+     */
+    public function getRootAlias()
+    {
+        return $this->_rootAlias;
+    }
+
+    /**
      * Add a condition over a related model.
      *
      * Usage:
@@ -134,20 +144,33 @@ class Builder
         $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
 
-        $model = $this->_root;
-        $rel   = $model::relation($relation);
+        // We'll use $rels for recursivity.
+        $rels = explode('/', $relation);
+        $relation = array_shift($rels);
+
+        $root = $this->getRoot();;
+        $rel  = $root::relation($relation);
 
         // We construct the sub-query. It can be the sub-query of an Exists
         // clause or a Count (if $op and $value are given).
-        $subQuery = $this->select($rel->lm->class, $rel->name, false);
+        $subRootAlias = $this->getRootAlias();
+        $subRootAlias = $subRootAlias ? $subRootAlias . '.' . $rel->name : $rel->name;
+        $subQuery = new self($rel->lm->class, $subRootAlias);
+        $subQuery->select();
         $subQuery->whereRelation($rel, $mainQueryRootAlias);
-        $subQuery->getCompiler()->useTableAlias = true;
+
+        if ($rels)
+        {
+            $relation = implode('/', $rels);
+            $subQuery->whereHas($relation);
+        }
 
         // We want a Count sub-query.
         if ($op !== null && $value !== null)
         {
-            $subQuery->count();
-            $mainQuery->selectSub($subQuery, '#'.$relation);
+            $subQuery->getQuery()->count();
+
+            $mainQuery->selectSub($subQuery->getQuery(), '#'.$relation);
             $mainQuery->where(DB::expr('#'.$relation), $op, $value, null, $not);
         }
 
@@ -161,8 +184,11 @@ class Builder
             }
 
             $subQuery->get(array('*'), false);
-            $mainQuery->whereExists($subQuery, null, $not);
+            $mainQuery->whereExists($subQuery->getQuery(), null, $not);
         }
+
+        $subQuery->getQuery()->getCompiler()->useTableAlias = true;
+        $mainQuery->getQuery()->getCompiler()->useTableAlias = true;
 
         return $this;
     }

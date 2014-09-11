@@ -293,8 +293,10 @@ class WhereBuilder extends Builder
      * @param Relation $rel
      * @param string   $alias An alias for the linked model.
      */
-    public function whereRelation(Relation $rel, $lmAlias = '_')
+    public function whereRelation(Relation $rel, $lmAlias = null)
     {
+        if ($lmAlias === null) { $lmAlias = self::DEFAULT_ROOT_ALIAS; }
+
         $lmTable = $rel->cm->t;
         $this->setInvolvedTable($lmAlias, $lmTable);
 
@@ -303,9 +305,9 @@ class WhereBuilder extends Builder
         $sep = Cfg::get('queryOptionRelationSeparator');
         if ($rel instanceof ManyMany)
         {
-            $mdTable = $rel->getMiddleTableName();
-            $mdAlias = $rel->getMiddleTableAlias();
             $cmAlias = $this->getRootAlias();
+            $mdTable = $rel->getMiddleTableName();
+            $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
 
             // Join middle table.
             $jc = new JoinClause($mdTable, $mdAlias);
@@ -700,7 +702,7 @@ class WhereBuilder extends Builder
     {
         // $md stands for "middle".
         $mdTable = $rel->getMiddleTableName();
-        $mdAlias = $rel->getMiddleTableAlias();
+        $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
         $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
 
         $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);

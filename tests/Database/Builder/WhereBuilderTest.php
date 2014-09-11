@@ -215,7 +215,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $sql = $c->compileComponents($components, 'select');
         $val = $c->compileValues($values, 'select');
 
-        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `readers_m` ON `articles.readers`.`id` = `readers_m`.`user_id` WHERE `readers_m`.`article_id` = `articles`.`id`)';
+        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `articles.readers_m` ON `articles.readers`.`id` = `articles.readers_m`.`user_id` WHERE `articles.readers_m`.`article_id` = `articles`.`id`)';
         $expectedValues = [[]];
         $this->assertEquals($expected, $sql);
         $this->assertEquals($expectedValues, $val);
