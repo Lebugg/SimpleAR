@@ -56,3 +56,29 @@ MyModel::orWhereNot('attr', 'val');
 Article::whereAttr('commentNumber', '>', 'viewNumber');
 {% endhighlight %}
 
+### Nested conditions
+
+Use the `whereNested` method:
+
+{% highlight php startinline %}
+Article::whereNested(function ($q) {
+    $q->where('author_id', [12, 13, 14])
+      ->andWhere('blog_id', 1);
+})
+->orWhere(function ($q) {
+    $q->where('title', 'Alice in Wonderland')
+      ->where('blog_id', 3);
+});
+{% endhighlight %}
+
+<p class="alert alert-info">
+<code>whereNested()</code> is the method that handles nested conditions; but
+<code>where()</code> will get it as well (by delegating to
+<code>whereNested()</code>).
+
+<br>
+<br>
+
+Use whatever name you prefer!
+</p>
+
