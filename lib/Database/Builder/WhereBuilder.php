@@ -119,6 +119,31 @@ class WhereBuilder extends Builder
         $this->_addWhere($cond, $val);
     }
 
+    public function whereNot($attribute, $op = null, $val = null, $logic = 'AND')
+    {
+        $this->where($attribute, $op, $val, $logic, true);
+    }
+
+    public function orWhere($attribute, $op = null, $val = null, $not = false)
+    {
+        $this->where($attribute, $op, $val, 'OR', $not);
+    }
+
+    public function andWhere($attribute, $op = null, $val = null, $not = false)
+    {
+        $this->where($attribute, $op, $val, 'AND', $not);
+    }
+
+    public function orWhereNot($attribute, $op = null, $val = null)
+    {
+        $this->whereNot($attribute, $op, $val, 'OR');
+    }
+
+    public function andWhereNot($attribute, $op = null, $val = null)
+    {
+        $this->whereNot($attribute, $op, $val, 'AND');
+    }
+
     /**
      * Add a condition between two attributes.
      *

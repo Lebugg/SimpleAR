@@ -1,15 +1,17 @@
 <?php
 
-use SimpleAR\Database\Builder\WhereBuilder;
-use SimpleAR\Database\Builder\SelectBuilder;
-use SimpleAR\Database\Compiler\BaseCompiler;
-use SimpleAR\Database\Expression;
-use SimpleAR\Database\Expression\Func as FuncExpr;
-use SimpleAR\Database\JoinClause;
-use SimpleAR\Database\Query;
+use \Mockery as m;
 
-use SimpleAR\Facades\Cfg;
-use SimpleAR\Facades\DB;
+use \SimpleAR\Database\Builder\WhereBuilder;
+use \SimpleAR\Database\Builder\SelectBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Query;
+
+use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Facades\DB;
 
 /**
  * @coversDefaultClass SimpleAR\Database\Builder\WhereBuilder
@@ -122,6 +124,46 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $expected[] = ['type' => 'Null', 'table' => '_', 'cols' => ['title'], 'logic' => 'AND', 'not' => false];
         $this->assertCount(2, $components['where']);
         $this->assertEquals($expected, $components['where']);
+    }
+
+    /**
+     * @covers ::orWhere
+     */
+    public function testOrWhere()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'OR', false);
+        $b->orWhere('my', '=', 12);
+    }
+
+    /**
+     * @covers ::andWhere
+     */
+    public function testAndWhere()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'AND', false);
+        $b->andWhere('my', '=', 12);
+    }
+
+    /**
+     * @covers ::andWhere
+     */
+    public function testOrWhereNot()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'OR', true);
+        $b->orWhereNot('my', '=', 12);
+    }
+
+    /**
+     * @covers ::andWhere
+     */
+    public function testAndWhereNot()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'AND', true);
+        $b->andWhereNot('my', '=', 12);
     }
 
     public function testOrAndLogicalOps()
