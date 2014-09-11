@@ -147,7 +147,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers ::andWhere
+     * @covers ::orWhereNot
      */
     public function testOrWhereNot()
     {
@@ -157,13 +157,43 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers ::andWhere
+     * @covers ::andWhereNot
      */
     public function testAndWhereNot()
     {
         $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
         $b->shouldReceive('where')->once()->with('my', '=', 12, 'AND', true);
         $b->andWhereNot('my', '=', 12);
+    }
+
+    /**
+     * @covers ::whereNested
+     * @covers ::where
+     */
+    public function testWhereNested()
+    {
+        $b = new WhereBuilder;
+        $b->whereNot(function($q) {
+                $q->where('a', 12)
+                  ->orWhere('b', 14);
+            })
+            ->orWhere(function ($q) {
+                $q->where('a', 14)
+                  ->andWhere('b', [12, 14]);
+            })
+            ;
+
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['a'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['b'], 'op' => '=', 'val' => 14, 'logic' => 'OR', 'not' => false];
+        $where[] = ['type' => 'Nested', 'nested' => $tmp, 'logic' => 'AND', 'not' => true];
+
+        $tmp = [];
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['a'], 'op' => '=', 'val' => 14, 'logic' => 'AND', 'not' => false];
+        $tmp[] = ['type' => 'In', 'table' => '', 'cols' => ['b'], 'val' => [12,14], 'logic' => 'AND', 'not' => false];
+        $where[] = ['type' => 'Nested', 'nested' => $tmp, 'logic' => 'OR', 'not' => false];
+
+        $components = $b->getComponents();
+        $this->assertEquals($where, $components['where']);
     }
 
     public function testOrAndLogicalOps()
