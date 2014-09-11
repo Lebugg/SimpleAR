@@ -233,7 +233,7 @@ class Builder
     {
         $alias && $this->setRootAlias($alias);
 
-        if (\SimpleAR\is_valid_model_class($root))
+        if (is_valid_model_class($root))
         {
             $this->setRootModel($root);
         }

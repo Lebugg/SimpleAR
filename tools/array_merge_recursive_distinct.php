@@ -1,4 +1,4 @@
-<?php namespace SimpleAR;
+<?php
 /**
  * This file contains the array_merge_recursive_distinct function.
  *

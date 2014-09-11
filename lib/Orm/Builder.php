@@ -797,7 +797,7 @@ class Builder
             $row = $this->_parseRow($row);
 
             // Construct result.
-            $res = $res ? \SimpleAR\array_merge_recursive_distinct($res, $row) : $row;
+            $res = $res ? array_merge_recursive_distinct($res, $row) : $row;
         }
 
         return $res;
