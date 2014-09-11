@@ -907,33 +907,6 @@ class WhereBuilder extends Builder
     }
 
     /**
-     * Build a condition.
-     *
-     *
-     * @param string $attribute The complete attribute string.
-     * @param string $operator  The condition operator to use ('=', '<='...).
-     * @param mixed  $value
-     * @param string $logic The logical operator to use to link this
-     * condition to the previous one ('AND', 'OR').
-     *
-     * @param string $findAName @TODO Flag to tell whether to do a 'any' or a
-     * 'all' condition.
-     *
-     * @return Condition
-     */
-    // protected function _buildCondition($attribute, $op, $val, $logic, $findAName = 'any')
-    // {
-    //     list($table, $cols) = $this->_processExtendedAttribute($attribute);
-    //
-    //     $type = 'Basic';
-    //     $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic');
-    //     //$cond = new SimpleCond($tAlias, $columns, $operator, $value, $logic);
-    //     $this->addValueToQuery($val, 'where');
-    //
-    //     return $cond;
-    // }
-
-    /**
      * Build a condition group (i.e. a nested condition).
      *
      * @param array  $conditions The nested raw conditions.

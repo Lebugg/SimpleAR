@@ -46,61 +46,8 @@ class ManyMany extends Relation
                 ? $info['join_to']
                 : (decamelize($this->lm->t->modelBaseName) . '_id'));
         }
-
-        //$this->jm->alias = '_' . strtolower($this->jm->table);
     }
 
-    // public function deleteJoinModel($value)
-    // {
-    //     $query = Query::delete(array($this->jm->from => $value), $this->jm->table);
-    //     $query->run();
-    // }
-    //
-    // public function deleteLinkedModel($value)
-    // {
-    //     $lHS = Condition::leftHandSide($this->lm->pk, 'a');
-    //     $rHS = Condition::leftHandSide($this->jm->to, 'b');
-    //     $condition = $lHS . ' = ' . $rHS;
-    //
-    //     $query =  "DELETE FROM {$this->lm->table} a
-    //                 WHERE EXISTS (
-    //                     SELECT NULL
-    //                     FROM {$this->jm->table} b
-    //                     WHERE b." . implode(' = ? AND b.', $this->jm->from) ." = ?
-    //                     AND $condition
-    //                 )";
-    //
-    //     DB::query($query, $value);
-    // }
-    //
-    // public function joinLinkedModel($cmAlias, $lmAlias, $joinType)
-    // {
-    //     return $this->_joinJM($cmAlias, $lmAlias, $joinType) . ' ' . $this->_joinLM($cmAlias, $lmAlias, $joinType);
-    // }
-    //
-    // public function joinAsLast($conditions, $cmAlias, $lmAlias, $joinType)
-    // {
-    //     $res = '';
-    //
-    //    // We always want to join the middle table.
-    //     $res .= $this->_joinJM($cmAlias, $lmAlias, $joinType);
-    //
-	// 	foreach ($conditions as $condition)
-	// 	{
-    //         foreach ($condition->attributes as $a)
-    //         {
-    //             // And, under certain conditions, the linked table.
-    //             if ($a->logic !== 'or' || $a->name !== 'id')
-    //             {
-    //                 $res .= $this->_joinLM($cmAlias, $lmAlias, $joinType);
-    //                 break 2;
-    //             }
-    //         }
-	// 	}
-    //
-    //     return $res;
-    // }
-    //
 	public function reverse()
 	{
 		$relation = clone $this;
