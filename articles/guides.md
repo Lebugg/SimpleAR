@@ -30,3 +30,12 @@ This guide covers:
 
  * Model relationships;
 
+## [Query builder]({{ site.baseurl }}/articles/guides/builder.html)
+
+This guide covers query build process.
+
+ * Simple conditions;
+ * Conditions over relations;
+ * Scopes;
+
+ * Option array form;

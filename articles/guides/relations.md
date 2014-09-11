@@ -65,7 +65,7 @@ relation information array:
 {% endhighlight %}
 
 <p class="alert alert-warning">
-    You can change SimpleAR assumptions for foreign keys by overwriting theses
+    You can change SimpleAR assumptions for foreign keys by overwriting these
     configuration options: <code>buildForeignKey</code> or
     <code>foreignKeySuffix</code>.
 </p>
@@ -154,4 +154,40 @@ class Article extends SimpleAR\Model
 // ...
 
 $readers = $article->readers; // $readers is an array of User instances.
+{% endhighlight %}
+
+For ManyMany relations, SimpleAR will make several assumptions. In above
+example, it would be as follows:
+
+* Middle table name: "articles_users". Set `join_table` to override it;
+* Middle table left foreign key: "article_id". Set `join_from` to override it;
+* Middle table right foreign key: "user_id". Set `join_to` to override it.
+
+You can also, set a join model instead of a middle table name with `join_model`
+entry.
+
+For example:
+
+{% highlight php startinline %}
+class Reading extends SimpleAR\Model
+{
+    protected static $_columns = array(
+        'article_id',
+        'user_id',
+        'created_at',
+    );
+}
+
+// ...
+
+class Article extends SimpleAR\Model
+{
+    protected static $_relations = array(
+        'readers' => array(
+            'type'  => 'many_many',
+            'model' => 'User',
+            'join_model' => 'Reading',
+        ),
+    );
+}
 {% endhighlight %}
