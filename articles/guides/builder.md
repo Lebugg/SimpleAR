@@ -26,4 +26,33 @@ $qb->one(); // Or first(), last(), all().
 ## Simple conditions
 
 Query builder provides a good collection of method to add conditions on data to
-retrieve.
+retrieve:
+
+{% highlight php startinline %}
+Article::query()->where('author_id', 12);
+{% endhighlight %}
+
+Fortunately, you don't have to use query() method every time you want to build a
+query:
+{% highlight php startinline %}
+Article::where('author_id', 12);
+Article::where('author_id', '=', 12); // Same as above
+{% endhighlight %}
+
+### Attribute-value conditions
+
+{% highlight php startinline %}
+// Collection or available where-like methods:
+MyModel::whereNot('attr', 'val');
+MyModel::andWhere('attr', 'val');
+MyModel::orWhere('attr', 'val');
+MyModel::andWhereNot('attr', 'val');
+MyModel::orWhereNot('attr', 'val');
+{% endhighlight %}
+
+### Attribute-attribute conditions
+
+{% highlight php startinline %}
+Article::whereAttr('commentNumber', '>', 'viewNumber');
+{% endhighlight %}
+
