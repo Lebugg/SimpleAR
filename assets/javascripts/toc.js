@@ -24,7 +24,7 @@ $(document).ready(function() {
       var title = $el.text();
       var depth = parseInt($el.prop("tagName")[1]);
 
-      if(depth > 3)
+      if(depth > 2)
         return;
 
       if (lastRoot && depth > lastRoot.depth) {
