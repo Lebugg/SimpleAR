@@ -36,6 +36,6 @@ This guide covers query build process.
 
  * Simple conditions;
  * Conditions over relations;
- * Scopes;
+ * Insert, Select, Update and Delete statements.
 
- * Option array form;
+## [Configuration]({{ site.baseurl }}/articles/guides/config.html)
