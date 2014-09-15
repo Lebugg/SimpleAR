@@ -10,10 +10,27 @@ SimpleAR is divided in two main parts:
 * Orm (namespace `SimpleAR\Orm`);
 * Database (namespace `SimpleAR\Database`).
 
-## Orm
+Here is an overview of the code organization:
+![Code overview]({{ site.baseurl }}/assets/images/reference_overview.png
+"Overview of code organization")
 
-It contains Model, Relation and an abstracted query builder.
+The first part describes the Query build process, the second deals with Model
+and Relations. The third part explain how the two main parts (`Orm` and
+`Database`) work together.
 
-## Database
 
-It contains classes that deal with database.
+## Query build process
+
+### Overview
+### Builder
+### Compiler
+### Connection
+
+
+## Models and relations
+
+### The `Model`
+### Relations
+
+
+## Orm query builder
