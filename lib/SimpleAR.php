@@ -133,7 +133,7 @@ class SimpleAR
                     //  folder.
                     //  2) Class is not abstract: wake up has no sense on
                     //  abstract class.
-                    if (SimpleAR\is_valid_model_class($class))
+                    if (is_valid_model_class($class))
                     {
                         $class::wakeup();
                     }
