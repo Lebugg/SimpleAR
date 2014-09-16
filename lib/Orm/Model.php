@@ -1575,7 +1575,7 @@ abstract class Model
             }
 
             // Row already exists, we cannot insert a new row with these values.
-            if (self::exists($conditions))
+            if (self::exists($conditions, false))
             {
                 throw new Exception('Violate unique constraint: (' . implode(', ', $constraint) . ').');
             }
