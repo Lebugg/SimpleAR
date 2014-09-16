@@ -21,9 +21,30 @@ and Relations. The third part explain how the two main parts (`Orm` and
 
 ## Query build process
 
+This section describes the process to build SQL queries.
+
 ### Overview
+
+Query build process is made in three steps:
+
+* Build;
+* Compilation;
+* Execution.
+
+The conductor of this process is the Query object. Give it a Connection and a
+Builder instances, and you have your entry point!
+
 ### Builder
+
+The builder is aimed to provide a rich interface for the user to construct the
+query: `where()`, `whereHas()`, `limit()`...
+
+There is one builder per query type.
+
 ### Compiler
+
+The compiler build the query components.
+
 ### Connection
 
 
