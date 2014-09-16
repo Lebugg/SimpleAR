@@ -359,15 +359,15 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers ::has
+     * @covers ::whereHas
      */
-    public function testHas()
+    public function testWhereHas()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
-        $qb->setRoot('Blog')->has('articles')->get(['*'], false);
+        $qb->setRoot('Blog')->whereHas('articles')->get(['*'], false);
 
         $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE EXISTS (SELECT `articles`.* FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id`)';
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
@@ -382,7 +382,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
-        $qb->setRoot('Blog')->has('articles', '>', 3)->get(['*']);
+        $qb->setRoot('Blog')->whereHas('articles', '>', 3)->get(['*']);
 
         //$sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
         $sql = 'SELECT (SELECT COUNT(*) FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id`) AS `#articles`,`_`.`name` AS `name`,`_`.`description` AS `description`,`_`.`created_at` AS `created_at`,`_`.`id` AS `id` FROM `blogs` `_` WHERE `#articles` > ?';
@@ -419,6 +419,34 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE NOT EXISTS (SELECT `articles`.* FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id`)';
         $this->assertEquals($sql, $qb->getQuery()->build()->getSql());
+    }
+
+    public function testHasRecursive()
+    {
+        $qb = new QueryBuilder;
+
+        $qb->setRoot('Blog')->has('articles', function ($q) {
+            $q->whereHas('readers');
+        })->get(['*'], false);
+
+        $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE EXISTS (SELECT `articles`.* FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id` AND EXISTS (SELECT `articles.readers`.* FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `articles.readers_m` ON `articles.readers`.`id` = `articles.readers_m`.`user_id` WHERE `articles.readers_m`.`article_id` = `articles`.`id`))';
+        $val = [];
+        $q = $qb->getQuery()->compile();
+        $this->assertEquals($sql, $q->getSql());
+        $this->assertEquals($val, $q->getValues());
+    }
+
+    public function testHasRecursiveWithShortcutSyntax()
+    {
+        $qb = new QueryBuilder;
+
+        $qb->setRoot('Blog')->whereHas('articles/readers')->get(['*'], false);
+
+        $sql = 'SELECT `_`.* FROM `blogs` `_` WHERE EXISTS (SELECT `articles`.* FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id` AND EXISTS (SELECT `articles.readers`.* FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `articles.readers_m` ON `articles.readers`.`id` = `articles.readers_m`.`user_id` WHERE `articles.readers_m`.`article_id` = `articles`.`id`))';
+        $val = [];
+        $q = $qb->getQuery()->compile();
+        $this->assertEquals($sql, $q->getSql());
+        $this->assertEquals($val, $q->getValues());
     }
 
     public function testSetRoot()

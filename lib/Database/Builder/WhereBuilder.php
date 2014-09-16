@@ -1,5 +1,7 @@
 <?php namespace SimpleAR\Database\Builder;
 
+use \Closure;
+
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;
@@ -70,6 +72,12 @@ class WhereBuilder extends Builder
      */
     public function where($attribute, $op = null, $val = null, $logic = 'AND', $not = false)
     {
+        // Allows for nested conditions.
+        if ($attribute instanceof Closure)
+        {
+            return $this->whereNested($attribute, $logic, $not);
+        }
+
         // It allows short form: `$builder->where('attribute', 'myVal');`
         if (func_num_args() === 2)
         {
@@ -86,7 +94,7 @@ class WhereBuilder extends Builder
         {
             if (isset($attribute[1]))
             {
-                $this->whereTuple($attribute, $val, $logic, $not); return;
+                return $this->whereTuple($attribute, $val, $logic, $not);
             }
 
             $attribute = $attribute[0];
@@ -101,15 +109,14 @@ class WhereBuilder extends Builder
 
             elseif (in_array($op, array('=', '!=')))
             {
-                $this->whereIn($attribute, $val, $logic, $op === '!='); return;
+                return $this->whereIn($attribute, $val, $logic, $op === '!=');
             }
         }
 
         // User wants a WHERE NULL condition.
         if ($val === null)
         {
-            $this->whereNull($attribute, $logic, $op === '!=');
-            return;
+            return $this->whereNull($attribute, $logic, $op === '!=');
         }
 
         list($table, $cols) = $this->_processAttribute($attribute);
@@ -117,6 +124,38 @@ class WhereBuilder extends Builder
         $type = 'Basic';
         $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+
+        return $this;
+    }
+
+    public function whereNot($attribute, $op = null, $val = null, $logic = 'AND')
+    {
+        if (func_num_args() === 2) { list($val, $op) = array($op, '='); }
+        return $this->where($attribute, $op, $val, $logic, true);
+    }
+
+    public function orWhere($attribute, $op = null, $val = null, $not = false)
+    {
+        if (func_num_args() === 2) { list($val, $op) = array($op, '='); }
+        return $this->where($attribute, $op, $val, 'OR', $not);
+    }
+
+    public function andWhere($attribute, $op = null, $val = null, $not = false)
+    {
+        if (func_num_args() === 2) { list($val, $op) = array($op, '='); }
+        return $this->where($attribute, $op, $val, 'AND', $not);
+    }
+
+    public function orWhereNot($attribute, $op = null, $val = null)
+    {
+        if (func_num_args() === 2) { list($val, $op) = array($op, '='); }
+        return $this->whereNot($attribute, $op, $val, 'OR');
+    }
+
+    public function andWhereNot($attribute, $op = null, $val = null)
+    {
+        if (func_num_args() === 2) { list($val, $op) = array($op, '='); }
+        return $this->whereNot($attribute, $op, $val, 'AND');
     }
 
     /**
@@ -137,7 +176,7 @@ class WhereBuilder extends Builder
         list($lTable, $lCols) = $this->_processAttribute($leftAttr);
         list($rTable, $rCols) = $this->_processAttribute($rightAttr);
 
-        $this->whereCol($lTable, $lCols, $op, $rTable, $rCols, $logic);
+        return $this->whereCol($lTable, $lCols, $op, $rTable, $rCols, $logic);
     }
 
     /**
@@ -156,6 +195,30 @@ class WhereBuilder extends Builder
         $cond = compact('type', 'lTable', 'lCols', 'op', 'rTable', 'rCols', 'logic');
 
         $this->_addWhere($cond);
+        return $this;
+    }
+
+    public function whereNested(Closure $fn, $logic = 'AND', $not = false)
+    {
+        // where() method updates $_components['where'] without
+        // returning anything. In order to construct the nested
+        // conditions. We are going to bufferize it.
+        $components = &$this->_components;
+        $currentWhere = isset($components['where']) ? $components['where'] : array();
+        unset($components['where']);
+
+        $fn($this);
+
+        // Now, nested conditions are in $_components['where'].
+        // We have to construct our nested condition and restore components.
+        $nested = isset($components['where'])? $components['where'] : array();
+        $type   = 'Nested';
+        $cond   = compact('type', 'nested', 'logic', 'not');
+
+        $currentWhere[]      = $cond;
+        $components['where'] = $currentWhere;
+
+        return $this;
     }
 
     /**
@@ -176,6 +239,8 @@ class WhereBuilder extends Builder
         $type = 'Sub';
         $cond = compact('type', 'query', 'op', 'val', 'logic');
         $this->_addWhere($cond, $val);
+
+        return $this;
     }
 
     /**
@@ -221,6 +286,8 @@ class WhereBuilder extends Builder
         $type = 'In';
         $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+
+        return $this;
     }
 
     /**
@@ -236,6 +303,8 @@ class WhereBuilder extends Builder
         $type = 'Null';
         $cond = compact('type', 'table', 'cols', 'logic', 'not');
         $this->_addWhere($cond);
+
+        return $this;
     }
 
     /**
@@ -246,7 +315,7 @@ class WhereBuilder extends Builder
      */
     public function whereNotNull($attribute, $logic = 'AND')
     {
-        $this->whereNull($attributes, $logic, true);
+        return $this->whereNull($attributes, $logic, true);
     }
 
     /**
@@ -260,6 +329,8 @@ class WhereBuilder extends Builder
         $type = 'Raw';
         $cond = compact('type', 'val', 'logic');
         $this->_addWhere($cond);
+
+        return $this;
     }
 
     /**
@@ -274,6 +345,8 @@ class WhereBuilder extends Builder
         $type = 'Basic';
         $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+
+        return $this;
     }
 
     /**
@@ -293,8 +366,10 @@ class WhereBuilder extends Builder
      * @param Relation $rel
      * @param string   $alias An alias for the linked model.
      */
-    public function whereRelation(Relation $rel, $lmAlias = '_')
+    public function whereRelation(Relation $rel, $lmAlias = null)
     {
+        if ($lmAlias === null) { $lmAlias = self::DEFAULT_ROOT_ALIAS; }
+
         $lmTable = $rel->cm->t;
         $this->setInvolvedTable($lmAlias, $lmTable);
 
@@ -303,9 +378,9 @@ class WhereBuilder extends Builder
         $sep = Cfg::get('queryOptionRelationSeparator');
         if ($rel instanceof ManyMany)
         {
-            $mdTable = $rel->getMiddleTableName();
-            $mdAlias = $rel->getMiddleTableAlias();
             $cmAlias = $this->getRootAlias();
+            $mdTable = $rel->getMiddleTableName();
+            $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
 
             // Join middle table.
             $jc = new JoinClause($mdTable, $mdAlias);
@@ -326,6 +401,7 @@ class WhereBuilder extends Builder
             }
         }
 
+        return $this;
     }
 
     /**
@@ -352,6 +428,8 @@ class WhereBuilder extends Builder
         $type = 'Tuple';
         $cond = compact('type', 'table', 'cols', 'val', 'logic', 'not');
         $this->_addWhere($cond, $val);
+
+        return $this;
     }
 
     /**
@@ -700,7 +778,7 @@ class WhereBuilder extends Builder
     {
         // $md stands for "middle".
         $mdTable = $rel->getMiddleTableName();
-        $mdAlias = $rel->getMiddleTableAlias();
+        $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
         $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
 
         $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);
@@ -903,33 +981,6 @@ class WhereBuilder extends Builder
     {
         $this->parseConditionArray($conditions);
     }
-
-    /**
-     * Build a condition.
-     *
-     *
-     * @param string $attribute The complete attribute string.
-     * @param string $operator  The condition operator to use ('=', '<='...).
-     * @param mixed  $value
-     * @param string $logic The logical operator to use to link this
-     * condition to the previous one ('AND', 'OR').
-     *
-     * @param string $findAName @TODO Flag to tell whether to do a 'any' or a
-     * 'all' condition.
-     *
-     * @return Condition
-     */
-    // protected function _buildCondition($attribute, $op, $val, $logic, $findAName = 'any')
-    // {
-    //     list($table, $cols) = $this->_processExtendedAttribute($attribute);
-    //
-    //     $type = 'Basic';
-    //     $cond = compact('type', 'table', 'cols', 'op', 'val', 'logic');
-    //     //$cond = new SimpleCond($tAlias, $columns, $operator, $value, $logic);
-    //     $this->addValueToQuery($val, 'where');
-    //
-    //     return $cond;
-    // }
 
     /**
      * Build a condition group (i.e. a nested condition).
