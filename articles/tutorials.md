@@ -35,7 +35,7 @@ configuration like this is made through the `Config` instance passed to the
 
 {% highlight php startinline %}
 // All these values are required.
-// You can optionaly set a "charset" entry too.
+// You can optionally set a "charset" entry too.
 $cfg->dsn = array(
     'driver'   => 'mysql',
     'host'     => 'localhost',
