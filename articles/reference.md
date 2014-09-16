@@ -5,6 +5,8 @@ layout: article
 
 # Reference
 
+## Overview
+
 SimpleAR is divided in two main parts:
 
 * Orm (namespace `SimpleAR\Orm`);
@@ -18,40 +20,8 @@ The first part describes the Query build process, the second deals with Model
 and Relations. The third part explain how the two main parts (`Orm` and
 `Database`) work together.
 
+## Reference entries
 
-## Query build process
-
-This section describes the process to build SQL queries.
-
-### Overview
-
-Query build process is made in three steps:
-
-* Build;
-* Compilation;
-* Execution.
-
-The conductor of this process is the Query object. Give it a Connection and a
-Builder instances, and you have your entry point!
-
-### Builder
-
-The builder is aimed to provide a rich interface for the user to construct the
-query: `where()`, `whereHas()`, `limit()`...
-
-There is one builder per query type.
-
-### Compiler
-
-The compiler build the query components.
-
-### Connection
-
-
-## Models and relations
-
-### The `Model`
-### Relations
-
-
-## Orm query builder
+* [Query build process]({{ site.baseurl }}/articles/reference/query-build.html)
+* [Models and relations]({{ site.baseurl }}/articles/reference/models-relations.html)
+* [FAQ]({{ site.baseurl }}/articles/reference/faq.html)
