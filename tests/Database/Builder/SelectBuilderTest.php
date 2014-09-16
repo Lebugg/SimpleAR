@@ -277,4 +277,21 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         ];
         $this->assertEquals($columns, $components['columns']);
     }
+
+    public function testJoinSeveralManyManyInARow()
+    {
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->where('readers/followers/id', 12);
+        $b->select(['*'], false);
+
+        $components = $b->build();
+        $jc[] = (new JoinClause('articles', '_'));
+        $jc[] = (new JoinClause('articles_USERS', 'readers_m'))->on('_', 'id', 'readers_m', 'article_id');
+        $jc[] = (new JoinClause('USERS', 'readers'))->on('readers_m', 'user_id', 'readers', 'id');
+        $jc[] = (new JoinClause('USERS_USERS', 'readers.followers_m'))->on('readers', 'id', 'readers.followers_m', 'user_id');
+        $jc[] = (new JoinClause('USERS', 'readers.followers'))->on('readers.followers_m', 'user_id', 'readers.followers', 'id');
+
+        $this->assertEquals($jc, $components['from']);
+    }
 }

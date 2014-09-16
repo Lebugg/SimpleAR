@@ -110,6 +110,13 @@ class User extends SimpleAR\Orm\Model
         'name' => 'name',
         'age',
     );
+
+    protected static $_relations = array(
+        'followers' => array(
+            'type'  => 'many_many',
+            'model' => 'User',
+        ),
+    );
 }
 
 // Normally, this is done by autoloader.

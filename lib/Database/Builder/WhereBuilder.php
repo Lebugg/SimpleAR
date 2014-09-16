@@ -353,7 +353,8 @@ class WhereBuilder extends Builder
      * Add a condition over a relation.
      *
      * This is not the same as perform a join. An involved table will be used
-     * and where conditions given by the relation object will be added.
+     * and conditions given by the relation object will be added. But no JOIN
+     * will be performed.
      *
      * This method is particularly useful to connect tables between subquery and
      * main query.
@@ -364,7 +365,7 @@ class WhereBuilder extends Builder
      * (LM) is the current builder's root model.
      *
      * @param Relation $rel
-     * @param string   $alias An alias for the linked model.
+     * @param string   $lmAlias An alias for the linked model.
      */
     public function whereRelation(Relation $rel, $lmAlias = null)
     {
@@ -378,13 +379,13 @@ class WhereBuilder extends Builder
         $sep = Cfg::get('queryOptionRelationSeparator');
         if ($rel instanceof ManyMany)
         {
-            $cmAlias = $this->getRootAlias();
             $mdTable = $rel->getMiddleTableName();
-            $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
+            $mdAlias = $rel->getMiddleTableAlias();
+            $mdAlias = $lmAlias === self::DEFAULT_ROOT_ALIAS ? $mdAlias : $lmAlias . '.' . $mdAlias;
 
             // Join middle table.
             $jc = new JoinClause($mdTable, $mdAlias);
-            $jc->on($cmAlias, $rel->lm->column, $mdAlias, $rel->jm->to);
+            $jc->on($this->getRootAlias(), $rel->lm->column, $mdAlias, $rel->jm->to);
             $this->setJoinClause($mdAlias, $jc);
 
             // Where on relation.
@@ -778,10 +779,13 @@ class WhereBuilder extends Builder
     {
         // $md stands for "middle".
         $mdTable = $rel->getMiddleTableName();
-        $mdAlias = $rel->getMiddleTableAlias($cmAlias === self::DEFAULT_ROOT_ALIAS ? '' : $cmAlias);
-        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
+        $mdAlias = $rel->getMiddleTableAlias();
+        $mdAlias = $cmAlias === self::DEFAULT_ROOT_ALIAS ? $mdAlias : $cmAlias . '.' . $mdAlias;
 
+        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
         $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);
+
+        echo $cmAlias . ' => ' . $mdAlias . ' => ' . $mdTable . "\n";
         $this->setJoinClause($mdAlias, $jcMiddle);
 
         return $mdAlias;

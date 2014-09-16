@@ -85,9 +85,9 @@ class ManyMany extends Relation
      *
      * @return string.
      */
-    public function getMiddleTableAlias($cmAlias = '')
+    public function getMiddleTableAlias()
     {
-        return $cmAlias ? $cmAlias . '_m' : $this->name . '_m';
+        return $this->name . '_m';
     }
 
     /**
