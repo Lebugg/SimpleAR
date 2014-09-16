@@ -785,7 +785,6 @@ class WhereBuilder extends Builder
         $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
         $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);
 
-        echo $cmAlias . ' => ' . $mdAlias . ' => ' . $mdTable . "\n";
         $this->setJoinClause($mdAlias, $jcMiddle);
 
         return $mdAlias;
