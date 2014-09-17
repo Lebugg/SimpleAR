@@ -962,7 +962,7 @@ class WhereBuilder extends Builder
         // 3)
         $attributes = $this->decomposeAttribute($attribute);
         $attributes = isset($attributes[1]) ? $attributes : $attributes[0];
-        $columns = (array) $this->convertAttributesToColumns($attributes, $table);
+        $columns = $this->convertAttributesToColumns($attributes, $table);
 
         return array($tAlias, $columns);
     }

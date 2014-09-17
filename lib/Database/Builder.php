@@ -280,7 +280,7 @@ class Builder
      */
     public function convertAttributesToColumns($attributes, Table $table)
     {
-        return $table->columnRealName($attributes);
+        return (array) $table->columnRealName($attributes);
     }
 
     /**
