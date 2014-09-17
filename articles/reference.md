@@ -5,6 +5,8 @@ layout: article
 
 # Reference
 
+## Overview
+
 SimpleAR is divided in two main parts:
 
 * Orm (namespace `SimpleAR\Orm`);
@@ -18,19 +20,8 @@ The first part describes the Query build process, the second deals with Model
 and Relations. The third part explain how the two main parts (`Orm` and
 `Database`) work together.
 
+## Reference entries
 
-## Query build process
-
-### Overview
-### Builder
-### Compiler
-### Connection
-
-
-## Models and relations
-
-### The `Model`
-### Relations
-
-
-## Orm query builder
+* [Query build process]({{ site.baseurl }}/articles/reference/query-build.html)
+* [Models and relations]({{ site.baseurl }}/articles/reference/models-relations.html)
+* [FAQ]({{ site.baseurl }}/articles/reference/faq.html)
