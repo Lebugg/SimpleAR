@@ -223,6 +223,10 @@ it with <code>queryOptionRelationSeparator</code> configuration option.
 
 {% highlight php startinline %}
 Blog::whereHas('articles');
+
+// or with negation
+
+Blog::whereHasNot('articles');
 {% endhighlight %}
 
 {% highlight php startinline %}
