@@ -67,7 +67,7 @@ class WhereBuilder extends Builder
      * @param string $attribute
      * @param mixed  $val
      * @param mixed  $op
-     * @param string $logic The logical operator to use to link this 
+     * @param string $logic The logical operator to use to link this
      * condition to the previous one ('AND', 'OR').
      */
     public function where($attribute, $op = null, $val = null, $logic = 'AND', $not = false)
@@ -315,7 +315,7 @@ class WhereBuilder extends Builder
      */
     public function whereNotNull($attribute, $logic = 'AND')
     {
-        return $this->whereNull($attributes, $logic, true);
+        return $this->whereNull($attribute, $logic, true);
     }
 
     /**
@@ -886,7 +886,7 @@ class WhereBuilder extends Builder
     /**
      * Process an attribute.
      *
-     * The goal of this function is to choose the correct attribute processor 
+     * The goal of this function is to choose the correct attribute processor
      * according to parameter's type.
      *
      * @param  mixed $attribute
