@@ -215,7 +215,8 @@ class BaseCompiler extends Compiler
         foreach ($aggregates as $agg)
         {
             // $cols is now a string of wrapped column names.
-            $cols = $this->columnize($agg['columns'], $agg['tableAlias']);
+            $tAlias = $this->useTableAlias ? $agg['tableAlias'] : '';
+            $cols = $this->columnize($agg['columns'], $tAlias);
             $fn   = $agg['function'];
 
             $sql[] = $fn . '(' . $cols . ')' . $this->_compileAs($agg['resultAlias']);

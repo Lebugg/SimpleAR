@@ -13,6 +13,7 @@ use \SimpleAR\Database\Compiler;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\Expression\Distinct as DistinctExpr;
 
 class Database
 {
@@ -40,6 +41,16 @@ class Database
     public function raw($expression)
     {
         return $this->expr($expression);
+    }
+
+    /**
+     * Return a Distinct instance with given attribute as value.
+     *
+     * @param string $attribute An extended attribute string
+     */
+    public function distinct($attribute)
+    {
+        return new DistinctExpr($attribute);
     }
 
     /**

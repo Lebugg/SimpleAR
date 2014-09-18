@@ -16,10 +16,10 @@ use \SimpleAR\Database\Expression;
  *
  * Differences with using `DB::raw('AVG(friends.age)')` are:
  *
- * *    Expression content will be parsed: Query Builder (QB) will perform
+ * - Expression content will be parsed: Query Builder (QB) will perform
  * needed joins automatically and use every other usual features for attribute
  * handling.
- * *    It looks nicer!
+ * - It looks nicer!
  *
  * @author Lebugg
  */

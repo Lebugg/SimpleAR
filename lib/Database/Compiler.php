@@ -5,6 +5,7 @@ require __DIR__ . '/Compiler/BaseCompiler.php';
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\Expression\Distinct as DistinctExpr;
 
 abstract class Compiler
 {
@@ -225,23 +226,42 @@ abstract class Compiler
      * @param string $tPrefix The table prefix.
      * @param string $fn An optional SQL function.
      */
-    public function column($column, $tPrefix = '', $fn = '')
+    public function column($column, $tPrefix = '')
     {
         if ($column instanceof FuncExpr)
         {
-            return $this->column($column->val(), $tPrefix, $column->getFunc());
+            return $this->columnFn($column->val(), $column->getFunc(), $tPrefix);
+        }
+
+        if ($column instanceof DistinctExpr)
+        {
+            return $this->columnDistinct($column->val(), $tPrefix);
         }
 
         $tPrefix = $tPrefix ? $this->wrap($tPrefix) . '.' : '';
         $wrapper = is_string($column) ? 'wrap' : 'wrapArrayToString';
         $sql = $tPrefix . $this->$wrapper($column);
 
-        if ($fn)
-        {
-            $sql = $fn . '(' . $sql . ')';
-        }
-
         return $sql;
+    }
+
+    /**
+     * Wrap column in SQL function.
+     *
+     * @param string $column
+     * @param string $fn The SQL function.
+     * @param string $tPrefix The table prefix.
+     */
+    public function columnFn($column, $fn, $tPrefix = '')
+    {
+        $sql = $this->column($column, $tPrefix);
+        return $fn . '(' . $sql . ')';
+    }
+
+    public function columnDistinct($column, $tPrefix = '')
+    {
+        $sql = $this->column($column, $tPrefix);
+        return 'DISTINCT ' . $sql;
     }
 
     /**

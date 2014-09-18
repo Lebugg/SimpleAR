@@ -5,6 +5,7 @@ use \Closure;
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\Expression\Distinct as DistinctExpr;
 use \SimpleAR\Database\JoinClause;
 use \SimpleAR\Database\Query;
 use \SimpleAR\Exception\MalformedOptionException;
@@ -899,6 +900,11 @@ class WhereBuilder extends Builder
             return $this->_processFunctionExpression($attribute);
         }
 
+        if ($attribute instanceof DistinctExpr)
+        {
+            return $this->_processDistinctExpression($attribute);
+        }
+
         return $this->_processExtendedAttribute($attribute);
     }
 
@@ -970,6 +976,19 @@ class WhereBuilder extends Builder
     protected function _processFunctionExpression(FuncExpr $expr)
     {
         list($table, $cols) = $this->_processExtendedAttribute($expr->getAttribute());
+        $expr->setValue($cols);
+
+        return array($table, array($expr));
+    }
+
+    protected function _processDistinctExpression(DistinctExpr $expr)
+    {
+        $cols = array();
+        foreach ((array) $expr->val() as $val)
+        {
+            list($table, $tmpCols) = $this->_processExtendedAttribute($val);
+            $cols = array_merge($cols, $tmpCols);
+        }
         $expr->setValue($cols);
 
         return array($table, array($expr));

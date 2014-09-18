@@ -565,9 +565,8 @@ class Builder
             $this->applyScopes($scope);
         }
 
-        $q->groupBy($lmClass::table()->getPrimaryKey());
-
-        return $this->count();
+        $pk = $lmClass::table()->getPrimaryKey();
+        return $this->count(DB::distinct($pk));
         // if ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
         // {
         //     $conditions = array_merge($relation->conditions,

@@ -88,7 +88,7 @@ class SelectBuilder extends WhereBuilder
     {
         list($tableAlias, $columns) = $attribute === '*'
             ? array('', array('*'))
-            : $this->_processExtendedAttribute($attribute)
+            : $this->_processAttribute($attribute)
             ;
 
         $this->_components['aggregates'][] = compact('columns', 'function',

@@ -1,9 +1,11 @@
 <?php
 
-use SimpleAR\Database\Builder\SelectBuilder;
-use SimpleAR\Database\Compiler\BaseCompiler;
-use SimpleAR\Database\Expression;
-use SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Builder\SelectBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Facades\DB;
+
 
 class SelectBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -293,5 +295,19 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $jc[] = (new JoinClause('USERS', 'readers.followers'))->on('readers.followers_m', 'user_id', 'readers.followers', 'id');
 
         $this->assertEquals($jc, $components['from']);
+    }
+
+    public function testDistinct()
+    {
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->count(DB::distinct(Article::table()->getPrimaryKey()));
+
+        $components = $b->build();
+        $c = new BaseCompiler;
+        $sql = $c->compileSelect($components);
+
+        $expected = 'SELECT COUNT(DISTINCT `id`) FROM `articles`';
+        $this->assertEquals($expected, $sql);
     }
 }
