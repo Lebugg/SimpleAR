@@ -357,15 +357,16 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testCompileAggregates()
     {
         $c = new BaseCompiler();
+        $c->useTableAlias = true;
 
-        $agg[] = array('columns' => array('*'), 'function' => 'COUNT', 'tableAlias' => '', 'resultAlias' => '');
-        $agg[] = array('columns' => array('*'), 'function' => 'COUNT', 'tableAlias' => 'articles', 'resultAlias' => '#articles');
-        $agg[] = array('columns' => array('views'), 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views');
+        $agg[] = ['columns' => ['*'], 'function' => 'COUNT', 'tableAlias' => '', 'resultAlias' => ''];
+        $agg[] = ['columns' => ['*'], 'function' => 'COUNT', 'tableAlias' => 'articles', 'resultAlias' => '#articles'];
+        $agg[] = ['columns' => ['views'], 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views'];
 
-        $components['from'] = array(new JoinClause('articles'));
+        $components['from'] = [new JoinClause('articles')];
         $components['aggregates'] = $agg;
 
-        $expected = 'SELECT COUNT(*),COUNT(`articles`.*) AS `#articles`,SUM(`articles`.`views`) AS `#views` FROM `articles`';
+        $expected = 'SELECT COUNT(*),COUNT(`articles`.*) AS `#articles`,SUM(`articles`.`views`) AS `#views` FROM `articles` `articles`';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 
@@ -379,7 +380,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['aggregates'] = $agg;
         $components['columns'] = ['' => ['columns' => ['*']]];
 
-        $expected = 'SELECT * ,SUM(`articles`.`views`) AS `#views` FROM `articles`';
+        $expected = 'SELECT * ,SUM(`views`) AS `#views` FROM `articles`';
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 

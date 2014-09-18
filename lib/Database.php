@@ -56,11 +56,11 @@ class Database
     /**
      * Return an Func Expression.
      *
-     * @param  string $attribute An extended attribute string.
      * @param  string $fn The aggregate function.
+     * @param  string $attribute An extended attribute string.
      * @return Database\Expression\Func
      */
-    public function fn($attribute, $fn)
+    public function fn($fn, $attribute)
     {
         return new FuncExpr($attribute, $fn);
     }
@@ -73,7 +73,7 @@ class Database
      */
     public function avg($attribute)
     {
-        return $this->fn($attribute, 'AVG');
+        return $this->fn('AVG', $attribute);
     }
 
     /**
@@ -84,7 +84,7 @@ class Database
      */
     public function count($attribute)
     {
-        return $this->agg($attribute, 'COUNT');
+        return $this->agg('COUNT', $attribute);
     }
 
     /**
@@ -95,7 +95,7 @@ class Database
      */
     public function sum($attribute)
     {
-        return $this->fn($attribute, 'SUM');
+        return $this->fn('SUM', $attribute);
     }
 
     /**
