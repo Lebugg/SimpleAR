@@ -596,9 +596,19 @@ class Builder
      */
     public function count($attribute = '*')
     {
+        return $this->getAggregate('COUNT', $attribute);
+    }
+
+    public function sum($attribute = '*')
+    {
+        return $this->getAggregate('SUM', $attribute);
+    }
+
+    public function getAggregate($fn, $attribute = '*')
+    {
         $q = $this->getQueryOrNewSelect();
         $q->removeOptions(array('orderBy', 'limit', 'offset', 'with'));
-        $q->count($attribute)->run();
+        $q->aggregate($fn, $attribute)->run();
 
         return $q->getConnection()->getColumn();
     }

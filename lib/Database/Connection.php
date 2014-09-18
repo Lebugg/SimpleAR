@@ -200,6 +200,7 @@ class Connection
 
         try
         {
+            if (! $this->_pdo) { throw new \Exception; }
             $this->_sth = $this->_pdo->prepare($query);
             $this->_sth->execute((array) $params);
 
