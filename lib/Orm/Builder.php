@@ -463,8 +463,6 @@ class Builder
 
     public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
     {
-        // Our object is already saved. It has an ID. We are going to
-        // fetch potential linked objects from DB.
 		$lmClass = $relation->lm->class;
         $this->setRoot($lmClass);
 
@@ -517,6 +515,78 @@ class Builder
         return $lmInstances;
     }
 
+    /**
+     * Count the number of linked models for givent instances.
+     *
+     */
+    public function countRelation(Relation $relation, array $objects, array $localOptions = array())
+    {
+		$lmClass = $relation->lm->class;
+        $this->setRoot($lmClass);
+
+        $lmAttributePrefix = '';
+        if ($relation instanceof Relation\ManyMany)
+        {
+			$reversed = $relation->reverse();
+			$lmClass::relation($reversed->name, $reversed);
+
+            $lmAttributePrefix = $reversed->name . '/';
+            $relation = $reversed;
+        }
+
+        // Get CM join attributes values for each given objects.
+        $cmValues = array();
+        foreach ($objects as $o)
+        {
+            $cmValues[] = $o->get($relation->getCmAttributes());
+        }
+
+        $lmAttributes = $relation->getLmAttributes();
+        if ($lmAttributePrefix) {
+            foreach ($lmAttributes as &$attr)
+            {
+                $attr = $lmAttributePrefix . $attr;
+            }
+        }
+
+        $options['conditions'] = array_merge(
+            $relation->conditions,
+            $lmClass::getGlobalConditions()
+        );
+
+        $options = array_merge($options, $localOptions);
+
+        $q = $this->select();
+        $this->setOptions($options);
+        $q->whereTuple($lmAttributes, $cmValues);
+
+        if ($scope = $relation->getScope())
+        {
+            $this->applyScopes($scope);
+        }
+
+        return $this->count();
+        // if ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
+        // {
+        //     $conditions = array_merge($relation->conditions,
+        //         array($relation->lm->attribute => $this->__get($relation->cm->attribute))
+        //     );
+        // }
+        // else // ManyMany
+        // {
+		// 	$reversed = $relation->reverse();
+		// 	$class::relation($reversed->name, $reversed);
+        //
+		// 	$conditions = array_merge(
+		// 		$reversed->conditions,
+		// 		array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
+		// 	);
+        //
+		// 	$res = $class::count(array(
+        //         'conditions' => $conditions,
+		// 	));
+        // }
+    }
     /**
      * Return the number of rows matching the current query.
      *

@@ -1729,49 +1729,23 @@ abstract class Model
      *
      * @param string $relationName The relation name.
      */
-    private function _countLinkedModel($relationName)
+    private function _countLinkedModel($relationName, array $localOptions = array())
     {
         $relation = static::relation($relationName);
-
-        // Current object is not saved in database yet. It does not
-        // have an ID, so we cannot retrieve linked models from Db.
-        if (! $this->isConcrete())
-        {
-			return 0;
-        }
-
-        // Our object is already saved. It has an ID. We are going to
-        // fetch potential linked objects from DB.
-		$res     = 0;
 		$class = $relation->lm->class;
 
+        // For BelongsTo, just load related model, it doesn't cost much.
         if ($relation instanceof Relation\BelongsTo)
         {
-            return $this->__get($relation->cm->attribute) === null ? 0 : 1;
-        }
-        elseif ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
-        {
-            $res = $class::count(array(
-                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->__get($relation->cm->attribute))),
-            ));
-        }
-        else // ManyMany
-        {
-			$reversed = $relation->reverse();
-
-			$class::relation($reversed->name, $reversed);
-
-			$conditions = array_merge(
-				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
-			);
-
-			$res = $class::count(array(
-                'conditions' => $conditions,
-			));
+            $value = $this->_loadRelation($relationName);
+            return $value === null ? 0 : 1;
         }
 
-        return $res;
+        // Current object is not saved in database yet. It does not
+        // have an ID, so we cannot retrieve linked models from DB.
+        if (! $this->isConcrete()) { return 0; }
+
+        return static::query()->countRelation($relation, array($this), $localOptions);
     }
 
     /**
