@@ -2114,7 +2114,7 @@ abstract class Model
             $pk = self::table()->getPrimaryKey();
             $query = self::query()->update()
                 ->set($fields)
-                ->where($pk, $this->id())
+                ->where($pk, array($this->id()))
                 ->run();
 
             // I know code seems (is) redundant, but I am convinced that it is
