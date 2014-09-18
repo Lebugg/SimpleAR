@@ -1,6 +1,7 @@
 <?php namespace SimpleAR\Database;
 
 require __DIR__ . '/Expression/Func.php';
+require __DIR__ . '/Expression/Distinct.php';
 
 /**
  * Represent a raw SQL expresion.
