@@ -109,11 +109,11 @@ class SelectBuilder extends WhereBuilder
             $grouped = true;
             foreach ($this->_components['groupBy'] as $group)
             {
-                $tAlias = $group['tAlias'];
+                $groupAlias = $group['tAlias'];
                 $col = $group['column'];
-                $table  = $this->getInvolvedTable($tAlias);
+                $table  = $this->getInvolvedTable($groupAlias);
                 $attr = $table->columnToAttribute($col);
-                $this->_selectColumns($group['tAlias'], array($attr => $col));
+                $this->_selectColumns($groupAlias, array($attr => $col));
             }
         }
         $this->_components['aggregates'] = array(compact('cols', 'fn', 'tAlias', 'resAlias'));
