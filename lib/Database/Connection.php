@@ -319,7 +319,14 @@ class Connection
     public function getNextRow($next = true)
     {
         $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
+        if (! $this->_sth) { throw new \Exception; }
         return $this->_sth->fetch(\PDO::FETCH_ASSOC|$ori);
+    }
+
+    public function fetchAll()
+    {
+        if (! $this->_sth) { throw new \Exception; }
+        return $this->_sth->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     /**
@@ -329,6 +336,7 @@ class Connection
      */
     public function getLastRow()
     {
+        if (! $this->_sth) { throw new \Exception; }
         return $this->_sth->fetch(\PDO::FETCH_ASSOC, \PDO::FETCH_ORI_LAST);
     }
 

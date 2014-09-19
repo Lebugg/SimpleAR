@@ -4,6 +4,7 @@ use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Query;
 use \SimpleAR\Facades\DB;
 
 
@@ -11,8 +12,40 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 {
     public function testAggregate()
     {
-        $b = new SelectBuilder();
-        $b->aggregate('COUNT', '*');
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
+        $q = new Query(new SelectBuilder, $conn);
+
+        $sql = 'SELECT `blog_id` AS `blogId` ,AVG(`views`) AS `views_avg` FROM `articles` GROUP BY `blog_id`';
+        $expected = [
+            ['blogId' => 1, 'views_avg' => 100],
+            ['blogId' => 2, 'views_avg' => 123.45],
+            ['blogId' => 3, 'views_avg' => 1200],
+        ];
+        $conn->expects($this->once())->method('query')->with($sql, []);
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue($expected));
+
+        $res = $q->root('Article')
+          ->groupBy('blogId')
+          ->avg('views', 'views_avg');
+        $this->assertEquals($expected, $res);
+
+        // - - - Withour groupBy
+
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
+        $q = new Query(new SelectBuilder, $conn);
+
+        $sql = 'SELECT COUNT(*) FROM `articles`';
+        $conn->expects($this->once())->method('query')->with($sql, []);
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
+
+        $res = $q->root('Article')->count();
+        $this->assertEquals(12, $res);
+    }
+
+    public function testAddAggregate()
+    {
+        $b = new SelectBuilder;
+        $b->addAggregate('COUNT', '*');
         $components = $b->build();
 
         $expected = array(
@@ -20,14 +53,15 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
                 'cols' => array('*'),
                 'fn' => 'COUNT',
                 'tAlias' => '',
+                'resAlias' => '',
             ),
         );
         $this->assertEquals($expected, $components['aggregates']);
 
-        $b = new SelectBuilder();
+        $b = new SelectBuilder;
         $b->root('Blog');
-        $b->aggregate('COUNT', 'articles/id', '#articles');
-        $b->aggregate('AVG', 'articles/author/age', 'mediumAge');
+        $b->addAggregate('COUNT', 'articles/id', '#articles');
+        $b->addAggregate('AVG', 'articles/author/age', 'mediumAge');
         $b->select(['*']);
         $components = $b->build();
 
@@ -309,4 +343,5 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $expected = 'SELECT COUNT(DISTINCT `id`) FROM `articles`';
         $this->assertEquals($expected, $sql);
     }
+
 }

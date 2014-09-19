@@ -44,7 +44,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $expected = array('name', 'description', 'created_at', 'id');
         $this->assertEquals($expected, array_values(Blog::columns()));
 
-        $expected = array('blog_id', 'author_id', 'title', 'created_at', 'id');
+        $expected = array('blog_id', 'author_id', 'title', 'created_at', 'views', 'id');
         $this->assertEquals($expected, array_values(Article::columns()));
     }
 

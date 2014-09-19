@@ -61,6 +61,7 @@ class Article extends SimpleAR\Orm\Model
         'title',
         'authorId' => 'author_id',
         'created_at',
+        'views'
     );
 
     protected static $_orderBy = array(

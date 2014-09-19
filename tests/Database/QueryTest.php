@@ -77,7 +77,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             ])
             ->select(['*']);
 
-        $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`id` AS `id` FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
+        $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
         $val = [12, 1, 'Das Kapital', 'Essays', 1];
         $conn->expects($this->once())->method('query')->with($sql, $val);
 

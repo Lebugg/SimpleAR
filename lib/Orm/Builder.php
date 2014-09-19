@@ -156,8 +156,12 @@ class Builder
         $subRootAlias = $this->getRootAlias();
         $subRootAlias = $subRootAlias ? $subRootAlias . '.' . $rel->name : $rel->name;
         $subQuery = new self($rel->lm->class, $subRootAlias);
-        $subQuery->select();
+        $subQuery->setConnection($this->getConnection());
+        $subQuery->newSelect();
         $subQuery->whereRelation($rel, $mainQueryRootAlias);
+
+        $subQuery->getQuery()->getCompiler()->useTableAlias = true;
+        $mainQuery->getQuery()->getCompiler()->useTableAlias = true;
 
         if ($rels)
         {
@@ -168,7 +172,7 @@ class Builder
         // We want a Count sub-query.
         if ($op !== null && $value !== null)
         {
-            $subQuery->getQuery()->count();
+            $subQuery->getQuery()->addAggregate('COUNT');
 
             $mainQuery->selectSub($subQuery->getQuery(), '#'.$relation);
             $mainQuery->where(DB::expr('#'.$relation), $op, $value, null, $not);
@@ -186,9 +190,6 @@ class Builder
             $subQuery->get(array('*'), false);
             $mainQuery->whereExists($subQuery->getQuery(), null, $not);
         }
-
-        $subQuery->getQuery()->getCompiler()->useTableAlias = true;
-        $mainQuery->getQuery()->getCompiler()->useTableAlias = true;
 
         return $this;
     }
@@ -265,7 +266,7 @@ class Builder
      * @param  string $root The query's root.
      * @return Query
      */
-    public function select($root = null, $rootAlias = null, $storeIt = true)
+    public function newSelect($root = null, $rootAlias = null, $storeIt = true)
     {
         return $this->initQuery(new SelectBuilder, $root, $rootAlias, false, $storeIt);
     }
@@ -501,7 +502,7 @@ class Builder
 
         $options = array_merge($options, $localOptions);
 
-        $q = $this->select();
+        $q = $this->newSelect();
         $this->setOptions($options);
         $q->whereTuple($lmAttributes, $cmValues);
 
@@ -556,7 +557,7 @@ class Builder
 
         $options = array_merge($options, $localOptions);
 
-        $q = $this->select();
+        $q = $this->newSelect();
         $this->setOptions($options);
         $q->whereTuple($lmAttributes, $cmValues);
 
@@ -567,50 +568,6 @@ class Builder
 
         $pk = $lmClass::table()->getPrimaryKey();
         return $this->count(DB::distinct($pk));
-        // if ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
-        // {
-        //     $conditions = array_merge($relation->conditions,
-        //         array($relation->lm->attribute => $this->__get($relation->cm->attribute))
-        //     );
-        // }
-        // else // ManyMany
-        // {
-		// 	$reversed = $relation->reverse();
-		// 	$class::relation($reversed->name, $reversed);
-        //
-		// 	$conditions = array_merge(
-		// 		$reversed->conditions,
-		// 		array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
-		// 	);
-        //
-		// 	$res = $class::count(array(
-        //         'conditions' => $conditions,
-		// 	));
-        // }
-    }
-    /**
-     * Return the number of rows matching the current query.
-     *
-     * @param string $attribute An optional attribute to count on.
-     * @return int The count.
-     */
-    public function count($attribute = '*')
-    {
-        return $this->getAggregate('COUNT', $attribute);
-    }
-
-    public function sum($attribute = '*')
-    {
-        return $this->getAggregate('SUM', $attribute);
-    }
-
-    public function getAggregate($fn, $attribute = '*')
-    {
-        $q = $this->getQueryOrNewSelect();
-        $q->removeOptions(array('orderBy', 'limit', 'offset', 'with'));
-        $q->aggregate($fn, $attribute)->run();
-
-        return $q->getConnection()->getColumn();
     }
 
 	/**
@@ -731,26 +688,21 @@ class Builder
             return $root::applyScope($name, $this, $args);
         }
 
-        // If 'with()' option is called, query builder has to parse eager loaded
-        // models.
+        // If 'with()' option is called, query builder will have to parse eager 
+        // loaded models.
         if ($name === 'with' && $args)
         {
             $this->_eagerLoad = true;
         }
 
         // Redirect method calls on Query.
-        switch (count($args))
-        {
-            case 0: $q->$name(); break;
-            case 1: $q->$name($args[0]); break;
-            case 2: $q->$name($args[0], $args[1]); break;
-            case 3: $q->$name($args[0], $args[1], $args[2]); break;
-            case 4: $q->$name($args[0], $args[1], $args[2], $args[3]); break;
-            default: call_user_func_array(array($q, $name), $args);
-        }
+        $res = call_user_func_array(array($q, $name), $args);
 
-        // We always want to use the query builder, not the Query class.
-        return $this;
+        // If Query returns itself, we will prefer to return current
+        // QueryBuilder instead. However, if it returns something else (A COUNT
+        // has been performed and Query returns the result, for example), we
+        // return the result.
+        return $res === $q ? $this : $res;
     }
 
     /**
@@ -782,7 +734,7 @@ class Builder
      */
     public function getQueryOrNewSelect()
     {
-        return $this->getQuery() ?: $this->select();
+        return $this->getQuery() ?: $this->newSelect();
     }
 
     /**

@@ -210,23 +210,23 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testCount()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getColumn']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles`';
-        $conn->expects($this->once())->method('getColumn')->with(0)->will($this->returnValue(12));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
         $conn->expects($this->once())->method('query')->with($sql, []);
 
         $this->assertEquals(12, $qb->setRoot('Article')->count());
 
         // With values to bind.
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getColumn']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles` WHERE `title` = ?';
-        $conn->expects($this->once())->method('getColumn')->with(0)->will($this->returnValue(12));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
         $conn->expects($this->once())->method('query')->with($sql, ['Yo']);
 
         $this->assertEquals(12, $qb->setRoot('Article')->where('title', 'Yo')->count());
@@ -378,11 +378,12 @@ class BuilderTest extends PHPUnit_Framework_TestCase
      */
     public function testHasWithCount()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
         $qb->setRoot('Blog')->whereHas('articles', '>', 3)->get(['*']);
+        $this->assertTrue($qb->getQuery()->getCompiler()->useTableAlias);
 
         //$sql = 'SELECT * FROM `blogs` `_` WHERE (SELECT COUNT(*) FROM `articles` `__` WHERE `__`.`blog_id` = `_`.`id`) > ?';
         $sql = 'SELECT (SELECT COUNT(*) FROM `articles` `articles` WHERE `articles`.`blog_id` = `_`.`id`) AS `#articles`,`_`.`name` AS `name`,`_`.`description` AS `description`,`_`.`created_at` AS `created_at`,`_`.`id` AS `id` FROM `blogs` `_` WHERE `#articles` > ?';
@@ -519,8 +520,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $q = $this->getMock('SimpleAR\Database\Query', ['whereTuple']);
         $q->expects($this->once())->method('whereTuple')->with(['blogId'], [[1],[2],[3]]);
 
-        $qb = m::mock('SimpleAR\Orm\Builder[select,setOptions,all]');
-        $qb->shouldReceive('select')->once()->withNoArgs()->andReturn($q);
+        $qb = m::mock('SimpleAR\Orm\Builder[newSelect,setOptions,all]');
+        $qb->shouldReceive('newSelect')->once()->withNoArgs()->andReturn($q);
         $qb->shouldReceive('setOptions')->once()->with(['conditions' => []]);
         $qb->shouldReceive('all')->once()->with(['*'], $q)->andReturn($articles);
         $this->assertEquals($articles, $qb->loadRelation($relation, $blogs));

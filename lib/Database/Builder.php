@@ -19,6 +19,8 @@ class Builder
 
     const DEFAULT_ROOT_ALIAS = '_';
 
+    protected $_query;
+
     /**
      * The Builder's type.
      *
@@ -87,9 +89,10 @@ class Builder
      */
     protected $_components;
 
-    public function __construct()
+    public function __construct(Query $q = null)
     {
         $this->_rootAlias = self::DEFAULT_ROOT_ALIAS;
+        $q && $this->setQuery($q);
     }
 
     /**
@@ -404,5 +407,15 @@ class Builder
      */
     protected function _onAfterBuild()
     {
+    }
+
+    public function getQuery()
+    {
+        return $this->_query;
+    }
+
+    public function setQuery(Query $q)
+    {
+        $this->_query = $q;
     }
 }

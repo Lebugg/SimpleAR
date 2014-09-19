@@ -276,7 +276,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Blog');
         $subQuery = User::query(null, 'articles.readers')
             ->whereRelation(Article::relation('readers'), 'articles')
-            ->aggregate('AVG', 'age')->getQuery();
+            ->addAggregate('AVG', 'age')->getQuery();
         $b->where('articles/author/age', '>', $subQuery);
         $b->get(['*'], false);
 

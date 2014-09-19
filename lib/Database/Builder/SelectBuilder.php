@@ -97,9 +97,32 @@ class SelectBuilder extends WhereBuilder
      */
     public function aggregate($fn, $attribute = '*', $resAlias = null)
     {
-        return $resAlias
-            ? $this->addAggregate($fn, $attribute, $resAlias)
-            : $this->setAggregate($fn, $attribute);
+        list($tAlias, $cols) = $attribute === '*'
+            ? array('', array('*'))
+            : $this->_processAttribute($attribute);
+
+        // Clean columns and add group by columns so result makes more sense.
+        unset($this->_components['columns']);
+        $grouped = false;
+        if (isset($this->_components['groupBy']))
+        {
+            $grouped = true;
+            foreach ($this->_components['groupBy'] as $group)
+            {
+                $tAlias = $group['tAlias'];
+                $col = $group['column'];
+                $table  = $this->getInvolvedTable($tAlias);
+                $attr = $table->columnToAttribute($col);
+                $this->_selectColumns($group['tAlias'], array($attr => $col));
+            }
+        }
+        $this->_components['aggregates'] = array(compact('cols', 'fn', 'tAlias', 'resAlias'));
+
+        if ($q = $this->getQuery())
+        {
+            $result = $q->run()->getResult();
+            return $grouped ? $result : current($result);
+        }
     }
 
     public function addAggregate($fn, $attribute = '*', $resAlias = '')
@@ -111,16 +134,6 @@ class SelectBuilder extends WhereBuilder
         $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
     }
 
-    public function setAggregate($fn, $attribute = '*')
-    {
-        list($tAlias, $cols) = $attribute === '*'
-            ? array('', array('*'))
-            : $this->_processAttribute($attribute);
-
-        $this->_components['aggregates'] = array(compact('cols', 'fn', 'tAlias'));
-        unset($this->_components['columns']);
-    }
-
     /**
      * Add a count aggregate to the query.
      *
@@ -128,27 +141,27 @@ class SelectBuilder extends WhereBuilder
      */
     public function count($columns = '*', $resAlias = null)
     {
-        $this->aggregate('COUNT', $columns, $resAlias);
+        return (int) $this->aggregate('COUNT', $columns, $resAlias);
     }
 
     public function sum($columns = '*', $resAlias = null)
     {
-        $this->aggregate('SUM', $columns, $resAlias);
+        return $this->aggregate('SUM', $columns, $resAlias);
     }
 
     public function max($columns = '*', $resAlias = null)
     {
-        $this->aggregate('MAX', $columns, $resAlias);
+        return $this->aggregate('MAX', $columns, $resAlias);
     }
 
     public function min($columns = '*', $resAlias = null)
     {
-        $this->aggregate('MIN', $columns, $resAlias);
+        return $this->aggregate('MIN', $columns, $resAlias);
     }
 
     public function avg($columns = '*', $resAlias = null)
     {
-        $this->aggregate('AVG', $columns, $resAlias);
+        return $this->aggregate('AVG', $columns, $resAlias);
     }
 
     public function orderBy($attribute, $sort = 'ASC')
@@ -182,9 +195,11 @@ class SelectBuilder extends WhereBuilder
         foreach ((array) $attribute as $attr)
         {
             list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
-            $column = $columns[0];
 
-            $this->_components['groupBy'][] = compact('tAlias', 'column');
+            foreach ($columns as $column)
+            {
+                $this->_components['groupBy'][] = compact('tAlias', 'column');
+            }
         }
     }
 
@@ -257,7 +272,8 @@ class SelectBuilder extends WhereBuilder
      * Add columns to the list of to-be-selected columns.
      *
      * @param string $tAlias The alias of the table the columns belong.
-     * @param array  $columns The columns to select. (Columns, not attributes).
+     * @param array  $columns The columns to select. (Can be
+     * attributes-to-columns array).
      * @param bool   $expand Whether to expand '*' wildcard or not.
      */
     protected function _selectColumns($tAlias, array $columns, $expand = true)
