@@ -17,10 +17,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $expected = array(
             array(
-                'columns' => array('*'),
-                'function' => 'COUNT',
-                'tableAlias' => '',
-                'resultAlias' => '',
+                'cols' => array('*'),
+                'fn' => 'COUNT',
+                'tAlias' => '',
             ),
         );
         $this->assertEquals($expected, $components['aggregates']);
@@ -34,20 +33,20 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $aggs = array(
             array(
-                'columns' => array('id'),
-                'function' => 'COUNT',
-                'tableAlias' => 'articles',
-                'resultAlias' => '#articles',
+                'cols' => array('id'),
+                'fn' => 'COUNT',
+                'tAlias' => 'articles',
+                'resAlias' => '#articles',
             ),
             array(
-                'columns' => array('age'),
-                'function' => 'AVG',
-                'tableAlias' => 'articles.author',
-                'resultAlias' => 'mediumAge',
+                'cols' => array('age'),
+                'fn' => 'AVG',
+                'tAlias' => 'articles.author',
+                'resAlias' => 'mediumAge',
             ),
         );
         $cols = [
-            '_' => ['columns' => array_flip(Blog::table()->getColumns()), 'resultAlias' => ''],
+            '_' => ['columns' => array_flip(Blog::table()->getColumns()), 'resAlias' => ''],
         ];
         $this->assertEquals($aggs, $components['aggregates']);
         $this->assertEquals($cols, $components['columns']);
@@ -112,12 +111,12 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $expected = array(
             array(
-                'tableAlias' => 'author',
+                'tAlias' => 'author',
                 'column' => 'last_name',
                 'sort' => 'ASC',
             ),
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
                 'sort' => 'DESC',
             ),
@@ -143,11 +142,11 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $expected = array(
             array(
-                'tableAlias' => 'author',
+                'tAlias' => 'author',
                 'column' => 'last_name',
             ),
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
             ),
         );
@@ -178,8 +177,8 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => ['columns' => Blog::table()->getColumns(), 'resultAlias' => ''],
-            'articles' => ['columns' => Article::table()->getColumns(), 'resultAlias' => 'articles'],
+            '_' => ['columns' => Blog::table()->getColumns(), 'resAlias' => ''],
+            'articles' => ['columns' => Article::table()->getColumns(), 'resAlias' => 'articles'],
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -193,7 +192,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
 
         $jc[] = (new JoinClause('authors', 'articles.author', JoinClause::LEFT))->on('articles', 'author_id', 'articles.author', 'id');
-        $columns['articles.author'] = ['columns' => Author::table()->getColumns(), 'resultAlias' => 'articles.author'];
+        $columns['articles.author'] = ['columns' => Author::table()->getColumns(), 'resAlias' => 'articles.author'];
 
         $this->assertEquals($jc, $components['from']);
         $this->assertEquals($columns, $components['columns']);
@@ -214,9 +213,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => ['columns' => Article::table()->getColumns(), 'resultAlias' => ''],
-            'blog' => ['columns' => Blog::table()->getColumns(), 'resultAlias' => 'blog'],
-            'author' => ['columns' => Author::table()->getColumns(), 'resultAlias' => 'author'],
+            '_' => ['columns' => Article::table()->getColumns(), 'resAlias' => ''],
+            'blog' => ['columns' => Blog::table()->getColumns(), 'resAlias' => 'blog'],
+            'author' => ['columns' => Author::table()->getColumns(), 'resAlias' => 'author'],
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -240,8 +239,8 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => ['columns' => Article::table()->getColumns(), 'resultAlias' => ''],
-            'readers' => ['columns' => User::table()->getColumns(), 'resultAlias' => 'readers'],
+            '_' => ['columns' => Article::table()->getColumns(), 'resAlias' => ''],
+            'readers' => ['columns' => User::table()->getColumns(), 'resAlias' => 'readers'],
         );
 
         $this->assertEquals($jc, $components['from']);
@@ -263,7 +262,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
                 'authorId' => 'author_id',
                 'title' => 'title',
                 'created_at' => 'created_at',
-            ], 'resultAlias' => ''],
+            ], 'resAlias' => ''],
             ['column' => $expr, 'alias' => ''],
         ];
         $this->assertEquals($columns, $components['columns']);
@@ -275,7 +274,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
         $columns = [
-            '_' => ['columns' => ['id' => 'id', 'firstName' => 'firstName', 'lastName' => 'name', 'name' => 'name'], 'resultAlias' => ''],
+            '_' => ['columns' => ['id' => 'id', 'firstName' => 'firstName', 'lastName' => 'name', 'name' => 'name'], 'resAlias' => ''],
         ];
         $this->assertEquals($columns, $components['columns']);
     }

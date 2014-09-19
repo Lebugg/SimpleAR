@@ -78,21 +78,47 @@ class SelectBuilder extends WhereBuilder
     /**
      * Add an aggregate function to the query (count, avg, sum...).
      *
-     * Aggregates do not replace columns selection. Both can be combined.
+     * Two behaviours:
+     * ---------------
+     *
+     * 1) Add an aggregate to the selection list (with other columns or
+     * aggregates). Query won't be executed.
+     * 2) Set the aggregate as the only item to fetch. Query will be executed
+     * and first value will be returned.
+     *
+     * The behaviour choice depends on $resAlias parameter. If null, 2) will 
+     * be used, 1) otherwise.
+     * You still can choose one behaviour over another using `addAggregate()` 
+     * and `setAggregate()` methods.
      *
      * @param string $fn The aggregate function.
      * @param string $attribute The attribute to apply the function on.
-     * @param string $alias The result alias to give to this aggregate.
+     * @param string $alias The result alias to give to the aggregate.
      */
-    public function aggregate($function, $attribute = '*', $resultAlias = '')
+    public function aggregate($fn, $attribute = '*', $resAlias = null)
     {
-        list($tableAlias, $columns) = $attribute === '*'
-            ? array('', array('*'))
-            : $this->_processAttribute($attribute)
-            ;
+        return $resAlias
+            ? $this->addAggregate($fn, $attribute, $resAlias)
+            : $this->setAggregate($fn, $attribute);
+    }
 
-        $this->_components['aggregates'][] = compact('columns', 'function',
-            'tableAlias', 'resultAlias');
+    public function addAggregate($fn, $attribute = '*', $resAlias = '')
+    {
+        list($tAlias, $cols) = $attribute === '*'
+            ? array('', array('*'))
+            : $this->_processAttribute($attribute);
+
+        $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
+    }
+
+    public function setAggregate($fn, $attribute = '*')
+    {
+        list($tAlias, $cols) = $attribute === '*'
+            ? array('', array('*'))
+            : $this->_processAttribute($attribute);
+
+        $this->_components['aggregates'] = array(compact('cols', 'fn', 'tAlias'));
+        unset($this->_components['columns']);
     }
 
     /**
@@ -100,9 +126,29 @@ class SelectBuilder extends WhereBuilder
      *
      * @param array|string $columns The columns to count on.
      */
-    public function count($columns = '*', $resultAlias = '')
+    public function count($columns = '*', $resAlias = null)
     {
-        $this->aggregate('COUNT', $columns, $resultAlias);
+        $this->aggregate('COUNT', $columns, $resAlias);
+    }
+
+    public function sum($columns = '*', $resAlias = null)
+    {
+        $this->aggregate('SUM', $columns, $resAlias);
+    }
+
+    public function max($columns = '*', $resAlias = null)
+    {
+        $this->aggregate('MAX', $columns, $resAlias);
+    }
+
+    public function min($columns = '*', $resAlias = null)
+    {
+        $this->aggregate('MIN', $columns, $resAlias);
+    }
+
+    public function avg($columns = '*', $resAlias = null)
+    {
+        $this->aggregate('AVG', $columns, $resAlias);
     }
 
     public function orderBy($attribute, $sort = 'ASC')
@@ -125,20 +171,20 @@ class SelectBuilder extends WhereBuilder
             return;
         }
 
-        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
+        list($tAlias, $columns) = $this->_processExtendedAttribute($attribute);
         $column = $columns[0];
 
-        $this->_components['orderBy'][] = compact('tableAlias', 'column', 'sort');
+        $this->_components['orderBy'][] = compact('tAlias', 'column', 'sort');
     }
 
     public function groupBy($attribute)
     {
         foreach ((array) $attribute as $attr)
         {
-            list($tableAlias, $columns) = $this->_processExtendedAttribute($attr);
+            list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
             $column = $columns[0];
 
-            $this->_components['groupBy'][] = compact('tableAlias', 'column');
+            $this->_components['groupBy'][] = compact('tAlias', 'column');
         }
     }
 
@@ -193,12 +239,12 @@ class SelectBuilder extends WhereBuilder
 
         // 1) We have to call addInvolvedTable() function. It takes a table alias
         // as a parameter.
-        $tableAlias = $this->relationsToTableAlias($relation);
-        $this->addInvolvedTable($tableAlias, JoinClause::LEFT);
+        $tAlias = $this->relationsToTableAlias($relation);
+        $this->addInvolvedTable($tAlias, JoinClause::LEFT);
 
         // 2)
         $alias = '';
-        foreach (explode('.', $tableAlias) as $relName)
+        foreach (explode('.', $tAlias) as $relName)
         {
             $alias .= $alias ? '.' . $relName : $relName;
             $this->_selectColumns($alias, array('*'));
@@ -210,21 +256,21 @@ class SelectBuilder extends WhereBuilder
     /**
      * Add columns to the list of to-be-selected columns.
      *
-     * @param string $tableAlias The alias of the table the columns belong.
+     * @param string $tAlias The alias of the table the columns belong.
      * @param array  $columns The columns to select. (Columns, not attributes).
      * @param bool   $expand Whether to expand '*' wildcard or not.
      */
-    protected function _selectColumns($tableAlias, array $columns, $expand = true)
+    protected function _selectColumns($tAlias, array $columns, $expand = true)
     {
         if ($expand && $columns === array('*'))
         {
-            $columns = $this->getInvolvedTable($tableAlias)->getColumns();
+            $columns = $this->getInvolvedTable($tAlias)->getColumns();
         }
 
-        $resultAlias = $tableAlias === $this->getRootAlias() ? '' : $tableAlias;
-        $this->_components['columns'][$tableAlias] = array(
+        $resAlias = $tAlias === $this->getRootAlias() ? '' : $tAlias;
+        $this->_components['columns'][$tAlias] = array(
             'columns' => $columns,
-            'resultAlias' => $resultAlias
+            'resAlias' => $resAlias
         );
     }
 

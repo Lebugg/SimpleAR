@@ -83,7 +83,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = array(new JoinClause('articles'));
         $expr = new Expression('AVG(created_at) AS average');
         $components['columns'] = [
-            '_' => ['columns' => ['id', 'author_id'], 'resultAlias' => ''],
+            '_' => ['columns' => ['id', 'author_id'], 'resAlias' => ''],
             ['column' => $expr, 'alias' => ''],
         ];
 
@@ -95,12 +95,11 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function notestSelectBasicWithTableAlias()
     {
         $compiler = new BaseCompiler();
-        //$compiler->useTableAlias = true;
 
         $components['from'] = array(new JoinClause('articles', 'a'));
 
         // "*" symbol for all columns.
-        $cols = array('a' => array('columns' => array('*'), 'resultAlias' => ''));
+        $cols = array('a' => array('columns' => array('*'), 'resAlias' => ''));
         $components['columns'] = $cols;
         $expected = 'SELECT `a`.* FROM `articles` `a`';
         $result   = $compiler->compileSelect($components);
@@ -109,7 +108,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         // Several columns.
         $cols = array('a' => array(
             'columns' => array('id', 'author_id' => 'authorId', 'title'),
-            'resultAlias' => '_',
+            'resAlias' => '_',
         ));
         $components['columns'] = $cols;
         $expected = 'SELECT `a`.`id`,`a`.`author_id` AS `authorId`,`a`.`title` FROM `articles` `a`';
@@ -120,7 +119,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testSelectBasicWithResultAlias()
     {
         $compiler = new BaseCompiler();
-        //$compiler->useTableAlias = true;
         $compiler->useResultAlias = true;
 
         $components['from'] = array(new JoinClause('articles', 'a'));
@@ -128,7 +126,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         // Several columns.
         $cols = ['a' => [
             'columns' => ['id', 'authorId' => 'author_id', 'title'],
-            'resultAlias' => '_'
+            'resAlias' => '_'
         ]];
         $components['columns'] = $cols;
         $expected = 'SELECT `id` AS `_.id`,`author_id` AS `_.authorId`,`title` AS `_.title` FROM `articles`';
@@ -148,7 +146,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
 
         $components['deleteFrom'] = 'articles';
         $components['using'] = array(new JoinClause('articles'));
-        //$compiler->useTableAlias = true;
 
         $expectedSql = 'DELETE FROM `articles` USING `articles` `articles`';
         $resultSql   = $compiler->compileDelete($components);
@@ -179,7 +176,6 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     public function testCompileDeleteOnSeveralTablesWithAlias()
     {
         $compiler = new BaseCompiler();
-        //$compiler->useTableAlias = true;
 
         // Without ON clause.
         $components['deleteFrom'] = array('a', 'u');
@@ -359,9 +355,9 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $c = new BaseCompiler();
         $c->useTableAlias = true;
 
-        $agg[] = ['columns' => ['*'], 'function' => 'COUNT', 'tableAlias' => '', 'resultAlias' => ''];
-        $agg[] = ['columns' => ['*'], 'function' => 'COUNT', 'tableAlias' => 'articles', 'resultAlias' => '#articles'];
-        $agg[] = ['columns' => ['views'], 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views'];
+        $agg[] = ['cols' => ['*'], 'fn' => 'COUNT', 'tAlias' => '', 'resAlias' => ''];
+        $agg[] = ['cols' => ['*'], 'fn' => 'COUNT', 'tAlias' => 'articles', 'resAlias' => '#articles'];
+        $agg[] = ['cols' => ['views'], 'fn' => 'SUM', 'tAlias' => 'articles', 'resAlias' => '#views'];
 
         $components['from'] = [new JoinClause('articles')];
         $components['aggregates'] = $agg;
@@ -374,7 +370,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
     {
         $c = new BaseCompiler();
 
-        $agg[] = array('columns' => array('views'), 'function' => 'SUM', 'tableAlias' => 'articles', 'resultAlias' => '#views');
+        $agg[] = array('cols' => array('views'), 'fn' => 'SUM', 'tAlias' => 'articles', 'resAlias' => '#views');
 
         $components['from'] = [new JoinClause('articles')];
         $components['aggregates'] = $agg;
@@ -416,7 +412,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = [new JoinClause('articles', '_')];
         $components['orderBy'] = array(
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
                 'sort' => 'DESC',
             ),
@@ -432,12 +428,12 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = $jc;
         $components['orderBy'] = array(
             array(
-                'tableAlias' => 'author',
+                'tAlias' => 'author',
                 'column' => 'last_name',
                 'sort' => 'ASC',
             ),
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
                 'sort' => 'DESC',
             ),
@@ -456,7 +452,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = [new JoinClause('articles', '_')];
         $components['groupBy'] = array(
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
             ),
         );
@@ -472,11 +468,11 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $components['from'] = $jc;
         $components['groupBy'] = array(
             array(
-                'tableAlias' => 'author',
+                'tAlias' => 'author',
                 'column' => 'last_name',
             ),
             array(
-                'tableAlias' => '_',
+                'tAlias' => '_',
                 'column' => 'created_at',
             ),
         );
@@ -495,9 +491,9 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         );
 
         $columns = array(
-            '_' => ['columns' => ['*'], 'resultAlias' => ''],
-            'articles' => ['columns' => ['*'], 'resultAlias' => ''],
-            'articles.author' => ['columns' => ['firstName' => 'first_name', 'lastName' => 'last_name'], 'resultAlias' => 'articles.author'],
+            '_' => ['columns' => ['*'], 'resAlias' => ''],
+            'articles' => ['columns' => ['*'], 'resAlias' => ''],
+            'articles.author' => ['columns' => ['firstName' => 'first_name', 'lastName' => 'last_name'], 'resAlias' => 'articles.author'],
         );
 
         $components['from'] = $jc;
@@ -557,7 +553,7 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $c = new BaseCompiler();
         $components['updateFrom'] = [new JoinClause('articles', '_')];
         $components['set'] = [[
-            'tableAlias' => '_',
+            'tAlias' => '_',
             'column' => 'title',
             'value' => 'Yo',
         ]];

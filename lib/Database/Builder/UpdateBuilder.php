@@ -61,12 +61,12 @@ class UpdateBuilder extends WhereBuilder
     {
         foreach ($sets as $attribute => $value)
         {
-            list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
+            list($tAlias, $columns) = $this->_processExtendedAttribute($attribute);
 
             // Set does not allow multiple attributes form.
             $column = $columns[0];
 
-            $this->_components['set'][] = compact('tableAlias', 'column', 'value');
+            $this->_components['set'][] = compact('tAlias', 'column', 'value');
 
             // One other task to do: move value over one place.
             $this->addValueToQuery($value, 'set');

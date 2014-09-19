@@ -12,8 +12,8 @@ class UpdateBuilderTest extends PHPUnit_Framework_TestCase
         $components = $b->build();
 
         $set = [
-            ['tableAlias' => '_', 'column' => 'title', 'value' => 'Title'],
-            ['tableAlias' => '_', 'column' => 'blog_id', 'value' => '12'],
+            ['tAlias' => '_', 'column' => 'title', 'value' => 'Title'],
+            ['tAlias' => '_', 'column' => 'blog_id', 'value' => '12'],
         ];
         $updateFrom = [new JoinClause('articles', '_')];
 

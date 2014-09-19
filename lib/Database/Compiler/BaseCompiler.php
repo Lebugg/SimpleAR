@@ -206,7 +206,7 @@ class BaseCompiler extends Compiler
      *  
      *  * "function": The aggregate function;
      *  * "columns": The columns to apply the function on;
-     *  * "tableAlias": The table alias;
+     *  * "tAlias": The table alias;
      *  * "resultAlias": The aggregate column's alias.
      */
     protected function _compileAggregates(array $aggregates)
@@ -215,11 +215,12 @@ class BaseCompiler extends Compiler
         foreach ($aggregates as $agg)
         {
             // $cols is now a string of wrapped column names.
-            $tAlias = $this->useTableAlias ? $agg['tableAlias'] : '';
-            $cols = $this->columnize($agg['columns'], $tAlias);
-            $fn   = $agg['function'];
+            $tAlias = $this->useTableAlias ? $agg['tAlias'] : '';
+            $cols = $this->columnize($agg['cols'], $tAlias);
+            $fn = $agg['fn'];
+            $resAlias = isset($agg['resAlias']) ? $this->_compileAs($agg['resAlias']) : '';
 
-            $sql[] = $fn . '(' . $cols . ')' . $this->_compileAs($agg['resultAlias']);
+            $sql[] = $fn . '(' . $cols . ')' . $resAlias;
         }
 
         $sql = implode(',', $sql);
@@ -239,15 +240,15 @@ class BaseCompiler extends Compiler
     protected function _compileColumns(array $columns)
     {
         $sql = array();
-        foreach ($columns as $tableAlias => $data)
+        foreach ($columns as $tAlias => $data)
         {
-            if (is_string($tableAlias))
+            if (is_string($tAlias))
             {
                 $columns     = $data['columns'];
-                $tableAlias  = $this->useTableAlias ? $tableAlias : '';
-                $resultAlias = isset($data['resultAlias']) ? $data['resultAlias'] : '';
+                $tAlias  = $this->useTableAlias ? $tAlias : '';
+                $resultAlias = isset($data['resAlias']) ? $data['resAlias'] : '';
 
-                $sql[] = $this->project($columns, $tableAlias, $resultAlias);
+                $sql[] = $this->project($columns, $tAlias, $resultAlias);
             }
 
             else
@@ -329,8 +330,8 @@ class BaseCompiler extends Compiler
     {
         foreach ($orderBys as $item)
         {
-            $tableAlias = $this->useTableAlias ? $item['tableAlias'] : '';
-            $col = $this->column($item['column'], $tableAlias);
+            $tAlias = $this->useTableAlias ? $item['tAlias'] : '';
+            $col = $this->column($item['column'], $tAlias);
             $sql[] = $col . ' ' . $item['sort'];
         }
 
@@ -347,8 +348,8 @@ class BaseCompiler extends Compiler
     {
         foreach ($groups as $g)
         {
-            $tableAlias = $this->useTableAlias ? $g['tableAlias'] : '';
-            $sql[] = $this->column($g['column'], $tableAlias);
+            $tAlias = $this->useTableAlias ? $g['tAlias'] : '';
+            $sql[] = $this->column($g['column'], $tAlias);
         }
 
         return 'GROUP BY ' . implode(',', $sql);
@@ -842,7 +843,7 @@ class BaseCompiler extends Compiler
      *
      * $set array entries:
      *
-     *  * 'tableAlias': The table alias to use.
+     *  * 'tAlias': The table alias to use.
      *  * 'column': The column.
      *  * 'value': The value.
      *
@@ -851,7 +852,7 @@ class BaseCompiler extends Compiler
      */
     protected function _compileSetPart(array $set)
     {
-        $prefix = $this->useTableAlias ? $set['tableAlias'] : '';
+        $prefix = $this->useTableAlias ? $set['tAlias'] : '';
         $left  = $this->column($set['column'], $prefix);
         $right = $this->parameterize($set['value']);
 
