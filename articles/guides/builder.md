@@ -270,9 +270,18 @@ If none of the available methods is sufficient to build your query, you can use
 the `whereRaw()` method:
 
 {% highlight php startinline %}
-Article::whereRaw("first_name LIKE 'Joe'");
+Author::whereRaw("first_name LIKE 'Joe'");
 {% endhighlight %}
 
+If you have to use relations in your query, note that:
+
+* The relation must be included. To manually include a relation, use `join()`
+method;
+* Relations are dot-separated in the query string:
+* Alias for root table is `_` (underscore) character.
+{% highlight php startinline %}
+Article::join('author')->whereRaw("author.first_name LIKE 'Joe' AND `_`.`views` > 100");
+{% endhighlight %}
 
 ## Select statements
 
@@ -280,9 +289,48 @@ Article::whereRaw("first_name LIKE 'Joe'");
 Article::where('author_id', 12)
     ->orderBy('title')
     ->limit(10)
-    ->offset(20)
+    ->offset(20) // Or: limit(10, 20)
     ->all();
 {% endhighlight %}
+
+### Aggregate selection
+{% highlight php startinline %}
+Article::where('views', '>', 1000)->count();
+// 12
+
+Article::where('views', '>', 1000)->groupBy('authorId')->count('*', 'articleNb');
+// array(
+//     array(
+//         'authorId' => 1,
+//         'articleNb' => 5,
+//     ),
+//     array(
+//         'authorId' => 2,
+//         'articleNb' => 3,
+//     ),
+//     ...
+// );
+{% endhighlight %}
+
+- - -
+
+There are several built-in aggregate methods (`min`, `max`, `sum`, `avg`,
+`count`); but if it not sufficient, you can use the generic `aggregate` method:
+
+{% highlight php startinline %}
+Article::where('blogId', 12)->aggregate('AVG', 'views', 'avg_views');
+{% endhighlight %}
+
+{% highlight sql %}
+SELECT AVG(`views`) AS `avg_views` FROM `articles`;
+{% endhighlight %}
+
+- - -
+
+If you want to *add* an aggregate to the selection but don't want to fetch only
+that, use `addAggregate()` method. Its signature is the same as `aggregate()`
+but instead of executing the query, it add the aggregate to the list of columns
+to select.
 
 ## Insert statements
 
