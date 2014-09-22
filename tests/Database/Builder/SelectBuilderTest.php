@@ -335,13 +335,28 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b = new SelectBuilder;
         $b->root('Article');
         $b->count(DB::distinct(Article::table()->getPrimaryKey()));
+        $b->select(['*'], false);
 
         $components = $b->build();
         $c = new BaseCompiler;
         $sql = $c->compileSelect($components);
 
-        $expected = 'SELECT COUNT(DISTINCT `id`) FROM `articles`';
+        $expected = 'SELECT * ,COUNT(DISTINCT `id`) FROM `articles`';
         $this->assertEquals($expected, $sql);
+    }
+
+    public function testJoin()
+    {
+        $b = new SelectBuilder;
+        $b->root('Blog')
+            ->join('articles')
+            ->select(['*'], false);
+        $components = $b->build();
+        $jc = array(
+            (new JoinClause('blogs', '_')),
+            (new JoinClause('articles', 'articles', JoinClause::INNER))->on('_', 'id', 'articles', 'blog_id')
+        );
+        $this->assertEquals($jc, $components['from']);
     }
 
 }

@@ -220,10 +220,30 @@ class SelectBuilder extends WhereBuilder
      * Set the offset of the query.
      *
      * @param int $offset The offset to set.
+     * @return $this
      */
     public function offset($offset)
     {
         $this->_components['offset'] = (int) $offset;
+
+        return $this;
+    }
+
+    /**
+     * Join a relation.
+     *
+     * @param string $relation The relation name.
+     * @param int    $joinType The type of join to perform. Possible values are
+     * listed in `JoinClause` class.
+     *
+     * @return $this
+     */
+    public function join($relation, $joinType = JoinClause::INNER)
+    {
+        $tAlias = $this->relationsToTableAlias($relation);
+        $this->addInvolvedTable($tAlias, $joinType);
+
+        return $this;
     }
 
     /**
@@ -238,6 +258,7 @@ class SelectBuilder extends WhereBuilder
      *
      * @param string|array $relation The model relation name relative to the root
      * model *or* an array of relation names.
+     * @return $this
      */
     public function with($relation)
     {
@@ -252,17 +273,16 @@ class SelectBuilder extends WhereBuilder
         //  1) Include related table;
         //  2) Select related table columns.
 
-        // 1) We have to call addInvolvedTable() function. It takes a table alias
-        // as a parameter.
-        $tAlias = $this->relationsToTableAlias($relation);
-        $this->addInvolvedTable($tAlias, JoinClause::LEFT);
+        // 1) `join()` is perfect for this.
+        $this->join($relation, JoinClause::LEFT);
 
         // 2)
-        $alias = '';
-        foreach (explode('.', $tAlias) as $relName)
+        $tmpAlias = '';
+        $sep = $this->getQueryOptionRelationSeparator();
+        foreach (explode($sep, $relation) as $relName)
         {
-            $alias .= $alias ? '.' . $relName : $relName;
-            $this->_selectColumns($alias, array('*'));
+            $tmpAlias .= $tmpAlias ? '.' . $relName : $relName;
+            $this->_selectColumns($tmpAlias, array('*'));
         }
 
         return $this;
