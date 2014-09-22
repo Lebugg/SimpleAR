@@ -224,7 +224,7 @@ it with <code>queryOptionRelationSeparator</code> configuration option.
 {% highlight php startinline %}
 Blog::whereHas('articles');
 
-// or with negation
+// With negation
 
 Blog::whereHasNot('articles');
 {% endhighlight %}
@@ -256,6 +256,23 @@ Blog::whereHas('articles', function($q) {
 Blog::where(DB::avg('articles/readers/age'), '>', 30);
 {% endhighlight %}
 Smooth!
+
+There are some built-in methods like `DB::avg()`: `sum()`, `count()`... But if
+the one you want doesn't exist, you can use `fn()` and give it the SQL
+function you want to use as first parameter:
+{% highlight php startinline %}
+// Blogs created before 2010.
+Blog:where(DB::fn('YEAR', 'created_at'), '<', 2010);
+{% endhighlight %}
+
+### Raw conditions
+If none of the available methods is sufficient to build your query, you can use
+the `whereRaw()` method:
+
+{% highlight php startinline %}
+Article::whereRaw("first_name LIKE 'Joe'");
+{% endhighlight %}
+
 
 ## Select statements
 
