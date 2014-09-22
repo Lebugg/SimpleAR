@@ -587,8 +587,8 @@ class Builder
         $q->limit($nbItems, ($page - 1) * $nbItems);
 
         $res['rows'] = $this->all();
-        $q->getBuilder()->clearResult();
-        $res['count'] = $this->count();
+        $q->remove(array('limit', 'offset'));
+        $res['count'] = $q->count();
 
         return $res;
     }

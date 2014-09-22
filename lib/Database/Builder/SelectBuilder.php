@@ -139,29 +139,29 @@ class SelectBuilder extends WhereBuilder
      *
      * @param array|string $columns The columns to count on.
      */
-    public function count($columns = '*', $resAlias = null)
+    public function count($attributes = '*', $resAlias = null)
     {
-        return (int) $this->aggregate('COUNT', $columns, $resAlias);
+        return (int) $this->aggregate('COUNT', $attributes, $resAlias);
     }
 
-    public function sum($columns = '*', $resAlias = null)
+    public function sum($attributes = '*', $resAlias = null)
     {
-        return $this->aggregate('SUM', $columns, $resAlias);
+        return $this->aggregate('SUM', $attributes, $resAlias);
     }
 
-    public function max($columns = '*', $resAlias = null)
+    public function max($attributes = '*', $resAlias = null)
     {
-        return $this->aggregate('MAX', $columns, $resAlias);
+        return $this->aggregate('MAX', $attributes, $resAlias);
     }
 
-    public function min($columns = '*', $resAlias = null)
+    public function min($attributes = '*', $resAlias = null)
     {
-        return $this->aggregate('MIN', $columns, $resAlias);
+        return $this->aggregate('MIN', $attributes, $resAlias);
     }
 
-    public function avg($columns = '*', $resAlias = null)
+    public function avg($attributes = '*', $resAlias = null)
     {
-        return $this->aggregate('AVG', $columns, $resAlias);
+        return $this->aggregate('AVG', $attributes, $resAlias);
     }
 
     public function orderBy($attribute, $sort = 'ASC')

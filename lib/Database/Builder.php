@@ -351,6 +351,20 @@ class Builder
         }
     }
 
+    public function removeComponents(array $toRemove)
+    {
+        foreach ($toRemove as $option)
+        {
+            unset($this->_components[$option]);
+        }
+    }
+
+    public function remove(array $toRemove)
+    {
+        $this->removeOptions($toRemove);
+        $this->removeComponents($toRemove);
+    }
+
     /**
      * Build all unbuilt options.
      *

@@ -8,6 +8,7 @@ use \SimpleAR\Database\Builder\DeleteBuilder;
 use \SimpleAR\Database\Builder\UpdateBuilder;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Query;
 use \SimpleAR\Orm\Builder as QueryBuilder;
 
 /**
@@ -494,15 +495,36 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     public function testSearch()
     {
         $q = $this->getMock('\SimpleAR\Database\Query', ['__call'], [new SelectBuilder]);
-        $q->expects($this->any())->method('__call')->with('limit', [10, 20]);
+        $q->expects($this->at(0))->method('__call')->with('limit', [10, 20])->will($this->returnValue($q));
+        $q->expects($this->at(1))->method('__call')->with('remove', [['limit', 'offset']]);
+        $q->expects($this->at(2))->method('__call')->with('count')->will($this->returnValue(34));
 
-        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['all', 'count']);
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['all']);
         $qb->expects($this->once())->method('all')->will($this->returnValue(['array']));
-        $qb->expects($this->once())->method('count')->will($this->returnValue(34));
         $qb->setQuery($q);
 
-        $res = $qb->search(3, 10);
+        $res = $qb->setRoot('Article')
+            ->search(3, 10);
         $this->assertEquals(['rows' => ['array'], 'count' => 34], $res);
+    }
+
+    public function testSearchCheckSQL()
+    {
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll', 'getNextRow']);
+
+        $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `blog_id` = ? LIMIT 20 OFFSET 40';
+        $conn->expects($this->at(0))->method('query')->with($sql, [12]);
+        $sql = 'SELECT COUNT(*) FROM `articles` WHERE `blog_id` = ?';
+        $conn->expects($this->at(1))->method('getNextRow')->will($this->returnValue(['id' => 1]));
+        $conn->expects($this->at(2))->method('getNextRow')->will($this->returnValue(false));
+        $conn->expects($this->at(3))->method('query')->with($sql, [12]);
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 123]));
+
+        $q = new Query(new SelectBuilder, $conn);
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
+        $qb->setConnection($conn);
+        $qb->setRoot('Article')->where('blogId', 12)->search(3, 20);
     }
 
     public function testLoadRelation()

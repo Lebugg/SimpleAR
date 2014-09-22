@@ -386,6 +386,15 @@ class Query
         $this->getConnection()->query($sql, $values);
     }
 
+    public function clearResult()
+    {
+        ($b = $this->getBuilder()) && $b->clearResult();
+        $this->_built    = false;
+        $this->_compiled = false;
+        $this->_executed = false;
+    }
+
+
     /**
      * This function is used to format value array for PDO.
      *
