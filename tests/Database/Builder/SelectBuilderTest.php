@@ -36,7 +36,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $sql = 'SELECT COUNT(*) FROM `articles`';
         $conn->expects($this->once())->method('query')->with($sql, []);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
 
         $res = $q->root('Article')->count();
         $this->assertEquals(12, $res);
