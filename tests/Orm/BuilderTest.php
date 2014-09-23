@@ -139,8 +139,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
         $row = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
         $conn->expects($this->once())->method('getNextRow')->will($this->returnValue($row));
-        $q->expects($this->exactly(2))->method('__call')->withConsecutive(
+        $q->expects($this->exactly(3))->method('__call')->withConsecutive(
             ['root', ['Article', null]],
+            ['conditions', [[]]],
             ['get', [['*']]]
         )->will($this->returnValue($q));
         $q->expects($this->once())->method('run');
@@ -194,8 +195,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $conn->expects($this->exactly(4))->method('getNextRow')->with(true)->will($this->onConsecutiveCalls(
             $return[0], $return[1], $return[2], false
         ));
-        $q->expects($this->exactly(2))->method('__call')->withConsecutive(
+        $q->expects($this->exactly(3))->method('__call')->withConsecutive(
             ['root', ['Article', null]],
+            ['conditions', [[]]],
             ['get', [['*']]]
         )->will($this->returnValue($q));
         $q->expects($this->once())->method('run');
@@ -496,7 +498,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $q = $this->getMock('\SimpleAR\Database\Query', ['__call'], [new SelectBuilder]);
         $q->expects($this->at(0))->method('__call')->with('limit', [10, 20])->will($this->returnValue($q));
-        $q->expects($this->at(1))->method('__call')->with('remove', [['limit', 'offset']]);
+        $q->expects($this->at(1))->method('__call')->with('remove', [['limit', 'offset', 'orderBy']]);
         $q->expects($this->at(2))->method('__call')->with('count')->will($this->returnValue(34));
 
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['all']);

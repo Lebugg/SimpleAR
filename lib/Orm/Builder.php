@@ -305,10 +305,16 @@ class Builder
     {
         $q = $this->newQuery($b);
 
-        $q->root($root ?: $this->_root, $rootAlias ?: $this->_rootAlias);
+        $root = $root ?: $this->_root;
+        $q->root($root, $rootAlias ?: $this->_rootAlias);
         $critical && $q->setCriticalQuery($critical);
 
         $storeIt && $this->setQuery($q);
+
+        if (is_valid_model_class($root))
+        {
+            $q->conditions($root::getGlobalConditions());
+        }
 
         return $q;
     }
@@ -492,10 +498,7 @@ class Builder
             }
         }
 
-        $options['conditions'] = array_merge(
-            $relation->conditions,
-            $lmClass::getGlobalConditions()
-        );
+        $options['conditions'] = (array) $relation->conditions;
         if ($orderBy = $relation->getOrderBy()) {
             $options['orderBy'] = $orderBy;
         }
@@ -550,11 +553,7 @@ class Builder
             }
         }
 
-        $options['conditions'] = array_merge(
-            $relation->conditions,
-            $lmClass::getGlobalConditions()
-        );
-
+        $options['conditions'] = (array) $relation->conditions;
         $options = array_merge($options, $localOptions);
 
         $q = $this->newSelect();
@@ -587,7 +586,7 @@ class Builder
         $q->limit($nbItems, ($page - 1) * $nbItems);
 
         $res['rows'] = $this->all();
-        $q->remove(array('limit', 'offset'));
+        $q->remove(array('limit', 'offset', 'orderBy'));
         $res['count'] = $q->count();
 
         return $res;
