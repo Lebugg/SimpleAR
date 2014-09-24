@@ -218,7 +218,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles`';
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
         $conn->expects($this->once())->method('query')->with($sql, []);
 
         $this->assertEquals(12, $qb->setRoot('Article')->count());
@@ -229,7 +229,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles` WHERE `title` = ?';
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 12]));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
         $conn->expects($this->once())->method('query')->with($sql, ['Yo']);
 
         $this->assertEquals(12, $qb->setRoot('Article')->where('title', 'Yo')->count());
@@ -520,7 +520,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $conn->expects($this->at(1))->method('getNextRow')->will($this->returnValue(['id' => 1]));
         $conn->expects($this->at(2))->method('getNextRow')->will($this->returnValue(false));
         $conn->expects($this->at(3))->method('query')->with($sql, [12]);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue(['COUNT(*)' => 123]));
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 123]]));
 
         $q = new Query(new SelectBuilder, $conn);
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
