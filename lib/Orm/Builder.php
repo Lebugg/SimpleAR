@@ -596,9 +596,9 @@ class Builder
         return $res;
     }
 
-    public function search($page, $nbItems)
+    public function search($page, $nbItems, $distinct = false)
     {
-        return $this->paginate($page, $nbItems);
+        return $this->paginate($page, $nbItems, $distinct);
     }
 
     /**

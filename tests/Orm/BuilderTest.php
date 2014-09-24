@@ -587,8 +587,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     public function testSearch()
     {
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['paginate']);
-        $qb->expects($this->once())->method('paginate')->with(3, 10);
-        $qb->search(3, 10);
+        $qb->expects($this->once())->method('paginate')->with(3, 10, true);
+        $qb->search(3, 10, true);
     }
 
     public function testPaginateWithDistinctParam()
