@@ -640,4 +640,25 @@ class BaseCompilerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $c->compileSelect($components));
     }
 
+    public function testCompileDistinct()
+    {
+        $components = [
+            'columns' => [
+                '_' => ['columns' => ['blogId' => 'blog_id', 'id' => 'id'], 'resAlias' => ''],
+            ],
+            'from' => [
+                new JoinClause('articles', '_'),
+            ],
+            'distinct' => true,
+        ];
+
+        $expected = 'SELECT DISTINCT `blog_id` AS `blogId`,`id` AS `id` FROM `articles`';
+        $c = new BaseCompiler();
+        $this->assertEquals($expected, $c->compileSelect($components));
+
+        $components['columns'] = ['_' => ['columns' => ['*'], 'resAlias' => '']];
+        $expected = 'SELECT DISTINCT * FROM `articles`';
+        $this->assertEquals($expected, $c->compileSelect($components));
+    }
+
 }

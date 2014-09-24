@@ -8,8 +8,14 @@ use \SimpleAR\Database\Query;
 use \SimpleAR\Facades\DB;
 
 
+/**
+ * @coversDefaultClass \SimpleAR\Database\Builder\SelectBuilder
+ */
 class SelectBuilderTest extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @covers ::aggregate()
+     */
     public function testAggregate()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
@@ -86,6 +92,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($cols, $components['columns']);
     }
 
+    /**
+     * @covers ::count()
+     */
     public function testCount()
     {
         $b = $this->getMock('SimpleAR\Database\Builder\SelectBuilder', array('aggregate'));
@@ -101,6 +110,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $b->count('my.attribute', 'coolAlias');
     }
 
+    /**
+     * @covers ::limit()
+     */
     public function testLimit()
     {
         $b = new SelectBuilder();
@@ -112,6 +124,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(5, $components['limit']);
     }
 
+    /**
+     * @covers ::limit()
+     */
     public function testLimitOffset()
     {
         $b = $this->getMock('SimpleAR\Database\Builder\SelectBuilder', array('offset'));
@@ -123,6 +138,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(5, $components['limit']);
     }
 
+    /**
+     * @covers ::offset()
+     */
     public function testOffset()
     {
         $b = new SelectBuilder();
@@ -134,6 +152,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(12, $components['offset']);
     }
 
+    /**
+     * @covers ::orderBy()
+     */
     public function testOrderBy()
     {
         $b = new SelectBuilder();
@@ -165,6 +186,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['orderBy']);
     }
 
+    /**
+     * @covers ::groupBy()
+     */
     public function testGroupBy()
     {
         $b = new SelectBuilder();
@@ -196,6 +220,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['groupBy']);
     }
 
+    /**
+     * @covers ::with()
+     */
     public function testWithOption()
     {
         $b = new SelectBuilder();
@@ -232,6 +259,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($columns, $components['columns']);
     }
 
+    /**
+     * @covers ::with()
+     */
     public function testWithOptionArray()
     {
         $b = new SelectBuilder();
@@ -281,6 +311,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($columns, $components['columns']);
     }
 
+    /**
+     * @covers ::select()
+     */
     public function testSelect()
     {
         $b = new SelectBuilder;
@@ -330,7 +363,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($jc, $components['from']);
     }
 
-    public function testDistinct()
+    public function testDistinctObject()
     {
         $b = new SelectBuilder;
         $b->root('Article');
@@ -343,6 +376,44 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         $expected = 'SELECT * ,COUNT(DISTINCT `id`) FROM `articles`';
         $this->assertEquals($expected, $sql);
+    }
+
+    /**
+     * @covers ::distinct()
+     */
+    public function testDistinct()
+    {
+        $expected = [
+            'columns' => [
+                '_' => ['columns' => Article::table()->getColumns(), 'resAlias' => ''],
+            ],
+            'from' => [
+                new JoinClause('articles', '_'),
+            ],
+            'distinct' => true,
+        ];
+
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->distinct();
+        $this->assertEquals($expected, $b->build());
+
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->distinct('*');
+        $this->assertEquals($expected, $b->build());
+
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->distinct('*', false);
+        $expected['columns'] = ['_' => ['columns' => ['*'], 'resAlias' => '']];
+        $this->assertEquals($expected, $b->build());
+
+        $b = new SelectBuilder;
+        $b->root('Article');
+        $b->distinct(['blogId', 'authorId']);
+        $expected['columns'] = ['_' => ['columns' => ['blogId' => 'blog_id', 'authorId' => 'author_id', 'id' => 'id'], 'resAlias' => '']];
+        $this->assertEquals($expected, $b->build());
     }
 
     public function testJoin()

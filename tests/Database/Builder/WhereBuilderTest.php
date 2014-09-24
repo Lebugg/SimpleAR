@@ -402,7 +402,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('USERS');
         $b->where('firstName', 'Jean');
 
-        $expected = ['root' => 'USERS', 'where' => [
+        $expected = ['where' => [
             ['type' => 'Basic', 'table' => '', 'cols' => ['firstName'], 'op' => '=', 'val' => 'Jean', 'logic' => 'AND', 'not' => false],
         ]];
 

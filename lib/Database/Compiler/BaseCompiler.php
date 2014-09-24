@@ -23,6 +23,7 @@ class BaseCompiler extends Compiler
             'values',
         ),
         'select' => array(
+            'distinct',
             'columns',
             'aggregates',
             'from',
@@ -230,6 +231,11 @@ class BaseCompiler extends Compiler
         if (isset($this->_componentsToCompile['columns'])) { $sql = ',' . $sql; }
 
         return $sql;
+    }
+
+    protected function _compileDistinct($distinct)
+    {
+        return $distinct ? 'DISTINCT' : '';
     }
 
     /**

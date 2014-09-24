@@ -61,6 +61,12 @@ class SelectBuilder extends WhereBuilder
         $this->select($attributes, $expand);
     }
 
+    public function distinct($attributes = '*', $expand = true)
+    {
+        $this->select((array) $attributes, $expand);
+        $this->_components['distinct'] = true;
+    }
+
     /**
      * Select result of a sub-query.
      *

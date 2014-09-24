@@ -245,7 +245,6 @@ class Builder
             $this->setRootTableName($root);
         }
 
-        $this->_components['root'] = $root;
         return $this;
     }
 
