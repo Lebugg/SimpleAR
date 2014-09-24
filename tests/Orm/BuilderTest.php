@@ -547,7 +547,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $q = $this->getMock('\SimpleAR\Database\Query', ['__call'], [new SelectBuilder]);
         $q->expects($this->at(0))->method('__call')->with('limit', [10, 20])->will($this->returnValue($q));
-        $q->expects($this->at(1))->method('__call')->with('remove', [['limit', 'offset', 'orderBy']]);
+        $q->expects($this->at(1))->method('__call')->with('remove', [['limit', 'offset', 'orderBy', 'distinct']]);
         $q->expects($this->at(2))->method('__call')->with('count')->will($this->returnValue(34));
 
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['all']);
@@ -559,6 +559,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(['rows' => ['array'], 'count' => 34], $res);
     }
 
+    /**
+     * @covers ::paginate()
+     */
     public function testPaginateCheckSQL()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll', 'getNextRow']);
@@ -578,6 +581,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->setRoot('Article')->where('blogId', 12)->paginate(3, 20);
     }
 
+    /**
+     * @covers ::search()
+     */
     public function testSearch()
     {
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['paginate']);
@@ -585,4 +591,22 @@ class BuilderTest extends PHPUnit_Framework_TestCase
         $qb->search(3, 10);
     }
 
+    public function testPaginateWithDistinctParam()
+    {
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll', 'getNextRow']);
+
+        $sql = 'SELECT DISTINCT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `blog_id` = ? LIMIT 20 OFFSET 40';
+        $conn->expects($this->at(0))->method('query')->with($sql, [12]);
+        $sql = 'SELECT COUNT(DISTINCT `id`) FROM `articles` WHERE `blog_id` = ?';
+        $conn->expects($this->at(1))->method('getNextRow')->will($this->returnValue(['id' => 1]));
+        $conn->expects($this->at(2))->method('getNextRow')->will($this->returnValue(false));
+        $conn->expects($this->at(3))->method('query')->with($sql, [12]);
+        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 123]]));
+
+        $q = new Query(new SelectBuilder, $conn);
+        $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
+        $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
+        $qb->setConnection($conn);
+        $qb->setRoot('Article')->where('blogId', 12)->paginate(3, 20, true);
+    }
 }

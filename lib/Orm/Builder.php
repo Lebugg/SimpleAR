@@ -577,17 +577,21 @@ class Builder
 	 * @param int   $page    Page number. Min: 1.
 	 * @param int   $nbItems Number of items. Min: 1.
 	 */
-    public function paginate($page, $nbItems)
+    public function paginate($page, $nbItems, $distinct = false)
     {
 		$page    = $page    >= 1 ? $page    : 1;
 		$nbItems = $nbItems >= 1 ? $nbItems : 1;
 
-        $q  = $this->getQueryOrNewSelect();
-        $q->limit($nbItems, ($page - 1) * $nbItems);
+        $q = $this->getQueryOrNewSelect();
+        $root = $this->_root;
 
+        $q->limit($nbItems, ($page - 1) * $nbItems);
+        $distinct && $q->distinct();
         $res['rows'] = $this->all();
-        $q->remove(array('limit', 'offset', 'orderBy'));
-        $res['count'] = $q->count();
+
+        $q->remove(array('limit', 'offset', 'orderBy', 'distinct'));
+        $attr = $distinct ? DB::distinct($root::table()->getPrimaryKey()) : '*';
+        $res['count'] = $q->count($attr);
 
         return $res;
     }
