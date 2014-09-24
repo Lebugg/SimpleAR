@@ -1,7 +1,11 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Compiler/BaseCompiler.php';
+
 use \SimpleAR\Database\Query;
 use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\Expression\Distinct as DistinctExpr;
 
 abstract class Compiler
 {
@@ -193,28 +197,90 @@ abstract class Compiler
             return '(' . $list . ')';
         }
 
+        if ($value instanceof Query)
+        {
+            return '(' . $this->compileSelect($value->getComponents()) . ')';
+        }
+
         return $value instanceof Expression
             ?  $value->val()
             : '?';
     }
 
-    public function column($column, $tablePrefix = '', $alias = '')
+    /**
+     * Compile a <column> AS <alias> SQL string.
+     *
+     * @param string $column
+     * @param string $alias
+     */
+    public function columnAs($column, $alias = '')
     {
-        $tablePrefix = $tablePrefix ? $this->wrap($tablePrefix) . '.' : '';
         $alias = $alias ? ' AS ' . $this->wrap($alias) : '';
-
-        return $tablePrefix . $this->wrap($column) . $alias;
+        return $this->wrap($column) . $alias;
     }
 
-    public function columnize(array $columns, $tablePrefix = '')
+    /**
+     * Wrap a column with backquotes.
+     *
+     * @param string $column
+     * @param string $tPrefix The table prefix.
+     * @param string $fn An optional SQL function.
+     */
+    public function column($column, $tPrefix = '')
     {
-        $tablePrefix = $tablePrefix && is_string($tablePrefix) ? $this->wrap($tablePrefix) . '.' : $tablePrefix;
+        if ($column instanceof FuncExpr)
+        {
+            return $this->columnFn($column->val(), $column->getFunc(), $tPrefix);
+        }
 
+        if ($column instanceof DistinctExpr)
+        {
+            return $this->columnDistinct($column->val(), $tPrefix);
+        }
+
+        $tPrefix = $tPrefix ? $this->wrap($tPrefix) . '.' : '';
+        $wrapper = is_string($column) ? 'wrap' : 'wrapArrayToString';
+        $sql = $tPrefix . $this->$wrapper($column);
+
+        return $sql;
+    }
+
+    /**
+     * Wrap column in SQL function.
+     *
+     * @param string $column
+     * @param string $fn The SQL function.
+     * @param string $tPrefix The table prefix.
+     */
+    public function columnFn($column, $fn, $tPrefix = '')
+    {
+        $sql = $this->column($column, $tPrefix);
+        return $fn . '(' . $sql . ')';
+    }
+
+    public function columnDistinct($column, $tPrefix = '')
+    {
+        $sql = $this->column($column, $tPrefix);
+        return 'DISTINCT ' . $sql;
+    }
+
+    /**
+     * Quote a bunch of columns at once.
+     *
+     * @param array $columns
+     * @param string|array $tPrefix The table prefix. If string, it will be used
+     * for every column. If array first column will use first table prefix,
+     * second column will use second table prefix etc. If there is not as much
+     * prefixes as columns, no prefix will be used for the last columns.
+     */
+    public function columnize(array $columns, $tPrefix = '')
+    {
         $cols = array();
         foreach($columns as $i => $column)
         {
-            $prefix = is_array($tablePrefix) ? $this->wrap($tablePrefix[$i]) . '.' : $tablePrefix;
-            $cols[] = $prefix . $this->wrap($column);
+            // The '@' is intentionaly used. No risk of error here.
+            $prefix = is_string($tPrefix) ? $tPrefix : (@ $tPrefix[$i] ?: '');
+            $cols[] = $this->column($column, $prefix);
         }
 
         return implode(',', $cols);

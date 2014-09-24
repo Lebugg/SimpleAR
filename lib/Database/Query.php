@@ -6,17 +6,12 @@
  */
 
 require __DIR__ . '/Builder.php';
-require __DIR__ . '/Compiler.php';
 require __DIR__ . '/JoinClause.php';
-require __DIR__ . '/Compiler/BaseCompiler.php';
-
-use \SimpleAR\Exception;
 
 use \SimpleAR\Database\Builder;
 use \SimpleAR\Database\Compiler;
 use \SimpleAR\Database\Connection;
-// To be removed as soon as getCompiler() does not use DB.
-use \SimpleAR\Facades\DB;
+use \SimpleAR\Exception;
 
 /**
  * This class is the superclass of all SQL queries.
@@ -111,16 +106,9 @@ class Query
      */
     protected $_type;
 
-    public function __construct(Builder $builder = null,
-        Compiler $compiler = null,
-        Connection $conn = null,
-        $criticalQuery = false
-    ) {
-        $builder && $this->setBuilder($builder);
-        $this->_compiler = $compiler;
-        $this->_connection = $conn;
-
-        $this->setCriticalQuery($criticalQuery);
+    public function __construct(Builder $b = null, Connection $conn = null) {
+        $b && $this->setBuilder($b);
+        $conn && $this->setConnection($conn);
     }
 
     /**
@@ -236,6 +224,7 @@ class Query
     {
         $this->_builder = $builder;
         $this->_type = $builder->type;
+        $this->_builder->setQuery($this);
     }
 
     /**
@@ -245,8 +234,22 @@ class Query
      */
     public function getCompiler()
     {
-        // Te be change. We *have* to use Connections.
-        return $this->_compiler = ($this->_compiler ?: DB::compiler());
+        if (! $this->_compiler)
+        {
+            $this->_compiler = $this->getConnection()->getCompiler();
+        }
+
+        return $this->_compiler;
+    }
+
+    /**
+     * Set compiler to user.
+     *
+     * @param Compiler $c
+     */
+    public function setCompiler(Compiler $c)
+    {
+        $this->_compiler = $c;
     }
 
     /**
@@ -259,11 +262,31 @@ class Query
         return $this->_connection;
     }
 
+    /**
+     * Set connection to use.
+     *
+     * @param Connection $conn
+     */
+    public function setConnection(Connection $conn)
+    {
+        $this->_connection = $conn;
+    }
+
+    /**
+     * Is this query critical?
+     *
+     * @return bool
+     */
     public function isCriticalQuery()
     {
         return $this->_isCriticalQuery;
     }
 
+    /**
+     * Mark this query as critical or not.
+     *
+     * @param bool $bool
+     */
     public function setCriticalQuery($bool = true)
     {
         $this->_isCriticalQuery = $bool;
@@ -322,13 +345,7 @@ class Query
      */
     protected function compile()
     {
-        // if (! $this->_built)
-        // {
-        //     throw new Exception('Cannot compile query: it is not built.');
-        // }
         $this->_built || $this->build();
-
-        //$compiler->useTablePrefix = $this->_useAlias;
 
         list($this->_sql, $this->_values) = $this->getCompiler()->compile($this);
 
@@ -368,6 +385,15 @@ class Query
     {
         $this->getConnection()->query($sql, $values);
     }
+
+    public function clearResult()
+    {
+        ($b = $this->getBuilder()) && $b->clearResult();
+        $this->_built    = false;
+        $this->_compiled = false;
+        $this->_executed = false;
+    }
+
 
     /**
      * This function is used to format value array for PDO.
@@ -438,6 +464,19 @@ class Query
     }
 
     /**
+     * Get last insert ID.
+     *
+     * @return mixed The last insert ID.
+     */
+    public function lastInsertId()
+    {
+        $this->run();
+
+        return $this->getConnection()->lastInsertId();
+    }
+
+
+    /**
      * Allows user to manually set query options.
      *
      * We use __call() magic method in order to avoid code duplication. Without
@@ -458,17 +497,35 @@ class Query
     public function __call($name, $args)
     {
         $b = $this->getBuilder();
-        switch (count($args))
+        $res = call_user_func_array(array($b, $name), $args);
+
+        // Builder can interact with query via return value of its methods.
+        //
+        // Some methods construct the query and are aimed to be chained. For
+        // these we implement method chaining by returning current Query.
+        // Others finish query construction and it makes more sense to execute
+        // the query and return the result.
+        //
+        // The chosen behaviour will depend on the return value of these
+        // methods. If the method returns nothing or the Builder itself, we
+        // return current Query. If it returns `true`, we execute the Query and
+        // return the result.
+        if ($res === $b || $res === null)
         {
-            case 0: $b->$name(); break;
-            case 1: $b->$name($args[0]); break;
-            case 2: $b->$name($args[0], $args[1]); break;
-            case 3: $b->$name($args[0], $args[1], $args[2]); break;
-            case 4: $b->$name($args[0], $args[1], $args[2], $args[3]); break;
-            default: call_user_func_array(array($b, $name), $args);
+            return $this;
         }
 
-        return $this;
+        return $res;
+    }
+
+    public function getNextRow()
+    {
+        return $this->getConnection()->getNextRow();
+    }
+
+    public function getResult()
+    {
+        return $this->getConnection()->fetchAll();
     }
 
 }

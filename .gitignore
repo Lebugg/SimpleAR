@@ -2,5 +2,6 @@
 *.phar
 *.lock
 test/iq
-/vendor
-/tests/db.json
+vendor
+tests/db.json
+_site

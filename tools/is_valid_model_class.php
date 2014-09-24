@@ -1,4 +1,4 @@
-<?php namespace SimpleAR;
+<?php
 /**
  * This file contains the is_valid_model_class function.
  *

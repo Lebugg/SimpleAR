@@ -6,16 +6,17 @@ class InsertBuilder extends Builder
 {
     public $type = Builder::INSERT;
 
-    public function useRootModel($class)
+    /**
+     * Set in which table to insert.
+     *
+     * @param string $table The root table name.
+     * @param array  $fields The fields targetted by the query.
+     * @return $this
+     */
+    public function into($table, $fields)
     {
-        parent::useRootModel($class);
-        $this->_components['into'] = $this->_table->name;
-    }
-
-    public function useRootTableName($table)
-    {
-        parent::useRootTableName($table);
-        $this->_components['into'] = $table;
+        return $this->root($table)
+            ->fields($fields);
     }
 
     /**
@@ -25,6 +26,7 @@ class InsertBuilder extends Builder
      * ----------
      *
      * @param array $fields The attributes.
+     * @return $this
      */
     public function fields(array $fields)
     {
@@ -35,7 +37,9 @@ class InsertBuilder extends Builder
             $fields = $this->convertAttributesToColumns($fields, $this->_table);
         }
 
-        $this->_components['insertColumns'] = $fields;
+        $this->_components['insertColumns'] = flatten_array($fields);
+
+        return $this;
     }
 
     /**
@@ -52,4 +56,10 @@ class InsertBuilder extends Builder
         $this->addValueToQuery($values, 'values');
     }
 
+    protected function _onAfterBuild()
+    {
+        $this->_components['into'] = $this->_useModel
+            ? $this->_table->name
+            : $this->_table;
+    }
 }

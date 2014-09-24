@@ -17,6 +17,10 @@ class Builder
     const UPDATE = 'update';
     const DELETE = 'delete';
 
+    const DEFAULT_ROOT_ALIAS = '_';
+
+    protected $_query;
+
     /**
      * The Builder's type.
      *
@@ -59,7 +63,7 @@ class Builder
      *
      * @var string
      */
-    protected $_rootAlias = '_';
+    protected $_rootAlias;
 
     /**
      * The list of values to pass the query executor.
@@ -85,6 +89,12 @@ class Builder
      */
     protected $_components;
 
+    public function __construct(Query $q = null)
+    {
+        $this->_rootAlias = self::DEFAULT_ROOT_ALIAS;
+        $q && $this->setQuery($q);
+    }
+
     /**
      * Run the build process.
      *
@@ -102,7 +112,7 @@ class Builder
         // Allow specific builders to set default values after build.
         $this->_onAfterBuild();
 
-        return $this->_components;
+        return $this->getComponents();
     }
 
     /**
@@ -143,36 +153,23 @@ class Builder
     }
 
     /**
-     * Set the root model class.
-     *
-     * @param  string $class A valid model class name.
-     */
-    public function useRootModel($class)
-    {
-        $this->_useModel = true;
-        $this->setRootModel($class);
-    }
-
-    /**
-     * Set the name of table on which to execute the query.
-     *
-     * @param  string $tableName The table name.
-     * @return $this
-     */
-    public function useRootTableName($tableName)
-    {
-        $this->_useModel = false;
-        $this->_root = $tableName;
-    }
-
-    /**
      * Return the list of options that are waiting to be built.
      *
-     * @var array
+     * @return array
      */
     public function getOptions()
     {
         return $this->_options;
+    }
+
+    /**
+     * Return currently built components.
+     *
+     * @return array
+     */
+    public function getComponents()
+    {
+        return $this->_components;
     }
 
     /**
@@ -226,16 +223,54 @@ class Builder
     }
 
     /**
-     * Set the root model class name.
+     * Set the query root.
+     *
+     * Component: "root"
+     * ----------
+     *
+     * @param string $root A valid model class name, or a DB table name.
+     * @param string $alias An alias for the root. It will override the default 
+     * that you can find here: @see ::$_rootAlias.
+     */
+    public function root($root, $alias = null)
+    {
+        $alias && $this->setRootAlias($alias);
+
+        if (is_valid_model_class($root))
+        {
+            $this->setRootModel($root);
+        }
+        else
+        {
+            $this->setRootTableName($root);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set the root model.
      *
      * @param string $model The model class name.
-     * @return void
      */
     public function setRootModel($model)
     {
         $this->_model    = $model;
         $this->_table    = $model::table();
         $this->_useModel = true;
+    }
+
+    /**
+     * Set the name of table on which to execute the query.
+     *
+     * @param  string $tableName The table name.
+     * @return $this
+     */
+    public function setRootTableName($tableName)
+    {
+        $this->_model    = null;
+        $this->_table    = $tableName;
+        $this->_useModel = false;
     }
 
     /**
@@ -247,14 +282,18 @@ class Builder
      */
     public function convertAttributesToColumns($attributes, Table $table)
     {
-        return $table->columnRealName($attributes);
+        return (array) $table->columnRealName($attributes);
     }
 
     /**
      * Add query value to value list.
      *
-     * If $component is not given, it expects $value to be an array of 
+     * If $component is not given, it expects $value to be an array of
      * components' values.
+     *
+     * If value is a subquery, its values will be added to the current query;
+     * but it won't be compiled. This is the Compiler's role. @see
+     * Compiler::parameterize().
      *
      * @param mixed $value The value to add to the value list.
      * @param string $component The component type ('set', 'where'...).
@@ -263,6 +302,12 @@ class Builder
      */
     public function addValueToQuery($value, $component = '')
     {
+        if ($value instanceof Query)
+        {
+            $this->addValueToQuery($value->getComponentValues(), $component);
+            return;
+        }
+
         if ($component)
         {
             // Any check on value type (Model instance, Expression...) is made
@@ -303,6 +348,20 @@ class Builder
         {
             unset($this->_options[$option]);
         }
+    }
+
+    public function removeComponents(array $toRemove)
+    {
+        foreach ($toRemove as $option)
+        {
+            unset($this->_components[$option]);
+        }
+    }
+
+    public function remove(array $toRemove)
+    {
+        $this->removeOptions($toRemove);
+        $this->removeComponents($toRemove);
     }
 
     /**
@@ -353,29 +412,6 @@ class Builder
     }
 
     /**
-     * Set the query root.
-     *
-     * Component: "root"
-     * ----------
-     *
-     * @param string $root A valid model class name, or a DB table name.
-     */
-    public function root($root)
-    {
-        if (\SimpleAR\is_valid_model_class($root))
-        {
-            $this->useRootModel($root);
-        }
-        else
-        {
-            $this->useRootTableName($root);
-        }
-
-        $this->_components['root'] = $root;
-        return $this;
-    }
-
-    /**
      * Event handler called at the end of build and before start of compilation.
      *
      * It can be overwritten  by builders.
@@ -384,5 +420,15 @@ class Builder
      */
     protected function _onAfterBuild()
     {
+    }
+
+    public function getQuery()
+    {
+        return $this->_query;
+    }
+
+    public function setQuery(Query $q)
+    {
+        $this->_query = $q;
     }
 }

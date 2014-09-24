@@ -1,5 +1,7 @@
 <?php
 
+use \Mockery as m;
+
 use \SimpleAR\Database\Builder\SelectBuilder;
 use \SimpleAR\Database\Builder\InsertBuilder;
 use \SimpleAR\Database\Builder\DeleteBuilder;
@@ -9,34 +11,38 @@ use \SimpleAR\Database\Connection;
 use \SimpleAR\Database\Expression;
 use \SimpleAR\Database\Query;
 
+/**
+ * @coversDefaultClass \SimpleAR\Database\Query
+ */
 class QueryTest extends PHPUnit_Framework_TestCase
 {
     public function testGetConnection()
     {
         $conn = new Connection;
-        $q = new Query(null, null, $conn);
+        $q = new Query(null, $conn);
         $this->assertEquals($conn, $q->getConnection());
     }
 
     public function testRunProcess()
     {
         $b = $this->getMock('\SimpleAR\Database\Builder', ['build', 'getValues']);
+        $b->type = 'Select';
         $c = $this->getMockForAbstractClass('\SimpleAR\Database\Compiler', [], '', false, false,false,['compile']);
-        $conn  = $this->getMock('\SimpleAR\Database\Connection', ['query']);
+        $conn  = $this->getMock('\SimpleAR\Database\Connection', ['query', 'getCompiler']);
 
-        $q = new Query($b, $c, $conn);
-
-        $b->expects($this->once())->method('build');
-        $b->expects($this->once())->method('getValues')->will($this->returnValue(array()));
-        $c->expects($this->once())->method('compile')->will($this->returnValue(array('SQL', array())));
+        $b->expects($this->once())->method('build')->will($this->returnValue([]));
+        $b->expects($this->once())->method('getValues')->will($this->returnValue([]));
+        $c->expects($this->once())->method('compile')->will($this->returnValue(['SQL', []]));
         $conn->expects($this->once())->method('query');
 
+        $q = new Query($b, $conn);
+        $q->setCompiler($c);
         $q->run();
     }
 
     public function testQueryIsSafe()
     {
-        $q = new Query();
+        $q = new Query;
 
         $sql = 'DELETE FROM users';
         $this->assertFalse($q->queryIsSafe($sql));
@@ -50,15 +56,16 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $conn = $this->getMock('\SimpleAR\Database\Connection', ['query']);
         $conn->expects($this->once())->method('query')->with('SELECT * FROM articles', []);
 
-        $q = new Query(null, null, $conn);
+        $q = new Query(null, $conn);
         $q->executeQuery('SELECT * FROM articles', []);
     }
 
     public function testSelectQuery()
     {
-        $conn = $this->getMock('\SimpleAR\Database\Connection', []);
+        $conn = $this->getMock('\SimpleAR\Database\Connection');
 
-        $q = new Query(new SelectBuilder(), new BaseCompiler(), $conn);
+        $q = new Query(new SelectBuilder(), $conn);
+        $q->setCompiler(new BaseCompiler);
         $q->root('Article')
             ->conditions([
                 'authorId' => 12,
@@ -70,7 +77,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             ])
             ->select(['*']);
 
-        $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`id` AS `id` FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
+        $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `author_id` = ? AND `blog_id` = ? AND (`title` IN (?,?) OR `author_id` = ?)';
         $val = [12, 1, 'Das Kapital', 'Essays', 1];
         $conn->expects($this->once())->method('query')->with($sql, $val);
 
@@ -81,7 +88,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $conn = $this->getMock('\SimpleAR\Database\Connection', ['query']);
 
-        $q = new Query(new InsertBuilder(), new BaseCompiler(), $conn);
+        $q = new Query(new InsertBuilder(), $conn);
+        $q->setCompiler(new BaseCompiler);
         $q->root('Article')
             ->fields(['blogId', 'title', 'authorId'])
             ->values([
@@ -101,7 +109,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $conn = $this->getMock('\SimpleAR\Database\Connection', ['query']);
 
-        $q = new Query(new UpdateBuilder(), new BaseCompiler(), $conn);
+        $q = new Query(new UpdateBuilder(), $conn);
+        $q->setCompiler(new BaseCompiler);
         $q->root('Author')
             ->conditions([
                 ['id', '!=', 12],
@@ -120,7 +129,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $conn = $this->getMock('\SimpleAR\Database\Connection', ['query']);
 
-        $q = new Query(new DeleteBuilder(), new BaseCompiler(), $conn);
+        $q = new Query(new DeleteBuilder(), $conn);
+        $q->setCompiler(new BaseCompiler);
         $q->root('Article')
             ->conditions([
                 ['authorId', '!=', 12],
@@ -137,7 +147,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
     public function testFalsyConditionValues()
     {
         $conn = $this->getMock('SimpleAR\Database\Connection');
-        $q = new Query(new SelectBuilder(), new BaseCompiler(), $conn);
+        $q = new Query(new SelectBuilder(), $conn);
+        $q->setCompiler(new BaseCompiler);
         $q->root('Author')
             ->select(['*'], false)
             ->conditions([
@@ -163,7 +174,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $exp = [1, 3];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
 
-        $val = [1, 2, [3], [new Expression, 3, [4, new Expression]]];
+        $val = [1, 2, [3], [new Expression(''), 3, [4, new Expression('')]]];
         $exp = [1, 2, 3, 3, 4];
         $this->assertEquals($exp, $q->prepareValuesForExecution($val));
     }
@@ -190,5 +201,19 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $q = new Query();
         $q->setBuilder($b);
         $q->select(['title', 'authorId', 'created_at']);
+    }
+
+    /**
+     * @covers ::lastInsertId()
+     */
+    public function testLastInsertId()
+    {
+        $conn = m::mock('\SimpleAR\Database\Connection[lastInsertId]');
+        $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
+
+        $q = m::mock('\SimpleAR\Database\Query[run]');
+        $q->shouldReceive('run')->once();
+        $q->setConnection($conn);
+        $this->assertEquals(12, $q->lastInsertId());
     }
 }

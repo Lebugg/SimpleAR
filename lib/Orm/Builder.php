@@ -15,13 +15,6 @@ use SimpleAR\Facades\DB;
 class Builder
 {
     /**
-     * The query compiler instance.
-     *
-     * @var Compiler
-     */
-    protected $_compiler;
-
-    /**
      * The DB connection instance.
      *
      * @var Connection
@@ -41,6 +34,7 @@ class Builder
      * @var string
      */
     protected $_root;
+    protected $_rootAlias;
 
     /**
      * Do we have eager loading processing?
@@ -67,9 +61,14 @@ class Builder
      */
     protected $_noRowToFetch = false;
 
-    public function __construct($root = null)
+    /**
+     * Constructor.
+     *
+     */
+    public function __construct($root = null, $rootAlias = null, Relation $rel = null)
     {
-        $root && $this->root($root);
+        $this->setRoot($root, $rootAlias);
+        $rel && $this->getQueryOrNewSelect()->whereRelation($rel);
     }
 
     /**
@@ -87,77 +86,156 @@ class Builder
      *
      * @return $this
      */
-    public function root($root)
+    public function setRoot($root, $rootAlias = null)
     {
-        $this->_root = $root;
-
         // If a query is already instanciated, set root of it.
-        $this->_query && $this->_query->root($root);
+        //$this->getQueryOrNewSelect()->root($root, $rootAlias);
+        $this->_root = $root;
+        $this->_rootAlias = $rootAlias;
 
         return $this;
     }
 
     /**
-     * Add a condition that check existence of related model instances for the 
-     * root model.
+     * Get the root alias.
+     *
+     * @return string The current root alias.
+     */
+    public function getRootAlias()
+    {
+        return $this->_rootAlias;
+    }
+
+    /**
+     * Add a condition over a related model.
+     *
+     * Usage:
+     * ------
+     *
+     * There is different calling form for this function.
+     *
+     *  * Check existence of related models. This is a merely a WHERE EXISTS
+     *  clause in SQL:
+     *
+     *      `$query->root('Blog')->has('articles');`
+     *
+     *  * Perform a condition over the *number* of related models:
+     *
+     *      `$query->root('Blog')->where('articles', '>', 100);`
+     *
+     *      This would retrieve blogs instance which contains at least one hundred
+     *      articles.
+     *
+     *  * Use a Closure to add conditions to the subquery:
+     *
+     *      ```php
+     *      $query->root('Blog')->has('articles', function ($q) {
+     *          $q->where('online', true);
+     *      });
      *
      * @param string $relation The name of the relation to check on.
+     * @param string $op       Optional. The operator for the second use form.
+     * @param mixed $value     Optional. The value for the second use form.
+     *
      * @return $this
      */
-    public function has($relation, $op = null, $value = null, \Closure $callback = null)
+    public function whereHas($relation, $op = null, $value = null, $not = false)
     {
         $mainQuery = $this->getQueryOrNewSelect();
         $mainQueryRootAlias = $mainQuery->getBuilder()->getRootAlias();
 
-        $model = $this->_root;
-        $rel   = $model::relation($relation);
+        // We'll use $rels for recursivity.
+        $rels = explode('/', $relation);
+        $relation = array_shift($rels);
 
-        // We construct the sub-query. It can be the sub-query of an Exists 
+        $root = $this->getRoot();;
+        $rel  = $root::relation($relation);
+
+        // We construct the sub-query. It can be the sub-query of an Exists
         // clause or a Count (if $op and $value are given).
-        $hasQuery = $this->newQuery(new SelectBuilder);
-        $hasQuery->getBuilder()->setRootAlias($mainQueryRootAlias . '_');
-        $hasQuery->setInvolvedTable($mainQueryRootAlias, $mainQuery->getBuilder()->getRootTable());
-        $hasQuery->root($rel->lm->class);
+        $subRootAlias = $this->getRootAlias();
+        $subRootAlias = $subRootAlias ? $subRootAlias . '.' . $rel->name : $rel->name;
+        $subQuery = new self($rel->lm->class, $subRootAlias);
+        $subQuery->setConnection($this->getConnection());
+        $subQuery->newSelect();
+        $subQuery->whereRelation($rel, $mainQueryRootAlias);
 
-        // Make the join between both tables.
-        $sep = Cfg::get('queryOptionRelationSeparator');
-        foreach ($rel->getJoinAttributes() as $mainAttr => $hasAttr)
+        $subQuery->getQuery()->getCompiler()->useTableAlias = true;
+        $mainQuery->getQuery()->getCompiler()->useTableAlias = true;
+
+        if ($rels)
         {
-            $hasQuery->whereAttr($hasAttr, $mainQueryRootAlias . $sep . $mainAttr);
+            $relation = implode('/', $rels);
+            $subQuery->whereHas($relation);
         }
 
         // We want a Count sub-query.
-        if (func_num_args() >= 3)
+        if ($op !== null && $value !== null)
         {
-            $hasQuery->count();
-            $mainQuery->selectSub($hasQuery, '#' . $relation);
-            $mainQuery->where(DB::expr('#' . $relation), $op, $value);
-            //$mainQuery->whereSub($hasQuery, $op, $value);
+            $subQuery->getQuery()->addAggregate('COUNT');
+
+            $mainQuery->selectSub($subQuery->getQuery(), '#'.$relation);
+            $mainQuery->where(DB::expr('#'.$relation), $op, $value, null, $not);
         }
 
-        // We don't want anything special. This will be a simple Select 
+        // We don't want anything special. This will be a simple Select
         // sub-query.
         else
         {
-            $hasQuery->select(array('*'), false);
-            $mainQuery->whereExists($hasQuery);
-        }
+            if ($op instanceof \Closure)
+            {
+                $op($subQuery);
+            }
 
-        if ($callback !== null || ($callback = $op) instanceof \Closure)
-        {
-            $callback($hasQuery);
+            $subQuery->get(array('*'), false);
+            $mainQuery->whereExists($subQuery->getQuery(), null, $not);
         }
-
-        $mainQuery->getCompiler()->useTableAlias = true;
 
         return $this;
     }
 
     /**
+     * Alias for whereHas()
+     *
+     * @deprecated
+     */
+    public function has($relation, $op = null, $value = null, $not = false)
+    {
+        return $this->whereHas($relation, $op, $value, $not);
+    }
+
+    /**
+     * Add a condition over a related model.
+     *
+     * Inverse `has()` method.
+     *
+     * @see ::has()
+     *
+     * @param string $relation The name of the relation to check on.
+     * @param string $op       Optional. The operator for the second use form.
+     * @param mixed $value     Optional. The value for the second use form.
+     *
+     * @return $this
+     */
+    public function whereHasNot($relation, $op = null, $value = null)
+    {
+        return $this->whereHas($relation, $op, $value, true);
+    }
+
+    /**
+     * Alias for whereHasNot()
+     *
+     * @deprecated
+     */
+    public function hasNot($relation, $op = null, $value = null)
+    {
+        return $this->whereHasNot($relation, $op, $value);
+    }
+    /**
      * Set several options.
      *
      * @param array $options The options to set.
-     * @param Query $q A query to set options on. If not given, builder will use 
+     * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      * @return $this
      */
@@ -172,69 +250,84 @@ class Builder
     }
 
     /**
-     * Create a new delete query.
+     * Create a new insert query.
      *
      * @param  string $root The query's root.
      * @return Query
      */
-    public function delete($root = '')
+    public function insert($root = null, $rootAlias = null, $storeIt = true)
     {
-        $query = $this->newQuery(new DeleteBuilder);
-        $query->root($root ?: $this->_root);
-
-        $query->setCriticalQuery();
-
-        return $query;
+        return $this->initQuery(new InsertBuilder, $root, $rootAlias, false, $storeIt);
     }
 
     /**
-     * Insert one or several rows in DB.
+     * Create a new select query.
      *
-     * @param array $fields The query columns.
-     * @param array $values The values to insert.
-     *
-     * @return mixed The last insert ID.
-     */
-    public function insert(array $fields, array $values)
-    {
-        $query = $this->newQuery(new InsertBuilder())
-            ->root($this->_root)
-            ->fields($fields)
-            ->values($values)
-            ->run()
-            ;
-
-        return $query->getConnection()->lastInsertId();
-    }
-
-    /**
-     * Create a new insert query.
-     *
-     * @param string $table The root table name.
-     * @param array  $fields The fields targetted by the query.
-     *
+     * @param  string $root The query's root.
      * @return Query
      */
-    public function insertInto($table, $fields)
+    public function newSelect($root = null, $rootAlias = null, $storeIt = true)
     {
-        $query = $this->newQuery(new InsertBuilder())
-            ->root($table)
-            ->fields($fields);
-
-        return $query;
+        return $this->initQuery(new SelectBuilder, $root, $rootAlias, false, $storeIt);
     }
 
     /**
      * Create a new update query.
      *
+     * @param  string $root The query's root.
      * @return Query
      */
-    public function update($root = '')
+    public function update($root = null, $rootAlias = null, $storeIt = true)
     {
-        $query = $this->newQuery(new UpdateBuilder())
-            ->root($root ?: $this->_root);
+        return $this->initQuery(new UpdateBuilder, $root, $rootAlias, true, $storeIt);
+    }
 
-        return $query;
+    /**
+     * Create a new delete query.
+     *
+     * @param  string $root The query's root.
+     * @return Query
+     */
+    public function delete($root = null, $rootAlias = null, $storeIt = true)
+    {
+        return $this->initQuery(new DeleteBuilder, $root, $rootAlias, true, $storeIt);
+    }
+
+    /**
+     * Return a new Query instance.
+     *
+     * @param Builder $b The builder to use.
+     * @return Query
+     */
+    public function initQuery(QueryBuilder $b = null,
+        $root = null, $rootAlias = null,
+        $critical = false, $storeIt = false)
+    {
+        $q = $this->newQuery($b);
+
+        $root = $root ?: $this->_root;
+        $q->root($root, $rootAlias ?: $this->_rootAlias);
+        $critical && $q->setCriticalQuery($critical);
+
+        $storeIt && $this->setQuery($q);
+
+        if (is_valid_model_class($root))
+        {
+            $q->conditions($root::getGlobalConditions());
+        }
+
+        return $q;
+    }
+
+    /**
+     * Instanciate a new Query object with the given builder.
+     *
+     * @param  QueryBuilder $b The builder to use.
+     * @return Query
+     */
+    public function newQuery(QueryBuilder $b)
+    {
+        return new Query($b, $this->getConnection());
     }
 
     /**
@@ -260,7 +353,7 @@ class Builder
      */
     public function one(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->select($columns)->run();
+        $q = $this->getQueryOrNewSelect()->get($columns)->run();
 
         $object = $this->_fetchModelInstance();
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -289,7 +382,7 @@ class Builder
      */
     public function last(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->select($columns)->run();
+        $q = $this->getQueryOrNewSelect()->get($columns)->run();
 
         $object = $this->_fetchModelInstance(false);
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -301,19 +394,19 @@ class Builder
      * Return all fetch Model instances.
      *
      * @param array $columns The columns to select.
-     * @param Query $q A query to set options on. If not given, builder will use 
+     * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      */
     public function all(array $columns = array('*'), Query $q = null)
     {
         $q = $q ?: $this->getQueryOrNewSelect();
-        $q->select($columns)->run();
+        $q->get($columns)->run();
 
         $all = array();
         while ($one = $this->_fetchModelInstance())
         {
             $all[] = $one;
-            $ids[] = $one->id;
+            $ids[] = $one->id();
         }
 
         $this->_relationsToPreload && $this->preloadRelations($all);
@@ -344,22 +437,41 @@ class Builder
         return $this->all();
     }
 
+    /**
+     * Preload required relations.
+     *
+     * @param array $cmInstances Instances of current model for which to preload
+     * relations.
+     */
     public function preloadRelations(array $cmInstances)
     {
         $root = $this->getRoot();
         foreach ($this->_relationsToPreload as $relationName)
         {
-            $relation = $root::relation($relationName);
-            $lmInstances = $this->loadRelation($relation, $cmInstances);
-            $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
+            $qb = new self($root);
+            $qb->preloadRelation($cmInstances, $relationName);
         }
+    }
+
+    /**
+     * Preload a relation for an array of model instances.
+     *
+     * @param array  $cmInstances
+     * @param string $relationName
+     */
+    public function preloadRelation(array $cmInstances, $relationName)
+    {
+        $root = $this->getRoot();
+        $relation = $root::relation($relationName);
+
+        $lmInstances = $this->loadRelation($relation, $cmInstances);
+        $this->_associateLinkedModels($cmInstances, $lmInstances, $relation);
     }
 
     public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
     {
-        // Our object is already saved. It has an ID. We are going to
-        // fetch potential linked objects from DB.
 		$lmClass = $relation->lm->class;
+        $this->setRoot($lmClass);
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
@@ -386,18 +498,14 @@ class Builder
             }
         }
 
-        $options['conditions'] = array_merge(
-            $relation->conditions,
-            $lmClass::getGlobalConditions(),
-            $localOptions
-        );
+        $options['conditions'] = (array) $relation->conditions;
         if ($orderBy = $relation->getOrderBy()) {
             $options['orderBy'] = $orderBy;
         }
 
-        $q = $this->newQuery(new SelectBuilder);
-        $this->setQuery($q); // We'll need it for possible scopes.
-        $this->root($lmClass);
+        $options = array_merge($options, $localOptions);
+
+        $q = $this->newSelect();
         $this->setOptions($options);
         $q->whereTuple($lmAttributes, $cmValues);
 
@@ -411,45 +519,54 @@ class Builder
         return $lmInstances;
     }
 
-    /*
-     * Return model instances.
-     *
-     * This function is merely a syntaxic sugar for `$builder->limit(<limit>)->all()`.
-     *
-     * Example:
-     * --------
-     *
-     * ```php
-     * Beer::where('type', 'ale')->get(5);
-     * ```
-     *
-     * is equivalent to:
-     * ```php
-     * Beer::where('type', 'ale')->limit(5)->all();
-     * ```
-     *
-     * @param int $limit The number of objects to return. If not given, will 
-     * return all found objects.
-     */
-    public function get($limit = null)
-    {
-        $limit && $this->limit($limit);
-        return $this->all();
-    }
-
     /**
-     * Return the number of rows matching the current query.
+     * Count the number of linked models for givent instances.
      *
-     * @param string $attribute An optional attribute to count on.
-     * @return int The count.
      */
-    public function count($attribute = '*')
+    public function countRelation(Relation $relation, array $objects, array $localOptions = array())
     {
-        $q = $this->getQueryOrNewSelect();
-        $q->removeOptions(array('orderBy', 'limit', 'offset', 'with'));
-        $q->count($attribute)->run();
+		$lmClass = $relation->lm->class;
+        $this->setRoot($lmClass);
 
-        return $q->getConnection()->getColumn();
+        $lmAttributePrefix = '';
+        if ($relation instanceof Relation\ManyMany)
+        {
+			$reversed = $relation->reverse();
+			$lmClass::relation($reversed->name, $reversed);
+
+            $lmAttributePrefix = $reversed->name . '/';
+            $relation = $reversed;
+        }
+
+        // Get CM join attributes values for each given objects.
+        $cmValues = array();
+        foreach ($objects as $o)
+        {
+            $cmValues[] = $o->get($relation->getCmAttributes());
+        }
+
+        $lmAttributes = $relation->getLmAttributes();
+        if ($lmAttributePrefix) {
+            foreach ($lmAttributes as &$attr)
+            {
+                $attr = $lmAttributePrefix . $attr;
+            }
+        }
+
+        $options['conditions'] = (array) $relation->conditions;
+        $options = array_merge($options, $localOptions);
+
+        $q = $this->newSelect();
+        $this->setOptions($options);
+        $q->whereTuple($lmAttributes, $cmValues);
+
+        if ($scope = $relation->getScope())
+        {
+            $this->applyScopes($scope);
+        }
+
+        $pk = $lmClass::table()->getPrimaryKey();
+        return $this->count(DB::distinct($pk));
     }
 
 	/**
@@ -460,19 +577,28 @@ class Builder
 	 * @param int   $page    Page number. Min: 1.
 	 * @param int   $nbItems Number of items. Min: 1.
 	 */
-    public function search($page, $nbItems)
+    public function paginate($page, $nbItems, $distinct = false)
     {
 		$page    = $page    >= 1 ? $page    : 1;
 		$nbItems = $nbItems >= 1 ? $nbItems : 1;
 
-        $q  = $this->getQueryOrNewSelect();
-        $q->limit($nbItems, ($page - 1) * $nbItems);
+        $q = $this->getQueryOrNewSelect();
+        $root = $this->_root;
 
+        $q->limit($nbItems, ($page - 1) * $nbItems);
+        $distinct && $q->distinct();
         $res['rows'] = $this->all();
-        $q->getBuilder()->clearResult();
-        $res['count'] = $this->count();
+
+        $q->remove(array('limit', 'offset', 'orderBy', 'distinct'));
+        $attr = $distinct ? DB::distinct($root::table()->getPrimaryKey()) : '*';
+        $res['count'] = $q->count($attr);
 
         return $res;
+    }
+
+    public function search($page, $nbItems, $distinct = false)
+    {
+        return $this->paginate($page, $nbItems, $distinct);
     }
 
     /**
@@ -531,6 +657,8 @@ class Builder
     public function preload($relation)
     {
         $this->_relationsToPreload[] = $relation;
+
+        return $this;
     }
 
     /**
@@ -559,7 +687,7 @@ class Builder
      */
     public function __call($name, $args)
     {
-        $q = $this->getQueryOrNewSelect();
+        $q    = $this->getQueryOrNewSelect();
         $root = $this->_root;
 
         // Check if model has a scope of this name.
@@ -568,26 +696,21 @@ class Builder
             return $root::applyScope($name, $this, $args);
         }
 
-        // If 'with()' option is called, query builder has to parse eager loaded
-        // models.
+        // If 'with()' option is called, query builder will have to parse eager
+        // loaded models.
         if ($name === 'with' && $args)
         {
             $this->_eagerLoad = true;
         }
 
         // Redirect method calls on Query.
-        switch (count($args))
-        {
-            case 0: $q->$name(); break;
-            case 1: $q->$name($args[0]); break;
-            case 2: $q->$name($args[0], $args[1]); break;
-            case 3: $q->$name($args[0], $args[1], $args[2]); break;
-            case 4: $q->$name($args[0], $args[1], $args[2], $args[3]); break;
-            default: call_user_func_array(array($q, $name), $args);
-        }
+        $res = call_user_func_array(array($q, $name), $args);
 
-        // We always want to use the query builder, not the Query class.
-        return $this;
+        // If Query returns itself, we will prefer to return current
+        // QueryBuilder instead. However, if it returns something else (A COUNT
+        // has been performed and Query returns the result, for example), we
+        // return the result.
+        return $res === $q ? $this : $res;
     }
 
     /**
@@ -611,50 +734,15 @@ class Builder
     }
 
     /**
-     * Return a new Query instance.
-     *
-     * @param Builder $b The builder to use.
-     * @param Compiler $c The compiler to use.
-     * @param Connection $conn The connection to use.
-     * @return Query
-     */
-    public function newQuery(QueryBuilder $b = null, Compiler $c = null, Connection $conn = null)
-    {
-        $c = $c ?: $this->getCompiler();
-        $conn = $conn ?: $this->getConnection();
-
-        return new Query($b, $c, $conn);
-    }
-
-    /**
      * Return the current query instance or a new Select query if there is no
      * query yet.
      *
      * @see getQuery()
-     * @see newQuery()
+     * @see select()
      */
     public function getQueryOrNewSelect()
     {
-        $q = $this->getQuery();
-
-        if (! $q)
-        {
-            $q = $this->newQuery(new SelectBuilder);
-            ($root = $this->getRoot()) && $q->root($root);
-            $this->setQuery($q);
-        }
-
-        return $q;
-    }
-
-    /**
-     * Get the compiler instance.
-     *
-     * @return Compiler
-     */
-    public function getCompiler()
-    {
-        return $this->_compiler = ($this->_compiler ?: DB::getCompiler());
+        return $this->getQuery() ?: $this->newSelect();
     }
 
     /**
@@ -750,7 +838,7 @@ class Builder
             $row = $this->_parseRow($row);
 
             // Construct result.
-            $res = $res ? \SimpleAR\array_merge_recursive_distinct($res, $row) : $row;
+            $res = $res ? array_merge_recursive_distinct($res, $row) : $row;
         }
 
         return $res;
@@ -854,6 +942,10 @@ class Builder
         return $res;
     }
 
+    /**
+     * Associate preloaded linked models to correct current models.
+     *
+     */
     protected function _associateLinkedModels(array $cmInstances, array $lmInstances, Relation $relation)
     {
         $cmAttr = $relation->getCmAttributes();

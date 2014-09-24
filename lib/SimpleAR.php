@@ -37,13 +37,12 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 50300)
 	die('SimpleAR requires PHP 5.3 or higher.');
 }
 
-define('PHP_SIMPLEAR_VERSION_ID', '1.2.14');
+define('PHP_SIMPLEAR_VERSION_ID', '1.2.15');
 
 require __DIR__ . '/Config.php';
 require __DIR__ . '/Orm/Table.php';
 require __DIR__ . '/Orm/Model.php';
 require __DIR__ . '/Orm/Builder.php';
-require __DIR__ . '/Orm/ReadOnlyModel.php';
 require __DIR__ . '/Orm/Relation.php';
 require __DIR__ . '/Database.php';
 require __DIR__ . '/Database/Query.php';
@@ -55,6 +54,7 @@ require __DIR__ . '/Facades/Cfg.php';
 require __DIR__ . '/../tools/array_merge_recursive_distinct.php';
 require __DIR__ . '/../tools/is_valid_model_class.php';
 require __DIR__ . '/../tools/decamelize.php';
+require __DIR__ . '/../tools/flatten_array.php';
 
 use \SimpleAR\Config;
 use \SimpleAR\Database;
@@ -133,7 +133,7 @@ class SimpleAR
                     //  folder.
                     //  2) Class is not abstract: wake up has no sense on
                     //  abstract class.
-                    if (SimpleAR\is_valid_model_class($class))
+                    if (is_valid_model_class($class))
                     {
                         $class::wakeup();
                     }

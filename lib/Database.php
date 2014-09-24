@@ -12,6 +12,8 @@ use \SimpleAR\Database\Connection;
 use \SimpleAR\Database\Compiler;
 use \SimpleAR\Database\Compiler\BaseCompiler;
 use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\Expression\Distinct as DistinctExpr;
 
 class Database
 {
@@ -31,6 +33,69 @@ class Database
     public function expr($expression)
     {
         return new Expression($expression);
+    }
+
+    /**
+     * Alias for `expr()`.
+     */
+    public function raw($expression)
+    {
+        return $this->expr($expression);
+    }
+
+    /**
+     * Return a Distinct instance with given attribute as value.
+     *
+     * @param string $attribute An extended attribute string
+     */
+    public function distinct($attribute)
+    {
+        return new DistinctExpr($attribute);
+    }
+
+    /**
+     * Return an Func Expression.
+     *
+     * @param  string $fn The aggregate function.
+     * @param  string $attribute An extended attribute string.
+     * @return Database\Expression\Func
+     */
+    public function fn($fn, $attribute)
+    {
+        return new FuncExpr($attribute, $fn);
+    }
+
+    /**
+     * Return an Func Expression for 'AVG' function.
+     *
+     * @param  string $attribute An extended attribute string.
+     * @return Database\Expression\Func
+     */
+    public function avg($attribute)
+    {
+        return $this->fn('AVG', $attribute);
+    }
+
+    /**
+     * Return an Func Expression for 'COUNT' function.
+     *
+     * @param  string $attribute An extended attribute string.
+     * @return Database\Expression\Func
+     */
+    public function count($attribute)
+    {
+        return $this->agg('COUNT', $attribute);
+    }
+
+    /**
+     * Return an Func Expression for 'SUM' function.
+     *
+     * @param  string $attribute An extended attribute string.
+     * @return Database\Expression\Func
+     */
+    public function sum($attribute)
+    {
+        return $this->fn('SUM', $attribute);
     }
 
     /**
@@ -77,6 +142,9 @@ class Database
     {
         if (method_exists($this->_connection, $method))
         {
+            // A day'll come: 5.6 style!
+            // $this->_connection->$method(...$args);
+
             // It is better to call the method via straight statement.
             // @see http://www.php.net/manual/fr/function.call-user-func-array.php#97473
             switch (count($args))

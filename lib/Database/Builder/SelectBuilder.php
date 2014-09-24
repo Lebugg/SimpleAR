@@ -11,15 +11,15 @@ class SelectBuilder extends WhereBuilder
     public $type = Builder::SELECT;
 
     /**
-     * Set query root.
-     *
+     * @override
      */
-    public function root($root)
+    public function root($root, $alias = null)
     {
-        parent::root($root);
+        parent::root($root, $alias);
 
-        $joinClause = new JoinClause($this->_table->name, $this->getRootAlias());
-        $this->_joinClauses[$this->getRootAlias()] = $joinClause;
+        $table = $this->_table->name;
+        $alias = $alias ?: $this->getRootAlias();
+        $this->setJoinClause($alias, new JoinClause($table, $alias));
 
         return $this;
     }
@@ -30,7 +30,7 @@ class SelectBuilder extends WhereBuilder
      * Note: Table primary key will always be added to the selection.
      * -----
      *
-     * @param array|Expression $attributes An attribute array or an Expression 
+     * @param array|Expression $attributes An attribute array or an Expression
      * object.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
@@ -53,6 +53,26 @@ class SelectBuilder extends WhereBuilder
         $this->_selectColumns($this->getRootAlias(), $attributes, $expand);
     }
 
+    /**
+     * Alias for select().
+     */
+    public function get($attributes, $expand = true)
+    {
+        $this->select($attributes, $expand);
+    }
+
+    public function distinct($attributes = '*', $expand = true)
+    {
+        $this->select((array) $attributes, $expand);
+        $this->_components['distinct'] = true;
+    }
+
+    /**
+     * Select result of a sub-query.
+     *
+     * @param Query  $sub The query of which to select result.
+     * @param string $alias The alias to give to the sub-result.
+     */
     public function selectSub(Query $sub, $alias)
     {
         $this->addValueToQuery($sub->getValues());
@@ -64,21 +84,60 @@ class SelectBuilder extends WhereBuilder
     /**
      * Add an aggregate function to the query (count, avg, sum...).
      *
-     * Aggregates do not replace columns selection. Both can be combined.
+     * Two behaviours:
+     * ---------------
+     *
+     * 1) Add an aggregate to the selection list (with other columns or
+     * aggregates). Query won't be executed.
+     * 2) Set the aggregate as the only item to fetch. Query will be executed
+     * and first value will be returned.
+     *
+     * The behaviour choice depends on $resAlias parameter. If null, 2) will
+     * be used, 1) otherwise.
+     * You still can choose one behaviour over another using `addAggregate()`
+     * and `setAggregate()` methods.
      *
      * @param string $fn The aggregate function.
      * @param string $attribute The attribute to apply the function on.
-     * @param string $alias The result alias to give to this aggregate.
+     * @param string $alias The result alias to give to the aggregate.
      */
-    public function aggregate($function, $attribute = '*', $resultAlias = '')
+    public function aggregate($fn, $attribute = '*', $resAlias = null)
     {
-        list($tableAlias, $columns) = $attribute === '*'
+        list($tAlias, $cols) = $attribute === '*'
             ? array('', array('*'))
-            : $this->_processExtendedAttribute($attribute)
-            ;
+            : $this->_processAttribute($attribute);
 
-        $this->_components['aggregates'][] = compact('columns', 'function',
-            'tableAlias', 'resultAlias');
+        // Clean columns and add group by columns so result makes more sense.
+        unset($this->_components['columns']);
+        $grouped = false;
+        if (isset($this->_components['groupBy']))
+        {
+            $grouped = true;
+            foreach ($this->_components['groupBy'] as $group)
+            {
+                $groupAlias = $group['tAlias'];
+                $col = $group['column'];
+                $table  = $this->getInvolvedTable($groupAlias);
+                $attr = $table->columnToAttribute($col);
+                $this->_selectColumns($groupAlias, array($attr => $col));
+            }
+        }
+        $this->_components['aggregates'] = array(compact('cols', 'fn', 'tAlias', 'resAlias'));
+
+        if ($q = $this->getQuery())
+        {
+            $result = $q->run()->getResult();
+            return $grouped ? $result : (isset($result[0]) ? current($result[0]) : null);
+        }
+    }
+
+    public function addAggregate($fn, $attribute = '*', $resAlias = '')
+    {
+        list($tAlias, $cols) = $attribute === '*'
+            ? array('', array('*'))
+            : $this->_processAttribute($attribute);
+
+        $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
     }
 
     /**
@@ -86,9 +145,29 @@ class SelectBuilder extends WhereBuilder
      *
      * @param array|string $columns The columns to count on.
      */
-    public function count($columns = '*', $resultAlias = '')
+    public function count($attributes = '*', $resAlias = null)
     {
-        $this->aggregate('COUNT', $columns, $resultAlias);
+        return (int) $this->aggregate('COUNT', $attributes, $resAlias);
+    }
+
+    public function sum($attributes = '*', $resAlias = null)
+    {
+        return $this->aggregate('SUM', $attributes, $resAlias);
+    }
+
+    public function max($attributes = '*', $resAlias = null)
+    {
+        return $this->aggregate('MAX', $attributes, $resAlias);
+    }
+
+    public function min($attributes = '*', $resAlias = null)
+    {
+        return $this->aggregate('MIN', $attributes, $resAlias);
+    }
+
+    public function avg($attributes = '*', $resAlias = null)
+    {
+        return $this->aggregate('AVG', $attributes, $resAlias);
     }
 
     public function orderBy($attribute, $sort = 'ASC')
@@ -102,7 +181,7 @@ class SelectBuilder extends WhereBuilder
                 }
                 else
                 {
-                    // User did not specify the sort order. $sort contains the 
+                    // User did not specify the sort order. $sort contains the
                     // attribute.
                     $this->orderBy($sort);
                 }
@@ -111,20 +190,22 @@ class SelectBuilder extends WhereBuilder
             return;
         }
 
-        list($tableAlias, $columns) = $this->_processExtendedAttribute($attribute);
+        list($tAlias, $columns) = $this->_processExtendedAttribute($attribute);
         $column = $columns[0];
 
-        $this->_components['orderBy'][] = compact('tableAlias', 'column', 'sort');
+        $this->_components['orderBy'][] = compact('tAlias', 'column', 'sort');
     }
 
     public function groupBy($attribute)
     {
         foreach ((array) $attribute as $attr)
         {
-            list($tableAlias, $columns) = $this->_processExtendedAttribute($attr);
-            $column = $columns[0];
+            list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
 
-            $this->_components['groupBy'][] = compact('tableAlias', 'column');
+            foreach ($columns as $column)
+            {
+                $this->_components['groupBy'][] = compact('tAlias', 'column');
+            }
         }
     }
 
@@ -145,10 +226,30 @@ class SelectBuilder extends WhereBuilder
      * Set the offset of the query.
      *
      * @param int $offset The offset to set.
+     * @return $this
      */
     public function offset($offset)
     {
         $this->_components['offset'] = (int) $offset;
+
+        return $this;
+    }
+
+    /**
+     * Join a relation.
+     *
+     * @param string $relation The relation name.
+     * @param int    $joinType The type of join to perform. Possible values are
+     * listed in `JoinClause` class.
+     *
+     * @return $this
+     */
+    public function join($relation, $joinType = JoinClause::INNER)
+    {
+        $tAlias = $this->relationsToTableAlias($relation);
+        $this->addInvolvedTable($tAlias, $joinType);
+
+        return $this;
     }
 
     /**
@@ -163,6 +264,7 @@ class SelectBuilder extends WhereBuilder
      *
      * @param string|array $relation The model relation name relative to the root
      * model *or* an array of relation names.
+     * @return $this
      */
     public function with($relation)
     {
@@ -177,17 +279,16 @@ class SelectBuilder extends WhereBuilder
         //  1) Include related table;
         //  2) Select related table columns.
 
-        // 1) We have to call addInvolvedTable() function. It takes a table alias
-        // as a parameter.
-        $tableAlias = $this->relationsToTableAlias($relation);
-        $this->addInvolvedTable($tableAlias, JoinClause::LEFT);
+        // 1) `join()` is perfect for this.
+        $this->join($relation, JoinClause::LEFT);
 
         // 2)
-        $alias = '';
-        foreach (explode('.', $tableAlias) as $relName)
+        $tmpAlias = '';
+        $sep = $this->getQueryOptionRelationSeparator();
+        foreach (explode($sep, $relation) as $relName)
         {
-            $alias .= $alias ? '.' . $relName : $relName;
-            $this->_selectColumns($alias, array('*'));
+            $tmpAlias .= $tmpAlias ? '.' . $relName : $relName;
+            $this->_selectColumns($tmpAlias, array('*'));
         }
 
         return $this;
@@ -196,21 +297,22 @@ class SelectBuilder extends WhereBuilder
     /**
      * Add columns to the list of to-be-selected columns.
      *
-     * @param string $tableAlias The alias of the table the columns belong.
-     * @param array  $columns The columns to select. (Columns, not attributes).
+     * @param string $tAlias The alias of the table the columns belong.
+     * @param array  $columns The columns to select. (Can be
+     * attributes-to-columns array).
      * @param bool   $expand Whether to expand '*' wildcard or not.
      */
-    protected function _selectColumns($tableAlias, array $columns, $expand = true)
+    protected function _selectColumns($tAlias, array $columns, $expand = true)
     {
         if ($expand && $columns === array('*'))
         {
-            $columns = $this->getInvolvedTable($tableAlias)->getColumns();
+            $columns = $this->getInvolvedTable($tAlias)->getColumns();
         }
 
-        $resultAlias = $tableAlias === $this->getRootAlias() ? '' : $tableAlias;
-        $this->_components['columns'][$tableAlias] = array(
+        $resAlias = $tAlias === $this->getRootAlias() ? '' : $tAlias;
+        $this->_components['columns'][$tAlias] = array(
             'columns' => $columns,
-            'resultAlias' => $resultAlias
+            'resAlias' => $resAlias
         );
     }
 
@@ -228,11 +330,6 @@ class SelectBuilder extends WhereBuilder
         );
     }
 
-    protected function _onAfterBuild()
-    {
-        $this->_components['from'] = array_values($this->_joinClauses);
-    }
-
     protected function _buildOrder_by($orderBy)
     {
         $this->orderBy($orderBy);
@@ -241,5 +338,10 @@ class SelectBuilder extends WhereBuilder
     protected function _buildGroup_by($groupBy)
     {
         $this->groupBy($groupBy);
+    }
+
+    protected function _onAfterBuild()
+    {
+        $this->_components['from'] = array_values($this->_joinClauses);
     }
 }

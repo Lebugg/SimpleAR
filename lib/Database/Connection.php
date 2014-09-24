@@ -1,8 +1,10 @@
 <?php namespace SimpleAR\Database;
 
+require __DIR__ . '/Compiler.php';
+
 use \SimpleAR\Config;
-use \SimpleAR\Exception\Database as DatabaseEx;
 use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Exception\Database as DatabaseEx;
 
 /**
  * This class abstracts a database connection.
@@ -198,6 +200,7 @@ class Connection
 
         try
         {
+            if (! $this->_pdo) { throw new \Exception; }
             $this->_sth = $this->_pdo->prepare($query);
             $this->_sth->execute((array) $params);
 
@@ -207,9 +210,17 @@ class Connection
         catch (\PDOException $ex)
         {
             // We must wait for PHP 5.5 to be able to use `finally` block.
-            $this->_debug && $this->logQuery($query, $params, 0);
+            if ($this->_debug)
+            {
+                $this->logQuery($query, $params, 0);
 
-            throw new DatabaseEx($ex->getMessage(), $query, $ex);
+                // If we debug is on, we use debug query in exception message.
+                $log = end($this->_queries);
+                $query = $log['sql'];
+            }
+
+            $log = end($this->_queries);
+            throw new DatabaseEx($ex->getMessage(), $log['sql'], $ex);
         }
 
         return $this->_sth;
@@ -283,6 +294,7 @@ class Connection
      */
     public function lastInsertId()
     {
+        if (! $this->_pdo) throw new \Exception;
         return $this->_pdo->lastInsertId();
     }
 
@@ -307,7 +319,14 @@ class Connection
     public function getNextRow($next = true)
     {
         $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
+        if (! $this->_sth) { throw new \Exception; }
         return $this->_sth->fetch(\PDO::FETCH_ASSOC|$ori);
+    }
+
+    public function fetchAll()
+    {
+        if (! $this->_sth) { throw new \Exception; }
+        return $this->_sth->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     /**
@@ -317,6 +336,7 @@ class Connection
      */
     public function getLastRow()
     {
+        if (! $this->_sth) { throw new \Exception; }
         return $this->_sth->fetch(\PDO::FETCH_ASSOC, \PDO::FETCH_ORI_LAST);
     }
 

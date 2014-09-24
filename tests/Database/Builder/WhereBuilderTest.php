@@ -1,17 +1,20 @@
 <?php
 
-use SimpleAR\Database\Builder\WhereBuilder;
-use SimpleAR\Database\Builder\SelectBuilder;
-use SimpleAR\Database\Compiler\BaseCompiler;
-use SimpleAR\Database\Expression;
-use SimpleAR\Database\JoinClause;
-use SimpleAR\Database\Query;
+use \Mockery as m;
 
-use SimpleAR\Facades\Cfg;
-use SimpleAR\Facades\DB;
+use \SimpleAR\Database\Builder\WhereBuilder;
+use \SimpleAR\Database\Builder\SelectBuilder;
+use \SimpleAR\Database\Compiler\BaseCompiler;
+use \SimpleAR\Database\Expression;
+use \SimpleAR\Database\Expression\Func as FuncExpr;
+use \SimpleAR\Database\JoinClause;
+use \SimpleAR\Database\Query;
+
+use \SimpleAR\Facades\Cfg;
+use \SimpleAR\Facades\DB;
 
 /**
- * @covers SimpleAR\Database\Builder\WhereBuilder
+ * @coversDefaultClass SimpleAR\Database\Builder\WhereBuilder
  */
 class WhereBuilderTest extends PHPUnit_Framework_TestCase
 {
@@ -123,6 +126,76 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['where']);
     }
 
+    /**
+     * @covers ::orWhere
+     */
+    public function testOrWhere()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'OR', false);
+        $b->orWhere('my', '=', 12);
+    }
+
+    /**
+     * @covers ::andWhere
+     */
+    public function testAndWhere()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'AND', false);
+        $b->andWhere('my', '=', 12);
+    }
+
+    /**
+     * @covers ::orWhereNot
+     */
+    public function testOrWhereNot()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'OR', true);
+        $b->orWhereNot('my', '=', 12);
+    }
+
+    /**
+     * @covers ::andWhereNot
+     */
+    public function testAndWhereNot()
+    {
+        $b = m::mock('\SimpleAR\Database\Builder\WhereBuilder[where]');
+        $b->shouldReceive('where')->once()->with('my', '=', 12, 'AND', true);
+        $b->andWhereNot('my', '=', 12);
+    }
+
+    /**
+     * @covers ::whereNested
+     * @covers ::where
+     */
+    public function testWhereNested()
+    {
+        $b = new WhereBuilder;
+        $b->whereNot(function($q) {
+                $q->where('a', 12)
+                  ->orWhere('b', 14);
+            })
+            ->orWhere(function ($q) {
+                $q->where('a', 14)
+                  ->andWhere('b', [12, 14]);
+            })
+            ;
+
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['a'], 'op' => '=', 'val' => 12, 'logic' => 'AND', 'not' => false];
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['b'], 'op' => '=', 'val' => 14, 'logic' => 'OR', 'not' => false];
+        $where[] = ['type' => 'Nested', 'nested' => $tmp, 'logic' => 'AND', 'not' => true];
+
+        $tmp = [];
+        $tmp[] = ['type' => 'Basic', 'table' => '', 'cols' => ['a'], 'op' => '=', 'val' => 14, 'logic' => 'AND', 'not' => false];
+        $tmp[] = ['type' => 'In', 'table' => '', 'cols' => ['b'], 'val' => [12,14], 'logic' => 'AND', 'not' => false];
+        $where[] = ['type' => 'Nested', 'nested' => $tmp, 'logic' => 'OR', 'not' => false];
+
+        $components = $b->getComponents();
+        $this->assertEquals($where, $components['where']);
+    }
+
     public function testOrAndLogicalOps()
     {
         $b = new WhereBuilder;
@@ -197,6 +270,29 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $components['where']);
     }
 
+    public function testWhereWithQueryAsValue()
+    {
+        $b = new SelectBuilder;
+        $b->root('Blog');
+        $subQuery = User::query(null, 'articles.readers')
+            ->whereRelation(Article::relation('readers'), 'articles')
+            ->addAggregate('AVG', 'age')->getQuery();
+        $b->where('articles/author/age', '>', $subQuery);
+        $b->get(['*'], false);
+
+        $components = $b->build();
+        $values = $b->getValues();
+
+        $c = new BaseCompiler();
+        $sql = $c->compileComponents($components, 'select');
+        $val = $c->compileValues($values, 'select');
+
+        $expected = 'SELECT `_`.* FROM `blogs` `_` INNER JOIN `articles` `articles` ON `_`.`id` = `articles`.`blog_id` INNER JOIN `authors` `articles.author` ON `articles`.`author_id` = `articles.author`.`id` WHERE `articles.author`.`age` > (SELECT AVG(`articles.readers`.`age`) FROM `USERS` `articles.readers` INNER JOIN `articles_USERS` `articles.readers_m` ON `articles.readers`.`id` = `articles.readers_m`.`user_id` WHERE `articles.readers_m`.`article_id` = `articles`.`id`)';
+        $expectedValues = [[]];
+        $this->assertEquals($expected, $sql);
+        $this->assertEquals($expectedValues, $val);
+    }
+
     public function testWhereAttribute()
     {
         $b = new WhereBuilder();
@@ -205,12 +301,14 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('Article')->whereAttr('blogId', '_/id');
 
         $components = $b->build();
-
         $where[] = ['type' => 'Attribute', 'lTable' => '__', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
 
         $this->assertEquals($where, $components['where']);
     }
 
+    /**
+     * @covers ::whereExists
+     */
     public function testWhereExists()
     {
         $subQuery = new Query(new SelectBuilder);
@@ -225,7 +323,32 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $components = $b->build();
 
-        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND'];
+        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND', 'not' => false];
+        // There is a sub array because Builders do not flatten value array.
+        $val['where'] = [['Article 1']];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals($val, $b->getValues());
+    }
+
+    /**
+     * @covers ::whereNotExists
+     */
+    public function testWhereNotExists()
+    {
+        $subQuery = new Query(new SelectBuilder);
+        $subQuery->setInvolvedTable('_', Blog::table());
+        $subQuery->setRootAlias('__')
+            ->root('Article')
+            ->where('title', 'Article 1')
+            ->whereAttr('blogId', '_/id');
+
+        $b = new WhereBuilder;
+        $b->root('Blog')->whereNotExists($subQuery);
+
+        $components = $b->build();
+
+        $where[] = ['type' => 'Exists', 'query' => $subQuery, 'logic' => 'AND', 'not' => true];
         // There is a sub array because Builders do not flatten value array.
         $val['where'] = [['Article 1']];
 
@@ -279,7 +402,7 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
         $b->root('USERS');
         $b->where('firstName', 'Jean');
 
-        $expected = ['root' => 'USERS', 'where' => [
+        $expected = ['where' => [
             ['type' => 'Basic', 'table' => '', 'cols' => ['firstName'], 'op' => '=', 'val' => 'Jean', 'logic' => 'AND', 'not' => false],
         ]];
 
@@ -399,5 +522,107 @@ class WhereBuilderTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals($middle, $b->getJoinClause('readers_m'));
         $this->assertEquals($lm, $b->getJoinClause('readers'));
+    }
+
+    /**
+     * Test the usage of FuncExpression in conditions.
+     *
+     * It validates the following syntax:
+     *
+     *  `$builder->where('DB::avg('articles/author/age'), '>', 25);`
+     *  `$builder->whereAttr('thisOne', '<', DB::max('this/otherOne'));`
+     *
+     * @covers ::where
+     * @covers ::whereAttr
+     */
+    public function testWhereFuncExpression()
+    {
+        $b = new WhereBuilder;
+        $b->root('Blog');
+        $b->where(DB::avg('articles/author/age'), '>', 25);
+        $components = $b->getComponents();
+
+        $expr = new FuncExpr('articles/author/age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [[
+            'type' => 'Basic', 'table' => 'articles.author', 'cols' => [$expr],
+            'op' => '>', 'val' => 25, 'logic' => 'AND', 'not' => false
+        ]];
+        $this->assertEquals($where, $components['where']);
+
+        // - - -
+
+        $b = new WhereBuilder;
+        $b->root('Article');
+        $b->whereAttr('author/age', '<', DB::avg('readers/age'));
+
+        $components = $b->getComponents();
+        $expr = new FuncExpr('readers/age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [[
+            'type' => 'Attribute', 'lTable' => 'author', 'lCols' => ['age'],
+            'op' => '<', 'rTable' => 'readers', 'rCols' => [$expr], 'logic' => 'AND'
+        ]];
+        $this->assertEquals($where, $components['where']);
+    }
+
+    /**
+     * @covers ::whereFunc
+     */
+    public function testWhereFunc()
+    {
+        $b = new WhereBuilder;
+        $b->root('Author');
+        $b->whereFunc(DB::avg('age'), '>', 30);
+
+        $components = $b->build();
+        $expr = new FuncExpr('age', 'AVG');
+        $expr->setValue(['age']);
+        $where = [
+            ['type' => 'Basic', 'table' => '_', 'cols' => [$expr], 'op' => '>', 'val' => 30, 'logic' => 'AND', 'not' => false],
+        ];
+
+        $this->assertEquals($where, $components['where']);
+    }
+
+    public function testWhereRelation()
+    {
+        $b = new WhereBuilder;
+        $b->root('Article', 'articles');
+        $b->whereRelation(Blog::relation('articles'), '_');
+
+        $components = $b->build();
+        $where[] = ['type' => 'Attribute', 'lTable' => 'articles', 'lCols' => ['blog_id'], 'op' => '=', 'rTable' => '_', 'rCols' => ['id'], 'logic' => 'AND'];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals(Blog::table(), $b->getInvolvedTable('_'));
+
+        // - - -
+
+        // With many-to-many relation.
+        $rel = Article::relation('readers');
+        $mdName  = $rel->getMiddleTableName();
+        $mdAlias = $rel->getMiddleTableAlias();
+
+        $b = new WhereBuilder;
+        $b->root('User', 'readers');
+        $b->whereRelation($rel, '_');
+        $components = $b->build();
+
+        $jc = new JoinClause($mdName, $mdAlias);
+        $jc->on('readers', 'id', $mdAlias, 'user_id');
+        $where = [['type' => 'Attribute', 'lTable' => $mdAlias, 'lCols' => ['article_id'],
+            'op' => '=', 'rTable' => '_', 'rCols' => ['id'],
+            'logic' => 'AND']];
+
+        $this->assertEquals($where, $components['where']);
+        $this->assertEquals(Article::table(), $b->getInvolvedTable('_'));
+        $this->assertEquals($jc, $b->getJoinClause($mdAlias));
+        try {
+            $b->getJoinClause('_');
+            $this->fail('Should have thrown an exception.');
+        } catch (Exception $ex) {
+            $this->assertContains('_', $ex->getMessage());
+        }
     }
 }

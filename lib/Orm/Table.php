@@ -97,6 +97,11 @@ class Table
         return isset($res[1]) ? $res : $res[0];
     }
 
+    public function columnToAttribute($col)
+    {
+        return array_search($col, $this->columns);
+    }
+
     /**
      * Return the primary key column(s).
      *

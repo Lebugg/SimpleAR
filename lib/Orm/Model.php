@@ -344,10 +344,10 @@ abstract class Model
     /**
      * Does the object exist?
      *
-     * This property is true as long as the object exist in DB or whatever 
+     * This property is true as long as the object exist in DB or whatever
      * storage layer is used.
      *
-     * It is set to `true` when save() is successful and set to `false` when 
+     * It is set to `true` when save() is successful and set to `false` when
      * object is deleted.
      *
      * @var bool
@@ -360,8 +360,6 @@ abstract class Model
      * @var string
      */
     protected $_currentFilter;
-
-    protected static $_queryBuilder;
 
     /**
      * This array contains the list of declared Table objects.
@@ -638,7 +636,7 @@ abstract class Model
 
         $table  = $relation->jm->table;
         $fields = array($relation->jm->from, $relation->jm->to);
-        self::query()->insertInto($table, $fields)
+        self::query()->insert($table, $fields)
             ->values(array($this->id(), $id))
             ->run();
     }
@@ -827,9 +825,8 @@ abstract class Model
 
         $pk = self::table()->getPrimaryKey();
         $count = self::query()->delete()->where($pk, $this->id())->rowCount();
-        //$count = self::query('delete')->conditions(array('id' => $this->_id))->rowCount();
 
-        // Was not here? Weird. Tell user.
+        // Was not here? Tell user.
         if ($count === 0)
         {
             throw new RecordNotFound($this->id());
@@ -1235,8 +1232,7 @@ abstract class Model
      */
     public static function remove(array $conditions = null)
     {
-        return self::query()
-                ->delete()
+        return self::query()->delete()
                 ->conditions($conditions)
                 ->rowCount();
     }
@@ -1411,17 +1407,6 @@ abstract class Model
 
     public static function boot()
     {
-        self::setQueryBuilder(new QueryBuilder());
-    }
-
-    /**
-     * Set the QueryBuilder to use.
-     *
-     * @param QueryBuilder $qb The builder.
-     */
-    public static function setQueryBuilder(QueryBuilder $qb)
-    {
-        self::$_queryBuilder = $qb;
     }
 
     /**
@@ -1483,7 +1468,7 @@ abstract class Model
         }
 
         $table = new Table($tableName, $primaryKey, $columns);
-        $table->order       = static::$_orderBy;
+        $table->order = static::$_orderBy;
         $table->modelBaseName = $modelBaseName;
 
         self::setTable($fqcn, $table);
@@ -1494,12 +1479,10 @@ abstract class Model
      *
      * @return QueryBuilder
      */
-    public static function query()
+    public static function query($root = null, $rootAlias = null, Relation $rel = null)
     {
-        self::$_queryBuilder->reset();
-        self::$_queryBuilder->root(get_called_class());
-
-        return self::$_queryBuilder;
+        $root = $root ?: get_called_class();
+        return new QueryBuilder($root, $rootAlias, $rel);
     }
 
     /**
@@ -1592,7 +1575,7 @@ abstract class Model
             }
 
             // Row already exists, we cannot insert a new row with these values.
-            if (self::exists($conditions))
+            if (self::exists($conditions, false))
             {
                 throw new Exception('Violate unique constraint: (' . implode(', ', $constraint) . ').');
             }
@@ -1746,49 +1729,23 @@ abstract class Model
      *
      * @param string $relationName The relation name.
      */
-    private function _countLinkedModel($relationName)
+    private function _countLinkedModel($relationName, array $localOptions = array())
     {
         $relation = static::relation($relationName);
-
-        // Current object is not saved in database yet. It does not
-        // have an ID, so we cannot retrieve linked models from Db.
-        if (! $this->isConcrete())
-        {
-			return 0;
-        }
-
-        // Our object is already saved. It has an ID. We are going to
-        // fetch potential linked objects from DB.
-		$res     = 0;
 		$class = $relation->lm->class;
 
+        // For BelongsTo, just load related model, it doesn't cost much.
         if ($relation instanceof Relation\BelongsTo)
         {
-            return $this->__get($relation->cm->attribute) === null ? 0 : 1;
-        }
-        elseif ($relation instanceof Relation\HasOne || $relation instanceof Relation\HasMany)
-        {
-            $res = $class::count(array(
-                'conditions' => array_merge($relation->conditions, array($relation->lm->attribute => $this->__get($relation->cm->attribute))),
-            ));
-        }
-        else // ManyMany
-        {
-			$reversed = $relation->reverse();
-
-			$class::relation($reversed->name, $reversed);
-
-			$conditions = array_merge(
-				$reversed->conditions,
-				array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute))
-			);
-
-			$res = $class::count(array(
-                'conditions' => $conditions,
-			));
+            $value = $this->_loadRelation($relationName);
+            return $value === null ? 0 : 1;
         }
 
-        return $res;
+        // Current object is not saved in database yet. It does not
+        // have an ID, so we cannot retrieve linked models from DB.
+        if (! $this->isConcrete()) { return 0; }
+
+        return static::query()->countRelation($relation, array($this), $localOptions);
     }
 
     /**
@@ -1943,7 +1900,10 @@ abstract class Model
 
         try
         {
-            $lastId = self::query()->insert(array_keys($fields), array_values($fields));
+            $lastId = self::query()->insert()
+                ->fields(array_keys($fields))
+                ->values(array_values($fields))
+                ->lastInsertId();
 
             if ($lastId)
             {
@@ -2012,7 +1972,8 @@ abstract class Model
                     if ($values)
                     {
                         $fields = array($relation->jm->from, $relation->jm->to);
-                        self::query()->insertInto($relation->jm->table, $fields)
+                        self::query()->insert($relation->jm->table)
+                            ->fields($fields)
                             ->values($values)->run();
                     }
                 }
@@ -2063,83 +2024,8 @@ abstract class Model
         }
 
         $this->_attr($relationName, $value);
-        return $value;
 
-        // // Our object is already saved. It has an ID. We are going to
-        // // fetch potential linked objects from DB.
-		// $lmClass = $relation->lm->class;
-        //
-        // if ($relation->order)
-        // {
-        //     $options['order_by'] = $relation->order;
-        // }
-        //
-        // if ($relation->filter)
-        // {
-        //     $options['filter']   = $relation->filter;
-        // }
-        //
-        // $lmAttributePrefix = '';
-        // if ($relation instanceof Relation\ManyMany)
-        // {
-		// 	$reversed = $relation->reverse();
-		// 	$lmClass::relation($reversed->name, $reversed);
-        //
-        //     $lmAttributePrefix = $reversed->name . '/';
-        //     $relation = $reversed;
-        // }
-        //
-        // $options['conditions'] = array_merge(
-        //     $relation->conditions,
-        //     array($lmAttributePrefix . $relation->lm->attribute => $this->__get($relation->cm->attribute)),
-        //     $lmClass::getGlobalConditions()
-        // );
-        //
-        // $options = array_merge($options, $localOptions);
-        // $q = $lmClass::query()->setOptions($options);
-        //
-        // if ($scope = $relation->getScope())
-        // {
-        //     $q->applyScopes($scope);
-        // }
-        //
-        // $get = $relation->isToMany() ? 'all' : 'one';
-        // $res = $q->$get();
-        //
-        // $this->_attr($relationName, $res);
-        // return $res;
-        //
-        // if ($relation instanceof Relation\BelongsTo || $relation instanceof Relation\HasOne)
-        // {
-        //
-        //     $options = array_merge($options, $localOptions);
-        //     $res = self::query()->findOne($options);
-        // }
-        // elseif ($relation instanceof Relation\HasMany)
-        // {
-        //     $options['conditions'] = array_merge(
-        //         $relation->conditions,
-        //         array($relation->lm->attribute => $this->__get($relation->cm->attribute)),
-        //         $lmClass::getGlobalConditions()
-        //     );
-        //
-        //     $options = array_merge($options, $localOptions);
-        //     $res = self::query()->findMany($options);
-        // }
-        // else // ManyMany
-        // {
-		// 	$reversed = $relation->reverse();
-		// 	$lmClass::relation($reversed->name, $reversed);
-        //
-		// 	$options['conditions'] = array_merge(
-		// 		$reversed->conditions,
-		// 		array($reversed->name . '/' . $reversed->lm->attribute => $this->__get($reversed->cm->attribute)),
-        //         $lmClass::getGlobalConditions()
-		// 	);
-        //
-        //     $options = array_merge($options, $localOptions);
-        //     $res = self::query()->findMany($options);
-        // }
+        return $value;
     }
 
     /**
@@ -2228,7 +2114,7 @@ abstract class Model
             $pk = self::table()->getPrimaryKey();
             $query = self::query()->update()
                 ->set($fields)
-                ->where($pk, $this->id())
+                ->where($pk, array($this->id()))
                 ->run();
 
             // I know code seems (is) redundant, but I am convinced that it is
@@ -2303,8 +2189,8 @@ abstract class Model
                     if ($values)
                     {
                         $fields = array($relation->jm->from, $relation->jm->to);
-                        $query = self::query()
-                            ->insertInto($relation->jm->table, $fields)
+                        $query = self::query()->insert($relation->jm->table)
+                            ->fields($fields)
                             ->values($values)
                             ->run();
                     }
