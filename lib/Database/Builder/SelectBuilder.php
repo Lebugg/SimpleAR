@@ -30,7 +30,7 @@ class SelectBuilder extends WhereBuilder
      * Note: Table primary key will always be added to the selection.
      * -----
      *
-     * @param array|Expression $attributes An attribute array or an Expression 
+     * @param array|Expression $attributes An attribute array or an Expression
      * object.
      * @param bool  $expand  Whether to expand '*' wildcard.
      */
@@ -86,9 +86,9 @@ class SelectBuilder extends WhereBuilder
      * 2) Set the aggregate as the only item to fetch. Query will be executed
      * and first value will be returned.
      *
-     * The behaviour choice depends on $resAlias parameter. If null, 2) will 
+     * The behaviour choice depends on $resAlias parameter. If null, 2) will
      * be used, 1) otherwise.
-     * You still can choose one behaviour over another using `addAggregate()` 
+     * You still can choose one behaviour over another using `addAggregate()`
      * and `setAggregate()` methods.
      *
      * @param string $fn The aggregate function.
@@ -121,7 +121,7 @@ class SelectBuilder extends WhereBuilder
         if ($q = $this->getQuery())
         {
             $result = $q->run()->getResult();
-            return $grouped ? $result : current($result);
+            return $grouped ? $result : current($result[0]);
         }
     }
 
@@ -175,7 +175,7 @@ class SelectBuilder extends WhereBuilder
                 }
                 else
                 {
-                    // User did not specify the sort order. $sort contains the 
+                    // User did not specify the sort order. $sort contains the
                     // attribute.
                     $this->orderBy($sort);
                 }

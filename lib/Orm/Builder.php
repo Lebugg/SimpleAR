@@ -440,7 +440,7 @@ class Builder
     /**
      * Preload required relations.
      *
-     * @param array $cmInstances Instances of current model for which to preload 
+     * @param array $cmInstances Instances of current model for which to preload
      * relations.
      */
     public function preloadRelations(array $cmInstances)
@@ -687,7 +687,7 @@ class Builder
             return $root::applyScope($name, $this, $args);
         }
 
-        // If 'with()' option is called, query builder will have to parse eager 
+        // If 'with()' option is called, query builder will have to parse eager
         // loaded models.
         if ($name === 'with' && $args)
         {
