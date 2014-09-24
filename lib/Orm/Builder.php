@@ -577,7 +577,7 @@ class Builder
 	 * @param int   $page    Page number. Min: 1.
 	 * @param int   $nbItems Number of items. Min: 1.
 	 */
-    public function search($page, $nbItems)
+    public function paginate($page, $nbItems)
     {
 		$page    = $page    >= 1 ? $page    : 1;
 		$nbItems = $nbItems >= 1 ? $nbItems : 1;
@@ -590,6 +590,11 @@ class Builder
         $res['count'] = $q->count();
 
         return $res;
+    }
+
+    public function search($page, $nbItems)
+    {
+        return $this->paginate($page, $nbItems);
     }
 
     /**
