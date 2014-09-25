@@ -1352,6 +1352,8 @@ abstract class Model
      */
     public function populate(array $data)
     {
+        $this->_onBeforeLoad($data);
+
         $with = isset($data['__with__']) ? $data['__with__'] : null;
         unset($data['__with__']);
 
@@ -1364,6 +1366,8 @@ abstract class Model
         $with && $this->_populateEagerLoad($with);
 
         $this->_concrete = true;
+
+        $this->_onAfterLoad();
     }
 
     public function convertDateAttributesToObject()
