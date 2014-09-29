@@ -295,6 +295,16 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($authors[0], $attributes['author']);
     }
 
+    public function testPopulateCallbacks()
+    {
+        $data = ['a' => 12, 'b' => 15];
+        $a = $this->getMock('Article', array('_onBeforeLoad', '_onAfterLoad'));
+        $a->expects($this->once())->method('_onBeforeLoad')->with($data);
+        $a->expects($this->once())->method('_onAfterLoad');
+
+        $a->populate($data);
+    }
+
     public function no_testLoadRelationManyMany()
     {
         $users = array(
