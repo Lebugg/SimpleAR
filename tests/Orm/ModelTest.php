@@ -25,9 +25,8 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
     public function testIsDirtyFlag()
     {
-        $conn = m::mock('\SimpleAR\Database\Connection[query,lastInsertId]');
-        $conn->shouldReceive('lastInsertId')->once()->andReturn(12);
-        $conn->shouldReceive('query')->once();
+        $conn = m::mock('\SimpleAR\Database\Connection[insert]');
+        $conn->shouldReceive('insert')->once()->andReturn(12);
         DB::setConnection($conn);
 
         $article = new Article;

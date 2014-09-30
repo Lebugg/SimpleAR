@@ -307,9 +307,9 @@ class Query
     {
         $this->build();
         $this->compile();
-        $this->execute($this->isCriticalQuery());
+        $res = $this->execute($this->isCriticalQuery());
 
-        return $this;
+        return $res;
     }
 
     /**
@@ -364,8 +364,10 @@ class Query
 
         // At last, execute the query.
         $values = $this->prepareValuesForExecution($this->getValues());
-        $this->executeQuery($sql, $values);
+        $res = $this->executeQuery($sql, $values);
         $this->_executed = true;
+
+        return $res;
     }
 
     public function queryIsSafe($sql)
@@ -383,7 +385,10 @@ class Query
      */
     public function executeQuery($sql, array $values)
     {
-        $this->getConnection()->query($sql, $values);
+        $c = $this->getConnection();
+        $fn = $this->_type ?: 'query'; // 'select', 'delete'...
+
+        return $c->$fn($sql, $values);
     }
 
     public function clearResult()
@@ -459,8 +464,8 @@ class Query
      */
     public function rowCount()
     {
-        $this->run();
-        return $this->getConnection()->rowCount();
+        // run() will return rowCount.
+        return $this->run();
     }
 
     /**
@@ -470,9 +475,7 @@ class Query
      */
     public function lastInsertId()
     {
-        $this->run();
-
-        return $this->getConnection()->lastInsertId();
+        return $this->run();
     }
 
 
@@ -520,12 +523,12 @@ class Query
 
     public function getNextRow()
     {
-        return $this->getConnection()->getNextRow();
+        return $this->_sth->getNextRow();
     }
 
     public function getResult()
     {
-        return $this->getConnection()->fetchAll();
+        return $this->_sth->fetchAll();
     }
 
 }

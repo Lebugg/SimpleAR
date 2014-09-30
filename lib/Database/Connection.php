@@ -145,6 +145,21 @@ class Connection
         $this->_driver   = $a['driver'];
     }
 
+    public function getPDO()
+    {
+        return $this->_pdo;
+    }
+
+    /**
+     * Returns the PDO object used by this instance.
+     *
+     * @return \PDO
+     */
+    public function pdo()
+    {
+        return $this->getPDO();
+    }
+
     public function setPDO(\PDO $pdo)
     {
         $this->_pdo = $pdo;
@@ -171,16 +186,6 @@ class Connection
     }
 
     /**
-     * Returns the PDO object used by this instance.
-     *
-     * @return \PDO
-     */
-    public function pdo()
-    {
-        return $this->_pdo;
-    }
-
-    /**
      * Executes a query.
      *
      * Actually, it prepares and executes the request in two steps. It provides
@@ -201,8 +206,8 @@ class Connection
         try
         {
             if (! $this->_pdo) { throw new \Exception; }
-            $this->_sth = $this->_pdo->prepare($query);
-            $this->_sth->execute((array) $params);
+            $sth = $this->getPDO()->prepare($query);
+            $sth->execute((array) $params);
 
             $this->_debug && $this->logQuery($query, $params, (microtime(TRUE) - $time));
 
@@ -223,7 +228,31 @@ class Connection
             throw new DatabaseEx($ex->getMessage(), $log['sql'], $ex);
         }
 
-        return $this->_sth;
+        return $sth;
+    }
+
+    public function select($query, $params = array())
+    {
+        $sth = $this->query($query, $params);
+        return $sth->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function insert($query, $params = array())
+    {
+        $sth = $this->query($query, $params);
+        return $this->getPDO()->lastInsertId();
+    }
+
+    public function delete($query, $params = array())
+    {
+        $sth = $this->query($query, $params);
+        return $sth->rowCount();
+    }
+
+    public function update($query, $params = array())
+    {
+        $sth = $this->query($query, $params);
+        return $sth->rowCount();
     }
 
     /**
@@ -266,7 +295,7 @@ class Connection
      */
     public function rollBack()
     {
-        $this->_pdo->rollBack();
+        $this->getPDO()->rollBack();
     }
 
     public function getDriver()
@@ -295,7 +324,7 @@ class Connection
     public function lastInsertId()
     {
         if (! $this->_pdo) throw new \Exception;
-        return $this->_pdo->lastInsertId();
+        return $this->getPDO()->lastInsertId();
     }
 
     /**

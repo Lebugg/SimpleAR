@@ -76,8 +76,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $sql = 'INSERT INTO `articles` (`title`,`author_id`) VALUES(?,?)';
         $val = ['Stuff', 12];
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query']);
-        $conn->expects($this->once())->method('query')->with($sql, $val);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['insert']);
+        $conn->expects($this->once())->method('insert')
+            ->with($sql, $val);
 
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
@@ -89,8 +90,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $sql = 'DELETE FROM `articles` WHERE `id` = ?';
         $val = [12];
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query']);
-        $conn->expects($this->once())->method('query')->with($sql, $val);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['delete']);
+        $conn->expects($this->once())->method('delete')
+            ->with($sql, $val);
 
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
@@ -109,8 +111,9 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     {
         $sql = 'UPDATE `articles` SET `title` = ? WHERE `title` = ? AND `author_id` IN (?,?)';
         $val = ['Stuff', 'Stuf', 12, 15];
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query']);
-        $conn->expects($this->once())->method('query')->with($sql, $val);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['update']);
+        $conn->expects($this->once())->method('update')
+            ->with($sql, $val);
 
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
@@ -131,20 +134,18 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testOne()
     {
-        $conn = $this->getMock('\SimpleAR\Database\Connection', ['query', 'getNextRow']);
-        $q = $this->getMock('\SimpleAR\Database\Query', ['__call', 'run'], [null, $conn]);
+        $q = $this->getMock('\SimpleAR\Database\Query', ['__call', 'run']);
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
-        $qb->setConnection($conn);
         $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
 
-        $row = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
-        $conn->expects($this->once())->method('getNextRow')->will($this->returnValue($row));
+        $rows = [['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5]];
         $q->expects($this->exactly(3))->method('__call')->withConsecutive(
             ['root', ['Article', null]],
             ['conditions', [[]]],
             ['get', [['*']]]
         )->will($this->returnValue($q));
-        $q->expects($this->once())->method('run');
+        $q->expects($this->once())->method('run')
+            ->will($this->returnValue($rows));
 
         $article  = $qb->setRoot('Article')->one();
         $expected = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
@@ -167,11 +168,12 @@ class BuilderTest extends PHPUnit_Framework_TestCase
     public function testLast()
     {
         $qb = new QueryBuilder;
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
         $qb->setConnection($conn);
 
-        $row = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
-        $conn->expects($this->once())->method('getNextRow')->with(false)->will($this->returnValue($row));
+        $rows = [['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5]];
+        $conn->expects($this->once())->method('select')
+            ->will($this->returnValue($rows));
 
         $article  = $qb->setRoot('Article')->last();
         $expected = ['title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2, 'id' => 5];
@@ -182,62 +184,61 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testAll()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
-        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'run'], [null, $conn]);
+        $q = $this->getMock('SimpleAR\Database\Query', ['__call', 'run']);
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
-        $qb->setConnection($conn);
         $qb->expects($this->once())->method('newQuery')->will($this->returnValue($q));
 
-        $return[] = ['id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2];
-        $return[] = ['id' => 11, 'title' => 'My Book', 'authorId' => 1, 'blogId' => 4];
-        $return[] = ['id' => 7, 'title' => 'Peter Pan', 'authorId' => 15, 'blogId' => 2];
+        $rows[] = ['id' => 5, 'title' => 'Das Kapital', 'authorId' => 12, 'blogId' => 2];
+        $rows[] = ['id' => 11, 'title' => 'My Book', 'authorId' => 1, 'blogId' => 4];
+        $rows[] = ['id' => 7, 'title' => 'Peter Pan', 'authorId' => 15, 'blogId' => 2];
 
-        $conn->expects($this->exactly(4))->method('getNextRow')->with(true)->will($this->onConsecutiveCalls(
-            $return[0], $return[1], $return[2], false
-        ));
-        $q->expects($this->exactly(3))->method('__call')->withConsecutive(
-            ['root', ['Article', null]],
-            ['conditions', [[]]],
-            ['get', [['*']]]
-        )->will($this->returnValue($q));
-        $q->expects($this->once())->method('run');
+        $q->expects($this->exactly(3))->method('__call')
+            ->withConsecutive(
+                ['root', ['Article', null]],
+                ['conditions', [[]]],
+                ['get', [['*']]])
+            ->will($this->returnValue($q));
+        $q->expects($this->once())->method('run')
+            ->will($this->returnValue($rows));
 
         $articles = $qb->setRoot('Article')->all();
         foreach ($articles as $i => $article)
         {
             $this->assertInstanceOf('Article', $article);
-            $this->assertSame($return[$i], $article->attributes());
+            $this->assertSame($rows[$i], $article->attributes());
         }
 
     }
 
     public function testCount()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles`';
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
-        $conn->expects($this->once())->method('query')->with($sql, []);
+        $conn->expects($this->once())->method('select')
+            ->with($sql, [])
+            ->will($this->returnValue([['COUNT(*)' => 12]]));
 
         $this->assertEquals(12, $qb->setRoot('Article')->count());
 
         // With values to bind.
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles` WHERE `title` = ?';
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
-        $conn->expects($this->once())->method('query')->with($sql, ['Yo']);
+        $conn->expects($this->once())->method('select')
+            ->with($sql, ['Yo'])
+            ->will($this->returnValue([['COUNT(*)' => 12]]));
 
         $this->assertEquals(12, $qb->setRoot('Article')->where('title', 'Yo')->count());
     }
 
     public function testModelConstructWithEagerLoad()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'getNextRow']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
@@ -264,9 +265,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             'blog.title' => 'My Nice Blog',
         ];
 
-        $conn->expects($this->exactly(3))->method('getNextRow')->will($this->onConsecutiveCalls(
-            $return[0], $return[1], false
-        ));
+        $conn->expects($this->once())->method('select')
+            ->will($this->returnValue($return));
 
         // with() method will set a flag to true to make the query builder
         // parse eager loaded models.
@@ -285,7 +285,7 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testModelConstructWithDeepEagerLoad()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'getNextRow'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('select'));
         $qb = new QueryBuilder;
         $qb->setConnection($conn);
 
@@ -338,9 +338,8 @@ class BuilderTest extends PHPUnit_Framework_TestCase
             'articles.author.lastName' => 'Last',
         );
 
-        $conn->expects($this->exactly(5))->method('getNextRow')->will($this->onConsecutiveCalls(
-            $return[0], $return[1], $return[2], $return[3], false
-        ));
+        $conn->expects($this->once())->method('select')
+            ->will($this->returnValue($return));
 
         // with() method will set a flag to true to make the query builder
         // parse eager loaded models.
@@ -564,15 +563,17 @@ class BuilderTest extends PHPUnit_Framework_TestCase
      */
     public function testPaginateCheckSQL()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll', 'getNextRow']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
 
         $sql = 'SELECT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `blog_id` = ? LIMIT 20 OFFSET 40';
-        $conn->expects($this->at(0))->method('query')->with($sql, [12]);
+        $conn->expects($this->at(0))->method('select')
+            ->with($sql, [12])
+            ->will($this->returnValue([['id' => 1]]));
+
         $sql = 'SELECT COUNT(*) FROM `articles` WHERE `blog_id` = ?';
-        $conn->expects($this->at(1))->method('getNextRow')->will($this->returnValue(['id' => 1]));
-        $conn->expects($this->at(2))->method('getNextRow')->will($this->returnValue(false));
-        $conn->expects($this->at(3))->method('query')->with($sql, [12]);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 123]]));
+        $conn->expects($this->at(1))->method('select')
+            ->with($sql, [12])
+            ->will($this->returnValue([['COUNT(*)' => 123]]));
 
         $q = new Query(new SelectBuilder, $conn);
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
@@ -593,15 +594,17 @@ class BuilderTest extends PHPUnit_Framework_TestCase
 
     public function testPaginateWithDistinctParam()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', ['query', 'fetchAll', 'getNextRow']);
+        $conn = $this->getMock('SimpleAR\Database\Connection', ['select']);
 
         $sql = 'SELECT DISTINCT `blog_id` AS `blogId`,`author_id` AS `authorId`,`title` AS `title`,`created_at` AS `created_at`,`views` AS `views`,`id` AS `id` FROM `articles` WHERE `blog_id` = ? LIMIT 20 OFFSET 40';
-        $conn->expects($this->at(0))->method('query')->with($sql, [12]);
+        $conn->expects($this->at(0))->method('select')
+            ->with($sql, [12])
+            ->will($this->returnValue([['id' => 1]]));
+
         $sql = 'SELECT COUNT(DISTINCT `id`) FROM `articles` WHERE `blog_id` = ?';
-        $conn->expects($this->at(1))->method('getNextRow')->will($this->returnValue(['id' => 1]));
-        $conn->expects($this->at(2))->method('getNextRow')->will($this->returnValue(false));
-        $conn->expects($this->at(3))->method('query')->with($sql, [12]);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 123]]));
+        $conn->expects($this->at(1))->method('select')
+            ->with($sql, [12])
+            ->will($this->returnValue([['COUNT(*)' => 123]]));
 
         $q = new Query(new SelectBuilder, $conn);
         $qb = $this->getMock('\SimpleAR\Orm\Builder', ['newQuery']);
