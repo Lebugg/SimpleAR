@@ -126,7 +126,7 @@ class SelectBuilder extends WhereBuilder
 
         if ($q = $this->getQuery())
         {
-            $result = $q->run()->getResult();
+            $result = $q->run();
             return $grouped ? $result : (isset($result[0]) ? current($result[0]) : null);
         }
     }

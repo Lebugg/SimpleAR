@@ -18,7 +18,7 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
      */
     public function testAggregate()
     {
-        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('select'));
         $q = new Query(new SelectBuilder, $conn);
 
         $sql = 'SELECT `blog_id` AS `blogId` ,AVG(`views`) AS `views_avg` FROM `articles` GROUP BY `blog_id`';
@@ -27,8 +27,9 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
             ['blogId' => 2, 'views_avg' => 123.45],
             ['blogId' => 3, 'views_avg' => 1200],
         ];
-        $conn->expects($this->once())->method('query')->with($sql, []);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue($expected));
+        $conn->expects($this->once())->method('select')
+            ->with($sql, [])
+            ->will($this->returnValue($expected));
 
         $res = $q->root('Article')
           ->groupBy('blogId')
@@ -37,12 +38,13 @@ class SelectBuilderTest extends PHPUnit_Framework_TestCase
 
         // - - - Withour groupBy
 
-        $conn = $this->getMock('SimpleAR\Database\Connection', array('query', 'fetchAll'));
+        $conn = $this->getMock('SimpleAR\Database\Connection', array('select'));
         $q = new Query(new SelectBuilder, $conn);
 
         $sql = 'SELECT COUNT(*) FROM `articles`';
-        $conn->expects($this->once())->method('query')->with($sql, []);
-        $conn->expects($this->once())->method('fetchAll')->will($this->returnValue([['COUNT(*)' => 12]]));
+        $conn->expects($this->once())->method('select')
+            ->with($sql, [])
+            ->will($this->returnValue([['COUNT(*)' => 12]]));
 
         $res = $q->root('Article')->count();
         $this->assertEquals(12, $res);

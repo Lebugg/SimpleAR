@@ -353,9 +353,9 @@ class Builder
      */
     public function one(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->get($columns)->run();
+        $rows = $this->getQueryOrNewSelect()->get($columns)->run();
 
-        $object = $this->_fetchModelInstance();
+        $object = $this->_fetchModelInstance($rows);
         $this->_relationsToPreload && $this->preloadRelations(array($object));
 
         return $object;
@@ -382,9 +382,9 @@ class Builder
      */
     public function last(array $columns = array('*'))
     {
-        $q = $this->getQueryOrNewSelect()->get($columns)->run();
+        $rows = $this->getQueryOrNewSelect()->get($columns)->run();
 
-        $object = $this->_fetchModelInstance(false);
+        $object = $this->_fetchModelInstance($rows, false);
         $this->_relationsToPreload && $this->preloadRelations(array($object));
 
         return $object;
@@ -400,14 +400,9 @@ class Builder
     public function all(array $columns = array('*'), Query $q = null)
     {
         $q = $q ?: $this->getQueryOrNewSelect();
-        $q->get($columns)->run();
+        $rows = $q->get($columns)->run();
 
-        $all = array();
-        while ($one = $this->_fetchModelInstance())
-        {
-            $all[] = $one;
-            $ids[] = $one->id();
-        }
+        $all = $this->_fetchModelInstances($rows);
 
         $this->_relationsToPreload && $this->preloadRelations($all);
         return $all;
@@ -783,9 +778,9 @@ class Builder
      * If some model relation are to be eager loaded, the 'fetch data' step can
      * retrieve several rows from DB.
      */
-    protected function _fetchModelInstance($next = true)
+    protected function _fetchModelInstance(array &$rows, $next = true)
     {
-        $data = $this->_fetchModelInstanceData($this->_eagerLoad, $next);
+        $data = $this->_fetchModelInstanceData($rows, $this->_eagerLoad, $next);
 
         if (! $data)
         {
@@ -799,13 +794,25 @@ class Builder
         return $instance;
     }
 
-    protected function _fetchModelInstanceData($eagerLoad = false, $next = true)
+    protected function _fetchModelInstances(array &$rows, $next = true)
+    {
+        $instances = array();
+
+        while ($instance = $this->_fetchModelInstance($rows))
+        {
+            $instances[] = $instance;
+        }
+
+        return $instances;
+    }
+
+    protected function _fetchModelInstanceData(&$rows, $eagerLoad = false, $next = true)
     {
         // If there is no eager load, we are sure that one row equals one model
         // instance.
         if (! $eagerLoad)
         {
-            return $this->_getNextOrPendingRow($next);
+            return $this->_getNextOrPendingRow($rows, $next);
         }
 
 
@@ -818,7 +825,7 @@ class Builder
         $res = array();
         $instanceId  = null;
 
-        while (($row = $this->_getNextOrPendingRow($next)) !== false)
+        while (($row = $this->_getNextOrPendingRow($rows, $next)) !== false)
         {
             // Get the ID of the row.
             $rowId = array_intersect_key($row, $pk);
@@ -849,9 +856,9 @@ class Builder
      *
      * @return array
      */
-    protected function _getNextOrPendingRow($next = true)
+    protected function _getNextOrPendingRow(&$rows, $next = true)
     {
-        $row = $this->_pendingRow ?: $this->_getNextRow($next);
+        $row = $this->_pendingRow ?: $this->_getNextRow($rows, $next);
         $this->_pendingRow = false;
 
         return $row;
@@ -864,15 +871,16 @@ class Builder
      *
      * @return array
      */
-    protected function _getNextRow($next = true)
+    protected function _getNextRow(&$rows, $next = true)
     {
         // It saves superfluous call to Connection instance.
         if ($this->_noRowToFetch) { return false; }
 
-        $res = $this->getQuery()->getConnection()->getNextRow($next);
+        $fn = $next ? 'array_shift' : 'array_pop';
+        $res = $fn($rows);
 
         // Do not try to call Connection next time, it's useless.
-        if ($res === false) { $this->_noRowToFetch = true; }
+        if ($res === null) { $res = false; $this->_noRowToFetch = true; }
 
         return $res;
     }
