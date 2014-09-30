@@ -5,6 +5,10 @@ layout: article
 
 # Reference
 
+This reference aims to offer a deeper comprehension of how internal works. It
+If a part is not well documented, don't hesitate to explore the code. There are
+entire comment paragraphs that explain how things work!
+
 ## Overview
 
 SimpleAR is divided in two main parts:
@@ -25,3 +29,4 @@ and Relations. The third part explain how the two main parts (`Orm` and
 * [Query build process]({{ site.baseurl }}/articles/reference/query-build.html)
 * [Models and relations]({{ site.baseurl }}/articles/reference/models-relations.html)
 * [FAQ]({{ site.baseurl }}/articles/reference/faq.html)
+* [Glossary]({{ site.baseurl }}/articles/reference/glossary.html)

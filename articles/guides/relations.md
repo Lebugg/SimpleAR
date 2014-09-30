@@ -26,7 +26,7 @@ array(
 
 `$_relations` keys are the name of the relations you declare and `$_relations`
 values are information about these relations.
-`type` and `model` in are always mandatory.
+`type` and `model` are always mandatory.
 
 Let's review the different kinds of relations between models!
 
