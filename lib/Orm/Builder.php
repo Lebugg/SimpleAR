@@ -465,14 +465,14 @@ class Builder
 
     public function loadRelation(Relation $relation, array $objects, array $localOptions = array())
     {
-		$lmClass = $relation->lm->class;
+        $lmClass = $relation->lm->class;
         $this->setRoot($lmClass);
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
         {
-			$reversed = $relation->reverse();
-			$lmClass::relation($reversed->name, $reversed);
+            $reversed = $relation->reverse();
+            $lmClass::relation($reversed->name, $reversed);
 
             $lmAttributePrefix = $reversed->name . '/';
             $relation = $reversed;
@@ -482,7 +482,15 @@ class Builder
         $cmValues = array();
         foreach ($objects as $o)
         {
-            $cmValues[] = $o->get($relation->getCmAttributes());
+            $cmValues[] = array($o->get($relation->getCmAttributes()));
+        }
+
+        // clean demension useless in array
+        $cmValues = $this->_cleanArray($cmValues);
+
+        // check if we are one more dimension useless
+        if (count($cmValues) == 1 && !is_string($cmValues[0])) {
+            $cmValues = $cmValues[0];
         }
 
         $lmAttributes = $relation->getLmAttributes();
@@ -492,6 +500,7 @@ class Builder
                 $attr = $lmAttributePrefix . $attr;
             }
         }
+
 
         $options['conditions'] = (array) $relation->conditions;
         if ($orderBy = $relation->getOrderBy()) {
@@ -520,14 +529,14 @@ class Builder
      */
     public function countRelation(Relation $relation, array $objects, array $localOptions = array())
     {
-		$lmClass = $relation->lm->class;
+        $lmClass = $relation->lm->class;
         $this->setRoot($lmClass);
 
         $lmAttributePrefix = '';
         if ($relation instanceof Relation\ManyMany)
         {
-			$reversed = $relation->reverse();
-			$lmClass::relation($reversed->name, $reversed);
+            $reversed = $relation->reverse();
+            $lmClass::relation($reversed->name, $reversed);
 
             $lmAttributePrefix = $reversed->name . '/';
             $relation = $reversed;
@@ -564,18 +573,18 @@ class Builder
         return $this->count(DB::distinct($pk));
     }
 
-	/**
+    /**
      * Search for object in database. It combines count() and all() functions.
      *
-	 * This function makes pagination easier.
-	 *
-	 * @param int   $page    Page number. Min: 1.
-	 * @param int   $nbItems Number of items. Min: 1.
-	 */
+     * This function makes pagination easier.
+     *
+     * @param int   $page    Page number. Min: 1.
+     * @param int   $nbItems Number of items. Min: 1.
+     */
     public function paginate($page, $nbItems, $distinct = false)
     {
-		$page    = $page    >= 1 ? $page    : 1;
-		$nbItems = $nbItems >= 1 ? $nbItems : 1;
+        $page    = $page    >= 1 ? $page    : 1;
+        $nbItems = $nbItems >= 1 ? $nbItems : 1;
 
         $q = $this->getQueryOrNewSelect();
         $root = $this->_root;
@@ -763,6 +772,20 @@ class Builder
     protected function _applyScope($modelClass, $scope, array $args)
     {
         return $modelClass::applyScope($scope, $this, $args);
+    }
+
+    protected function _cleanArray($array)
+    {
+        $return = array();
+        foreach ($array as $key => $value) {
+            if (is_array($value) && count($value) == 1) {
+                $return = array_merge($return, $this->_cleanArray($value));
+            } else {
+                $return[] = $value;
+            }
+        }
+
+        return $return;
     }
 
     /**
