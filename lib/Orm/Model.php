@@ -1004,9 +1004,10 @@ abstract class Model
         }
 
         $query = self::query()->setOptions($options);
+
         if (! $res = $query->$get())
         {
-            throw new RecordNotFound($id);
+            return FALSE;
         }
 
         return $res;
