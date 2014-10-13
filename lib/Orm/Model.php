@@ -1766,30 +1766,12 @@ abstract class Model
     {
         $relation = static::relation($relationName);
 
-        // Remove lm model.
-        $lmClass  = $relation->lm->class;
-        $reversed = $relation->reverse();
-        $lmClass::relation($reversed->name, $reversed);
-
-        $lmClass::query()->delete()
-            ->where($reversed->name . '/' . $reversed->lm->attribute, $this->id())
-            ->run();
-
         // Remove join table rows.
         if ($relation instanceof Relation\ManyMany)
         {
             self::query()->delete($relation->jm->table)
                 ->where($relation->jm->from, $this->id())
                 ->run();
-        }
-
-        if ($relation instanceof Relation\HasOne)
-        {
-            $this->_attr[$relationName] = null;
-        }
-        else // HasMany || ManyMany
-        {
-            $this->_attr[$relationName] = array();
         }
     }
 
