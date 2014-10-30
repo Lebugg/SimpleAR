@@ -2082,11 +2082,13 @@ abstract class Model
                 // If it is linked by a BelongsTo instance, update local field.
                 if ($relation instanceof Relation\BelongsTo)
                 {
-                    // Save in cascade.
-                    $value->save();
+                    if ($value) {
+                        // Save in cascade.
+                        $value->save();
 
-                    // We use array_merge() and array_combine() in order to handle composed keys.
-                    $fields = array_merge($fields, array_combine((array) $relation->cm->attribute, (array) $value->id));
+                        // We use array_merge() and array_combine() in order to handle composed keys.
+                        $fields = array_merge($fields, array_combine((array) $relation->cm->attribute, (array) $value->id));
+                    }
                 }
                 // Otherwise, handle it later (After CM insert, actually).
                 else
