@@ -101,6 +101,7 @@ class WhereBuilder extends Builder
             $attribute = $attribute[0];
         }
 
+
         // Maybe user wants a IN condition?
         if (is_array($val))
         {
@@ -110,7 +111,7 @@ class WhereBuilder extends Builder
 
             elseif (in_array($op, array('=', '!=')))
             {
-                return $this->whereIn($attribute, $val, $logic, $op === '!=');
+                return $this->whereIn($attribute, $val, $logic, ($op === '!=' || $not));
             }
         }
 
