@@ -5,7 +5,7 @@ layout: article
 
 # Guide list
 
-[{{ site.projectName }} documentation](https://github.com/Lebugg/SimpleAR) is organized as a number of guides, covering all kinds of topics.
+{{ site.projectName }} documentation is organized as a number of guides, covering all kinds of topics.
 
 We recommend that you read these guides, if possible, in this order:
 
