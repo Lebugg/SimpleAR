@@ -28,5 +28,3 @@ and Relations. The third part explain how the two main parts (`Orm` and
 
 * [Query build process]({{ site.baseurl }}/articles/reference/query-build.html)
 * [Models and relations]({{ site.baseurl }}/articles/reference/models-relations.html)
-* [FAQ]({{ site.baseurl }}/articles/reference/faq.html)
-* [Glossary]({{ site.baseurl }}/articles/reference/glossary.html)

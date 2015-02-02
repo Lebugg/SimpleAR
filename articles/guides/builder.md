@@ -293,8 +293,6 @@ Article::where('author_id', 12)
     ->all();
 {% endhighlight %}
 
-- - -
-
 You can use `one()`, `first()`, `last()` instead of `all()` if you want just one row.
 By default, Query builder return all columns of your table. So if you want just some field, do it like this
 
@@ -304,7 +302,7 @@ Article::where('blogId', 12)
 {% endhighlight %}
 
 {% highlight sql %}
-SELECT blog_id, author_id, title FROM `articles`;
+SELECT id, author_id, title FROM `articles`;
 {% endhighlight %}
 
 **The primary key of root table are always selected**

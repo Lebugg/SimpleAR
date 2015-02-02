@@ -37,9 +37,3 @@ method.
 Article::table()->getPrimaryKey();
 // ['id']
 {% endhighlight %}
-
-## Relations
-
-Relations 
-
-## Orm query builder
