@@ -380,7 +380,7 @@ $query->orderBy(array('author_id', 'first_name'));
 
 {% highlight sql%}
 ORDER BY `author_id` ASC
-// Multiple order by
+/* Multiple order by */
 ORDER BY `author_id` ASC, `first_name` ASC
 {% endhighlight %}
 
@@ -394,7 +394,7 @@ $query->orderBy(array('author_id', 'first_name' => 'DESC'));
 
 {% highlight sql%}
 ORDER BY `author_id` DESC
-// Multiple order by
+/* Multiple order by */
 ORDER BY `author_id` ASC, `first_name` DESC
 {% endhighlight %}
 
@@ -408,6 +408,6 @@ $query->orderBy(array(DB::fn('YEAR', 'created_at') => 'DESC'));
 
 {% highlight sql%}
 ORDER BY RAND()
-// OR
+/* OR */
 ORDER BY YEAR('created_at') DESC
 {% endhighlight %}
