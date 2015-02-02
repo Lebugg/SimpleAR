@@ -353,3 +353,61 @@ User::update()->set('first_name', 'Foo')->where('last_name', 'Bar')->run();
 Author::delete()->whereHasNot('articles')->run();
 {% endhighlight %}
 
+## Other statements
+
+### GROUP BY
+{% highlight php startinline %}
+$query->groupBy('authorId');
+// OR
+$query->groupBy(array('authorId', 'first_name'));
+{% endhighlight %}
+
+{% highlight sql%}
+GROUP BY `author_id`
+// multiple group by
+GROUP BY `author_id`, `first_name`
+{% endhighlight %}
+
+### ORDER BY
+
+The default sort direction is ASC
+
+{% highlight php startinline %}
+$query->orderBy('author_id');
+// Multiple order by
+$query->orderBy(array('author_id', 'first_name'));
+{% endhighlight %}
+
+{% highlight sql%}
+ORDER BY `author_id` ASC
+// Multiple order by
+ORDER BY `author_id` ASC, `first_name` ASC
+{% endhighlight %}
+
+You change the sort direction like this:
+
+{% highlight php startinline %}
+$query->orderBy(array('author_id' => 'DESC'));
+// Multiple order by
+$query->orderBy(array('author_id', 'first_name' => 'DESC'));
+{% endhighlight %}
+
+{% highlight sql%}
+ORDER BY `author_id` DESC
+// Multiple order by
+ORDER BY `author_id` ASC, `first_name` DESC
+{% endhighlight %}
+
+You can use some function like RAND
+
+{% highlight php startinline %}
+$query->orderBy(DB::fn('RAND'));
+// OR
+$query->orderBy(array(DB::fn('YEAR', 'created_at') => 'DESC'));
+{% endhighlight %}
+
+{% highlight sql%}
+ORDER BY RAND()
+// OR
+ORDER BY YEAR('created_at') DESC
+{% endhighlight %}
