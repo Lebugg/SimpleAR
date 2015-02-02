@@ -23,7 +23,7 @@ class Query
     /**
      * Component array.
      *
-     * Query class is also a container. Builders fill this array with 
+     * Query class is also a container. Builders fill this array with
      * appropriate components that Compiler will use to construct SQL.
      *
      * @var array
@@ -166,7 +166,7 @@ class Query
     /**
      * Return query components' values.
      *
-     * Component values are different from plain values because they are grouped 
+     * Component values are different from plain values because they are grouped
      * by component.
      *
      * Example:
@@ -192,7 +192,7 @@ class Query
     /**
      * Return the query's type.
      *
-     * Query's type depends on the used builder's type. It is set in 
+     * Query's type depends on the used builder's type. It is set in
      * setBuilder().
      *
      * @return string The query type.

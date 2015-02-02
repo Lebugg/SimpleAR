@@ -20,7 +20,7 @@ abstract class Compiler
      * compile can decide whether to use table alias or not depending on number
      * of used tables or things like that.
      *
-     * If $useTableAlias is null when compilation starts, the compiler will 
+     * If $useTableAlias is null when compilation starts, the compiler will
      * decide himself whether to use table aliases or not.
      *
      * @var bool
@@ -102,7 +102,7 @@ abstract class Compiler
     /**
      * Compile query values in well-sorted array.
      *
-     * It transforms values grouped by component type into a plain value array 
+     * It transforms values grouped by component type into a plain value array
      * ordered according to query component order (@see $components).
      *
      * Example:
@@ -136,8 +136,8 @@ abstract class Compiler
      *
      * @param string $name The identifier to alias.
      * @param string $alias The identifier alias.
-     * @parm bool $useAlias Should we really alias the identifier? This boolean 
-     * may seem stupid, but it prevents us to check that we are using table 
+     * @parm bool $useAlias Should we really alias the identifier? This boolean
+     * may seem stupid, but it prevents us to check that we are using table
      * alias or not.
      */
     protected function _compileAs($alias)
@@ -167,7 +167,7 @@ abstract class Compiler
      * Get appropriate placeholders for values.
      *
      * It handles:
-     *  
+     *
      *  * array of values;
      *  * array of array of values;
      *  * Expression;
@@ -240,9 +240,12 @@ abstract class Compiler
 
         $tPrefix = $tPrefix ? $this->wrap($tPrefix) . '.' : '';
         $wrapper = is_string($column) ? 'wrap' : 'wrapArrayToString';
-        $sql = $tPrefix . $this->$wrapper($column);
 
-        return $sql;
+        if ($column !== NULL) {
+            return $tPrefix . $this->$wrapper($column);
+        }
+
+        return NULL;
     }
 
     /**
