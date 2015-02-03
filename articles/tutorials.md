@@ -161,8 +161,8 @@ Here are the currently existing methods of this kind:
 * `first()`: Fetch the first found record;
 * `last()`: Fetch the last found record;
 * `all()`: Fetch all found records;
-* `search($page, $number)`: Fetch $number records with an offset of "($page - 1) *
-$offset".
+* `search($page, $number, $distinct = FALSE)`: Fetch $number records with an offset of "($page - 1) *
+$offset". You can disctinct result with third parameter.
 
 #### Update
 
