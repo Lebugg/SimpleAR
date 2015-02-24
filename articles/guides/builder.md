@@ -270,7 +270,7 @@ If none of the available methods is sufficient to build your query, you can use
 the `whereRaw()` method:
 
 {% highlight php startinline %}
-Author::whereRaw("first_name LIKE 'Joe'");
+Author::whereRaw(DB::expr("first_name LIKE 'Joe'"));
 {% endhighlight %}
 
 If you have to use relations in your query, note that:
@@ -280,7 +280,7 @@ method;
 * Relations are dot-separated in the query string:
 * Alias for root table is `_` (underscore) character.
 {% highlight php startinline %}
-Article::join('author')->whereRaw("author.first_name LIKE 'Joe' AND `_`.`views` > 100");
+Article::join('author')->whereRaw(DB::expr("author.first_name LIKE 'Joe' AND `_`.`views` > 100"));
 {% endhighlight %}
 
 ## Select statements
