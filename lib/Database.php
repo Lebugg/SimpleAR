@@ -60,7 +60,7 @@ class Database
      * @param  string $attribute An extended attribute string.
      * @return Database\Expression\Func
      */
-    public function fn($fn, $attribute)
+    public function fn($fn, $attribute = NULL)
     {
         return new FuncExpr($attribute, $fn);
     }

@@ -8,9 +8,9 @@ class UpdateBuilder extends WhereBuilder
 {
     public $type = Builder::UPDATE;
 
-    public function root($root)
+    public function root($root, $alias = null)
     {
-        parent::root($root);
+        parent::root($root, $alias);
 
         if (! $this->_useModel)
         {
@@ -34,7 +34,7 @@ class UpdateBuilder extends WhereBuilder
      *  1) `$builder->set('myAttribute', 'myValue');`
      *  2) `$builder->set(['myAttr' => 'myValue', 'myAttr2' => 'myValue2']);`
      *
-     * @param string|array $attribute The attribute name or an array of 
+     * @param string|array $attribute The attribute name or an array of
      * attribute/value pairs.
      * @param mixed  $value
      *

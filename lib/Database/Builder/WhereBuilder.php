@@ -969,7 +969,7 @@ class WhereBuilder extends Builder
         // 3)
         $attributes = $this->decomposeAttribute($attribute);
         $attributes = isset($attributes[1]) ? $attributes : $attributes[0];
-        $columns = $this->convertAttributesToColumns($attributes, $table);
+        $columns    = $this->convertAttributesToColumns($attributes, $table);
 
         return array($tAlias, $columns);
     }
@@ -977,7 +977,10 @@ class WhereBuilder extends Builder
     protected function _processFunctionExpression(FuncExpr $expr)
     {
         list($table, $cols) = $this->_processExtendedAttribute($expr->getAttribute());
-        $expr->setValue($cols);
+
+        if ($expr->getAttribute()) {
+            $expr->setValue($cols);
+        }
 
         return array($table, array($expr));
     }

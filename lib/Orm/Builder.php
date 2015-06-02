@@ -591,14 +591,16 @@ class Builder
         $page    = $page    >= 1 ? $page    : 1;
         $nbItems = $nbItems >= 1 ? $nbItems : 1;
 
-        $q = $this->getQueryOrNewSelect();
+        $q    = $this->getQueryOrNewSelect();
         $root = $this->_root;
 
         $q->limit($nbItems, ($page - 1) * $nbItems);
-        $distinct && $q->distinct();
+
+        // prefer group by than distinct
+        $distinct && $q->groupBy($root::table()->getPrimaryKey());
         $res['rows'] = $this->all();
 
-        $q->remove(array('limit', 'offset', 'orderBy', 'distinct'));
+        $q->remove(array('limit', 'offset', 'orderBy', 'distinct', 'groupBy'));
         $attr = $distinct ? DB::distinct($root::table()->getPrimaryKey()) : '*';
         $res['count'] = $q->count($attr);
 

@@ -7,17 +7,17 @@ class DeleteBuilder extends WhereBuilder
 {
     public $type = Builder::DELETE;
 
-    public function root($root)
+    public function root($root, $alias = null)
     {
-        parent::root($root);
+        parent::root($root, $alias);
 
         if (! $this->_useModel)
         {
             $this->_components['deleteFrom'] = $root; return $this;
         }
 
-        // Using several tables is not yet possible with delete builder. Thus, 
-        // we set the table name in "deleteFrom" component. We won't bother with 
+        // Using several tables is not yet possible with delete builder. Thus,
+        // we set the table name in "deleteFrom" component. We won't bother with
         // any table alias.
         $this->_components['deleteFrom'] = $this->_table->name;
 
@@ -27,7 +27,7 @@ class DeleteBuilder extends WhereBuilder
     /**
      * Alias for root.
      *
-     * It easier to read "delete()->from('table')->where(...)" rather than 
+     * It easier to read "delete()->from('table')->where(...)" rather than
      * "delete()->root('table')->where(...)". That's why this function is here.
      */
     public function from($root)
