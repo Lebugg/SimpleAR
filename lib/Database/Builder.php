@@ -31,7 +31,7 @@ class Builder
     public $type;
 
     /**
-     * The "root table" of the query. If set, it means that we are using a model 
+     * The "root table" of the query. If set, it means that we are using a model
      * to construct the query: i.e. User::all();
      *
      * @var Table
@@ -74,7 +74,7 @@ class Builder
 
     /**
      * The list of given options.
-     * 
+     *
      * @var array
      */
     protected $_options = array();
@@ -82,7 +82,7 @@ class Builder
     /**
      * The list of built components.
      *
-     * When an option is built, the resulting value(s) is stored in 
+     * When an option is built, the resulting value(s) is stored in
      * $_components.
      *
      * @var array
@@ -98,10 +98,10 @@ class Builder
     /**
      * Run the build process.
      *
-     * @param array $options Options to build. If given, it will erase 
+     * @param array $options Options to build. If given, it will erase
      * previously set options.
      *
-     * @return array The built components. Components are to be passed to a 
+     * @return array The built components. Components are to be passed to a
      * Compiler.
      */
     public function build(array $options = array())
@@ -119,7 +119,7 @@ class Builder
      * Set an option.
      *
      * Options are defined in sub-builders. Options are here to allow the array
-     * way of constructing query. This array way tends to be replaced by 
+     * way of constructing query. This array way tends to be replaced by
      * method-chaining.
      *
      * Example:
@@ -229,7 +229,7 @@ class Builder
      * ----------
      *
      * @param string $root A valid model class name, or a DB table name.
-     * @param string $alias An alias for the root. It will override the default 
+     * @param string $alias An alias for the root. It will override the default
      * that you can find here: @see ::$_rootAlias.
      */
     public function root($root, $alias = null)
@@ -326,7 +326,7 @@ class Builder
     /**
      * Clear build() result.
      *
-     * A builder can `build()` options any number of time. But at each run, 
+     * A builder can `build()` options any number of time. But at each run,
      * previous result must be cleared.
      *
      * It clears components and values.
@@ -367,7 +367,7 @@ class Builder
     /**
      * Build all unbuilt options.
      *
-     * There is unbuilt options when the option-array syntax is used to build 
+     * There is unbuilt options when the option-array syntax is used to build
      * queries.
      *
      * Example:

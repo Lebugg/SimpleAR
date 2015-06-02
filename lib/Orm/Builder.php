@@ -313,7 +313,12 @@ class Builder
 
         if (is_valid_model_class($root))
         {
-            $q->conditions($root::getGlobalConditions());
+            // delete relation when we make an update query
+            if ($b->type == QueryBuilder::UPDATE) {
+                $q->conditions($this->_cleanConditionRelation($root::getGlobalConditions()));
+            } else {
+                $q->conditions($root::getGlobalConditions());
+            }
         }
 
         return $q;
@@ -772,6 +777,26 @@ class Builder
     protected function _applyScope($modelClass, $scope, array $args)
     {
         return $modelClass::applyScope($scope, $this, $args);
+    }
+
+    /**
+     * Delete relation in array condition.
+     *
+     * Use this function when you make an UPDATE or DELETE
+    **/
+    protected function _cleanConditionRelation($array)
+    {
+        $return = array();
+        foreach ($array as $key => $value) {
+            if (isset($value[0])
+                && is_string($value[0])
+                && strpos($value[0], '/') === FALSE
+            ) {
+                $return[$key] = $value;
+            }
+        }
+
+        return $return;
     }
 
     protected function _cleanArray($array)

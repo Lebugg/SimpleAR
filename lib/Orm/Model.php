@@ -2100,7 +2100,7 @@ abstract class Model
 
         try
         {
-            $pk = self::table()->getPrimaryKey();
+            $pk    = self::table()->getPrimaryKey();
             $query = self::query()->update()
                 ->set($fields)
                 ->where($pk, array($this->id()))
