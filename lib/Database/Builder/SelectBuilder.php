@@ -190,12 +190,11 @@ class SelectBuilder extends WhereBuilder
             return;
         }
 
-
         if ($attribute instanceof FuncExpr) {
             $sort = NULL;
         }
 
-        list($tAlias, $columns) = $this->_processAttribute($attribute);
+        list($tAlias, $columns) = $this->_processAttribute($attribute, 'orderBy');
         $column = $columns[0];
 
         $this->_components['orderBy'][] = compact('tAlias', 'column', 'sort');

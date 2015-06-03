@@ -299,9 +299,7 @@ class Builder
      * @param Builder $b The builder to use.
      * @return Query
      */
-    public function initQuery(QueryBuilder $b = null,
-        $root = null, $rootAlias = null,
-        $critical = false, $storeIt = false)
+    public function initQuery(QueryBuilder $b = null, $root = null, $rootAlias = null, $critical = false, $storeIt = false)
     {
         $q = $this->newQuery($b);
 

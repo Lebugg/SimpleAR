@@ -891,10 +891,11 @@ class WhereBuilder extends Builder
      * The goal of this function is to choose the correct attribute processor
      * according to parameter's type.
      *
-     * @param  mixed $attribute
+     * @param mixed $attribute
+     * @param string $type - parameter's type (example : orderBy, groupBy, ...)
      * @return array [<table alias>, <cols>] (To put in condition array).
      */
-    protected function _processAttribute($attribute)
+    protected function _processAttribute($attribute, $type = NULL)
     {
         if ($attribute instanceof FuncExpr)
         {
@@ -906,7 +907,7 @@ class WhereBuilder extends Builder
             return $this->_processDistinctExpression($attribute);
         }
 
-        return $this->_processExtendedAttribute($attribute);
+        return $this->_processExtendedAttribute($attribute, $type);
     }
 
     /**
@@ -936,10 +937,10 @@ class WhereBuilder extends Builder
      *  3) Decompose <attribute> and convert it to column(s).
      *
      * @param mixed $attribute The extended attribute string to process.
-     *
+     * @param string $type - parameter's type (example : orderBy, groupBy, ...)
      * @return array [tAlias, [columns]].
      */
-    protected function _processExtendedAttribute($attribute)
+    protected function _processExtendedAttribute($attribute, $type = NULL)
     {
         if ($attribute instanceof Expression)
         {
@@ -954,7 +955,6 @@ class WhereBuilder extends Builder
 
         // 1)
         list($relations, $attribute) = $this->separateAttributeFromRelations($attribute);
-
         // 2)
         $tAlias = $relations
             ? $this->relationsToTableAlias($relations)
@@ -962,7 +962,14 @@ class WhereBuilder extends Builder
 
         if (! $this->isKnownTableAlias($tAlias))
         {
-            $this->addInvolvedTable($tAlias);
+            if ($type == 'orderBy')
+            {
+                $this->addInvolvedTable($tAlias, JoinClause::LEFT);
+            }
+            else
+            {
+                $this->addInvolvedTable($tAlias);
+            }
         }
         $table = $this->getInvolvedTable($tAlias);
 
