@@ -138,7 +138,7 @@ class Connection
         }
         catch (\PDOException $ex)
 		{
-            throw new DatabaseEx($ex->getMessage(), null, $ex);
+            throw new DatabaseEx($ex->getMessage(), null, null);
         }
 
         $this->_database = $a['name'];
@@ -262,10 +262,10 @@ class Connection
      * @param array  $params The bound parameters.
      * @param float  $time The query execution time in seconds.
      *
-     * Queries will be stored in $_queries property as an array containing these 
+     * Queries will be stored in $_queries property as an array containing these
      * entries:
      *
-     *  * "sql" The SQL string where wilcards have been transpolated with bound 
+     *  * "sql" The SQL string where wilcards have been transpolated with bound
      *  params;
      *  * "time": The query execution time, in milliseconds.
      */
@@ -340,7 +340,7 @@ class Connection
     /**
      * Return next fetched row from DB.
      *
-     * @param bool $next Set it to false to get previous row instead on next 
+     * @param bool $next Set it to false to get previous row instead on next
      * row. (Default: true)
      *
      * @return array
@@ -383,7 +383,7 @@ class Connection
     /**
      * Set the compiler according to database driver.
      *
-     * If no adequate compiler is found for the driver, default compiler is 
+     * If no adequate compiler is found for the driver, default compiler is
      * used.
      *
      * @see setCompiler()
