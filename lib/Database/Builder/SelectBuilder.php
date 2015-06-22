@@ -105,7 +105,7 @@ class SelectBuilder extends WhereBuilder
     {
         list($tAlias, $cols) = $attribute === '*'
             ? array('', array('*'))
-            : $this->_processAttribute($attribute);
+            : $this->_processAttribute($attribute, 'aggregate');
 
         // Clean columns and add group by columns so result makes more sense.
         unset($this->_components['columns']);
@@ -116,9 +116,10 @@ class SelectBuilder extends WhereBuilder
             foreach ($this->_components['groupBy'] as $group)
             {
                 $groupAlias = $group['tAlias'];
-                $col = $group['column'];
-                $table  = $this->getInvolvedTable($groupAlias);
-                $attr = $table->columnToAttribute($col);
+                $col        = $group['column'];
+                $table      = $this->getInvolvedTable($groupAlias);
+                $attr       = $table->columnToAttribute($col);
+
                 $this->_selectColumns($groupAlias, array($attr => $col));
             }
         }
@@ -135,7 +136,7 @@ class SelectBuilder extends WhereBuilder
     {
         list($tAlias, $cols) = $attribute === '*'
             ? array('', array('*'))
-            : $this->_processAttribute($attribute);
+            : $this->_processAttribute($attribute, 'aggregate');
 
         $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
     }

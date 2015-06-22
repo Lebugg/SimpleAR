@@ -323,11 +323,10 @@ class Query
      */
 	public function build()
     {
-        $builder = $this->getBuilder();
-        $this->_components = $builder->build();
+        $builder                = $this->getBuilder();
+        $this->_components      = $builder->build();
         $this->_componentValues = $builder->getValues();
-
-        $this->_built = true;
+        $this->_built           = true;
 
         return $this;
     }

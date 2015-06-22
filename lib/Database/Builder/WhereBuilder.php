@@ -962,7 +962,7 @@ class WhereBuilder extends Builder
 
         if (! $this->isKnownTableAlias($tAlias))
         {
-            if ($type == 'orderBy')
+            if ($type == 'orderBy' || $type == 'aggregate')
             {
                 $this->addInvolvedTable($tAlias, JoinClause::LEFT);
             }

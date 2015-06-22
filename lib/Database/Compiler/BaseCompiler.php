@@ -158,7 +158,7 @@ class BaseCompiler extends Compiler
     /**
      * Compile the VALUES clause of an INSERT statement.
      *
-     * @param array $values The values to insert. It can be an array of values 
+     * @param array $values The values to insert. It can be an array of values
      * or an array of array of values in case user wants to insert several rows.
      */
     protected function _compileValues(array $values)
@@ -174,7 +174,7 @@ class BaseCompiler extends Compiler
         {
             // Tuple cardinal.
             $tupleSize = count($values[0]);
-            
+
             $tuple = '(' . str_repeat('?,', $tupleSize - 1) . '?)';
             $sql .= str_repeat($tuple . ',', $count - 1) . $tuple;
         }
@@ -202,9 +202,9 @@ class BaseCompiler extends Compiler
      *
      * @param array $aggregates The aggregates to compile.
      *
-     * $aggregates is an array of array. Each sub-array correspond to an 
+     * $aggregates is an array of array. Each sub-array correspond to an
      * aggregate to build. Each has these entries:
-     *  
+     *
      *  * "function": The aggregate function;
      *  * "columns": The columns to apply the function on;
      *  * "tAlias": The table alias;
@@ -216,17 +216,16 @@ class BaseCompiler extends Compiler
         foreach ($aggregates as $agg)
         {
             // $cols is now a string of wrapped column names.
-            $tAlias = $this->useTableAlias ? $agg['tAlias'] : '';
-            $cols = $this->columnize($agg['cols'], $tAlias);
-            $fn = $agg['fn'];
+            $tAlias   = $this->useTableAlias ? $agg['tAlias'] : '';
+            $cols     = $this->columnize($agg['cols'], $tAlias);
+            $fn       = $agg['fn'];
             $resAlias = isset($agg['resAlias']) ? $this->_compileAs($agg['resAlias']) : '';
-
-            $sql[] = $fn . '(' . $cols . ')' . $resAlias;
+            $sql[]    = $fn . '(' . $cols . ')' . $resAlias;
         }
 
         $sql = implode(',', $sql);
 
-        // If there are simple columns to be selected too, we need to add a 
+        // If there are simple columns to be selected too, we need to add a
         // separation comma.
         if (isset($this->_componentsToCompile['columns'])) { $sql = ',' . $sql; }
 
@@ -390,8 +389,8 @@ class BaseCompiler extends Compiler
      */
     protected function _compileDeleteFrom($from)
     {
-        // DELETE can be made over several tables at the same time. Here, we 
-        // don't want to cover two cases: one table or several tables. Thus, 
+        // DELETE can be made over several tables at the same time. Here, we
+        // don't want to cover two cases: one table or several tables. Thus,
         // we'll work with an array, whatever the table numbers.
         $tableNames = (array) $from;
 
@@ -399,7 +398,7 @@ class BaseCompiler extends Compiler
     }
 
     /**
-     * There is no "FROM" keywprd in UPDATE statements. However, table 
+     * There is no "FROM" keywprd in UPDATE statements. However, table
      * declaration is the same as in SELECT.
      *
      * @param array $from An array of JoinClause.
@@ -419,8 +418,8 @@ class BaseCompiler extends Compiler
     {
         $sql = array();
 
-        // A join list do not start with a "JOIN" keyword. I don't want to do 
-        // string manipulation, so I use a $first flag to tell _compileJoin() 
+        // A join list do not start with a "JOIN" keyword. I don't want to do
+        // string manipulation, so I use a $first flag to tell _compileJoin()
         // whether to prepend or not the keyword.
         $first = true;
         foreach ($joins as $join)
@@ -511,7 +510,7 @@ class BaseCompiler extends Compiler
     /**
      * Compile USING clause of a DELETE statement.
      *
-     * USING clause is just like a FROM clause of a SELECT statement. But here, 
+     * USING clause is just like a FROM clause of a SELECT statement. But here,
      * we are sure to use _compileJoins().
      *
      * @param array $using A join array.
@@ -546,7 +545,7 @@ class BaseCompiler extends Compiler
             $sql .= ' ' . $this->_compileCondition($where);
         }
 
-        // We have to remove the first "AND" or "OR" at the beginning of the 
+        // We have to remove the first "AND" or "OR" at the beginning of the
         // string.
         $sql = preg_replace('/ AND | OR /', '', $sql, 1);
 
@@ -690,7 +689,7 @@ class BaseCompiler extends Compiler
      *  * `IN ()` means false;
      *  * `NOT IN ()` means true.
      *
-     * This is arbitrary behaviour, since IN empty array is not allowed by SQL 
+     * This is arbitrary behaviour, since IN empty array is not allowed by SQL
      * standard. See these discussions for further thoughts on it:
      *
      * @see http://bugs.mysql.com/bug.php?id=12474
@@ -791,7 +790,7 @@ class BaseCompiler extends Compiler
     /**
      * Get appropriate operator for the given condition.
      *
-     * Sometimes, the conditional operator the user chose is not fitting for the 
+     * Sometimes, the conditional operator the user chose is not fitting for the
      * values type. Thus, we need to use a more appropriate one.
      *
      * Example:
