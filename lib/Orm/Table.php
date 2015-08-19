@@ -7,11 +7,12 @@ class Table
     public $name;
     public $primaryKey;
     public $columns;
+    public $deprecated;
     public $orderBy;
     public $conditions = array();
     public $modelBaseName;
 
-    public function __construct($name, $primaryKey, array $columns = array())
+    public function __construct($name, $primaryKey, array $columns = array(), array $deprecated = array())
     {
         if (! is_string($name))
         {
@@ -64,7 +65,8 @@ class Table
             }
         }
 
-        $this->columns = $columns;
+        $this->columns    = $columns;
+        $this->deprecated = $deprecated;
         $this->primaryKey = $primaryKey;
     }
 
