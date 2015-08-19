@@ -44,9 +44,9 @@ class SelectBuilder extends WhereBuilder
         if ($attributes !== array('*'))
         {
             // We add primary key if not present.
-            $table = $this->getRootTable();
+            $table      = $this->getRootTable();
             $attributes = array_unique(array_merge($table->getPrimaryKey(), $attributes));
-            $columns = $this->convertAttributesToColumns($attributes, $table);
+            $columns    = $this->convertAttributesToColumns($attributes, $table);
             $attributes = array_combine($attributes, $columns);
         }
 
