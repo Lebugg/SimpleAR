@@ -412,6 +412,40 @@ class Builder
     }
 
     /**
+     * Return instance of Model with statement of query (use browse() after this function).
+     *
+     * @param array $columns The columns to select.
+     * @param Query $q A query to set options on. If not given, builder will use
+     * getQueryOrNewSelect() to get one.
+     */
+    public function result(array $columns = array('*'), Query $q = null)
+    {
+        $q = $q ?: $this->getQueryOrNewSelect();
+
+        // execute query and store statement in connection object
+        $q->get($columns)->run(FALSE);
+
+        return $this;
+    }
+
+    /**
+    * browse line by line of statement will be returned by result()
+    */
+    public function browse(Query $q = null)
+    {
+        // becouse we want to use connection each time
+        $this->_noRowToFetch = false;
+
+        $q      = $q ?: $this->getQuery();
+        $rows[] = $q->getConnection()->getNextRow();
+        $object = $this->_fetchModelInstance($rows);
+
+        $this->_relationsToPreload && $this->preloadRelations(array($object));
+
+        return $object;
+    }
+
+    /**
      * Find one model isntance.
      *
      * @param  array $options The options to pass to the query.
@@ -835,7 +869,7 @@ class Builder
             return null;
         }
 
-        $model = $this->_root;
+        $model    = $this->_root;
         $instance = new $model();
         $instance->populate($data);
 
@@ -866,12 +900,10 @@ class Builder
 
         // Otherwise, it is more complicated: several rows can be returned for
         // only one model instance.
-
-        $model = $this->_root;
-        $pk = array_flip($model::table()->getPrimaryKey());
-
-        $res = array();
-        $instanceId  = null;
+        $model      = $this->_root;
+        $pk         = array_flip($model::table()->getPrimaryKey());
+        $res        = array();
+        $instanceId = null;
 
         while (($row = $this->_getNextOrPendingRow($rows, $next)) !== false)
         {
@@ -886,6 +918,7 @@ class Builder
                 $this->_pendingRow = $row;
                 break;
             }
+
 
             $instanceId = $rowId;
 

@@ -208,6 +208,7 @@ class Connection
             if (! $this->_pdo) { throw new \Exception; }
             $sth = $this->getPDO()->prepare($query);
             $sth->execute((array) $params);
+            $this->_sth = $sth;
 
             $this->_debug && $this->logQuery($query, $params, (microtime(TRUE) - $time));
 
@@ -349,7 +350,7 @@ class Connection
     {
         $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
         if (! $this->_sth) { throw new \Exception; }
-        return $this->_sth->fetch(\PDO::FETCH_ASSOC|$ori);
+        return $this->_sth->fetch(\PDO::FETCH_ASSOC, $ori);
     }
 
     public function fetchAll()

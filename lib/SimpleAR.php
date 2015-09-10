@@ -13,7 +13,7 @@
  *
  *  ```php
  *  include 'libraries/SimpleAR/SimpleAR.php';
- *  
+ *
  *  $oCfg = SimpleAR\Config::instance();
  *  $oCfg->dsn = array(
  *      'driver'   => DB_DRIVER,
@@ -22,10 +22,10 @@
  *      'user'     => DB_USER,
  *      'password' => DB_PASS,
  *  );
- *  
+ *
  *  // Note trailing slash.
  *  $oCfg->modelDirectory  = 'path/to/any/directory_you_want/';
- *  
+ *
  *  SimpleAR\init($oCfg);
  *  ```
  *

@@ -76,6 +76,13 @@ abstract class Model
      */
     protected static $_columns = array();
 
+    /*
+    * This array contain all field was deprecated
+    * The structure is the same of columns array.
+    * Fieds must be declared in both array (columns and deprecated)
+    */
+    protected static $_deprecated = array();
+
     /**
      * Attributes' default values array.
      *
@@ -1472,7 +1479,13 @@ abstract class Model
             }
         }
 
-        $table = new Table($tableName, $primaryKey, $columns);
+        if (static::$_deprecated) {
+            $deprecated = static::$_deprecated;
+        } else {
+            $deprecated = array();
+        }
+
+        $table = new Table($tableName, $primaryKey, $columns, $deprecated);
         $table->order = static::$_orderBy;
         $table->modelBaseName = $modelBaseName;
 
@@ -1830,7 +1843,7 @@ abstract class Model
         $this->_onBeforeInsert();
 
         $table   = static::table();
-        $columns = $table->columns;
+        $columns = array_diff_key($table->columns, $table->deprecated);
 
         // Keys will be attribute names; Values will be attributes values.
         $fields = array();
@@ -2041,7 +2054,7 @@ abstract class Model
         $this->_onBeforeUpdate();
 
         $table   = static::table();
-        $columns = $table->columns;
+        $columns = array_diff_key($table->columns, $table->deprecated);
 
         // Keys will be attribute names; Values will be attributes values.
         $fields = array();
