@@ -148,7 +148,7 @@ class Builder
         $rels = explode('/', $relation);
         $relation = array_shift($rels);
 
-        $root = $this->getRoot();;
+        $root = $this->getRoot();
         $rel  = $root::relation($relation);
 
         // We construct the sub-query. It can be the sub-query of an Exists
