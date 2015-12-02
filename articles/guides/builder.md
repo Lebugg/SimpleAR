@@ -312,6 +312,9 @@ SELECT id, author_id, title FROM `articles`;
 Article::where('views', '>', 1000)->count();
 // 12
 
+Article::where('views', '>', 1000)->count(DB::distinct('id'));
+
+
 Article::where('views', '>', 1000)->groupBy('authorId')->count('*', 'articleNb');
 // array(
 //     array(
