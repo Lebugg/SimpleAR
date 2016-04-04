@@ -125,8 +125,8 @@ class Connection
      */
     public function connect(array $dsn)
     {
-        $a    = $dsn;
-        $dsn = $a['driver'].':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
+        $a   = $dsn;
+        $dsn = 'mysql:host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $options = array();
         $options[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
