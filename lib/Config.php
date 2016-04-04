@@ -1,7 +1,7 @@
 <?php namespace SimpleAR;
 /**
  * This file contains Config class.
- * 
+ *
  * @author Lebugg lebugg@hotmail.com
  */
 
@@ -88,7 +88,7 @@ class Config
      * `$this` is the Config instance.
      *
      * @see Config::__construct().
-     * 
+     *
      * @var function
      */
     private $_buildForeignKey;
@@ -144,7 +144,7 @@ class Config
 
     /**
      * Date format to be used by SimpleAR.
-     * 
+     *
      * It will be used in conjunction with
      * DateTime attributes if Config::$_convertDateToObject is set to true.
      *
@@ -370,18 +370,18 @@ class Config
      */
     public function dsn(array $dsn)
     {
-        if (!isset($dsn['driver'], $dsn['host'], $dsn['name'], $dsn['user'], $dsn['password']))
+        if (!isset($dsn['databaseType'], $dsn['host'], $dsn['name'], $dsn['user'], $dsn['password']))
         {
             throw new Exception('Database configuration array is not complete.');
         }
 
         $this->_dsn = array(
-            'driver'   => $dsn['driver'],
-            'host'     => $dsn['host'],
-            'name'     => $dsn['name'],
-            'user'     => $dsn['user'],
-            'password' => $dsn['password'],
-            'charset'  => isset($dsn['charset']) ? $dsn['charset'] : $this->_charset,
+            'databaseType' => $dsn['databaseType'],
+            'host'         => $dsn['host'],
+            'name'         => $dsn['name'],
+            'user'         => $dsn['user'],
+            'password'     => $dsn['password'],
+            'charset'      => isset($dsn['charset']) ? $dsn['charset'] : $this->_charset,
         );
     }
 
@@ -412,7 +412,7 @@ class Config
     /**
      * Apply configuration.
      *
-     * Some configuration options need few operation to be correctly set. See 
+     * Some configuration options need few operation to be correctly set. See
      * $_aliases for example.
      */
     public function apply()

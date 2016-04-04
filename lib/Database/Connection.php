@@ -56,7 +56,7 @@ class Connection
      *
      * @var string
      */
-    protected $_driver;
+    protected $_databaseType;
 
     /**
      * Executed query array.
@@ -126,7 +126,7 @@ class Connection
     public function connect(array $dsn)
     {
         $a   = $dsn;
-        $dsn = 'mysql:host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
+        $dsn = $a['databaseType'] . ':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $options = array();
         $options[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
@@ -141,8 +141,8 @@ class Connection
             throw new DatabaseEx($ex->getMessage(), null, null);
         }
 
-        $this->_database = $a['name'];
-        $this->_driver   = $a['driver'];
+        $this->_database     = $a['name'];
+        $this->_databaseType = $a['databaseType'];
     }
 
     public function getPDO()
@@ -299,9 +299,9 @@ class Connection
         $this->getPDO()->rollBack();
     }
 
-    public function getDriver()
+    public function getDatabaseType()
     {
-        return $this->_driver;
+        return $this->_databaseType;
     }
 
     /**
@@ -392,7 +392,7 @@ class Connection
      */
     public function chooseCompiler()
     {
-        $specificCompiler = ucfirst($this->getDriver()) . 'Compiler';
+        $specificCompiler = ucfirst($this->getDatabaseType()) . 'Compiler';
         $specificCompiler = 'SimpleAR\Database\Compiler\\' . $specificCompiler;
 
         if (class_exists($specificCompiler)) {
