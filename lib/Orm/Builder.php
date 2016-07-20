@@ -438,6 +438,8 @@ class Builder
 
         $q      = $q ?: $this->getQuery();
         $rows[] = $q->getConnection()->getNextRow();
+
+
         $object = $this->_fetchModelInstance($rows);
 
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -890,6 +892,7 @@ class Builder
 
     protected function _fetchModelInstanceData(&$rows, $eagerLoad = false, $next = true)
     {
+
         // If there is no eager load, we are sure that one row equals one model
         // instance.
         if (! $eagerLoad)
