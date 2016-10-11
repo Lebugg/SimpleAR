@@ -823,12 +823,18 @@ class Builder
     protected function _cleanConditionRelation($array)
     {
         $return = array();
+
         foreach ($array as $key => $value) {
-            if (isset($value[0])
-                && is_string($value[0])
-                && strpos($value[0], '/') === FALSE
-            ) {
-                $return[$key] = $value;
+
+            if (is_array($value)) {
+                if (isset($value[0])
+                    && is_string($value[0])
+                    && strpos($value[0], '/') === FALSE
+                ) {
+                    $return[$key] = $value;
+                }
+            } else if (get_class($value) == 'Closure') {
+                $return[] = $value;
             }
         }
 
