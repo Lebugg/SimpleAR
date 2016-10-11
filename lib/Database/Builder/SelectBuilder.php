@@ -134,9 +134,14 @@ class SelectBuilder extends WhereBuilder
 
     public function addAggregate($fn, $attribute = '*', $resAlias = '')
     {
-        list($tAlias, $cols) = $attribute === '*'
-            ? array('', array('*'))
-            : $this->_processAttribute($attribute, 'aggregate');
+        if ($attribute instanceof Expression)
+        {
+            list($tAlias, $cols) = array('', [$attribute]);
+        } else {
+            list($tAlias, $cols) = $attribute === '*'
+                ? array('', array('*'))
+                : $this->_processAttribute($attribute, 'aggregate');
+        }
 
         $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
     }
