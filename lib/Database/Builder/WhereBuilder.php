@@ -849,7 +849,10 @@ class WhereBuilder extends Builder
             {
                 $this->whereRaw($value, $logic);
             }
-
+            else if ($value instanceof Closure)
+            {
+                $this->whereNested($value, $logic);
+            }
             elseif (is_array($value))
             {
                 // We are facing a "complete" condition form.
