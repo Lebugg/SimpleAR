@@ -208,15 +208,17 @@ class SelectBuilder extends WhereBuilder
 
     public function groupBy($attribute)
     {
+
         foreach ((array) $attribute as $attr)
         {
-            list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
+            list($tAlias, $columns) = $this->_processAttribute($attr);
 
             foreach ($columns as $column)
             {
                 $this->_components['groupBy'][] = compact('tAlias', 'column');
             }
         }
+
     }
 
     /**

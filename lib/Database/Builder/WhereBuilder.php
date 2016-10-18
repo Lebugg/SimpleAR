@@ -849,7 +849,7 @@ class WhereBuilder extends Builder
             {
                 $this->whereRaw($value, $logic);
             }
-            else if ($value instanceof Closure)
+            elseif ($value instanceof Closure)
             {
                 $this->whereNested($value, $logic);
             }
@@ -946,6 +946,11 @@ class WhereBuilder extends Builder
     protected function _processExtendedAttribute($attribute, $type = NULL)
     {
         if ($attribute instanceof Expression)
+        {
+            return array('', (array) $attribute->val());
+        }
+
+        if ($attribute instanceof FuncExpr)
         {
             return array('', (array) $attribute->val());
         }
