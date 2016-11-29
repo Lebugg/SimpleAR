@@ -256,11 +256,11 @@ class SelectBuilder extends WhereBuilder
      *
      * @return $this
      */
-    public function join($relation, $joinType = JoinClause::INNER)
+    public function join($relation, $joinType = JoinClause::INNER, $conditions = NULL)
     {
         $tAlias = $this->relationsToTableAlias($relation);
-        $this->addInvolvedTable($tAlias, $joinType);
-
+        $this->addInvolvedTable($tAlias, $joinType, $conditions);
+        
         return $this;
     }
 

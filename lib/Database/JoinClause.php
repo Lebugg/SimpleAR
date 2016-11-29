@@ -24,6 +24,11 @@ class JoinClause
     public $type;
 
     /**
+     * The conditions of join to perform.
+     */
+    public $conditions;
+
+    /**
      * List of ON clauses for this JoinClause.
      *
      * @var array
@@ -35,11 +40,12 @@ class JoinClause
     const INNER = 3;
     const OUTER = 4;
 
-    public function __construct($table, $alias = '', $type = self::INNER)
+    public function __construct($table, $alias = '', $type = self::INNER, $conditions = NULL)
     {
-        $this->table = $table;
-        $this->alias = $alias ?: $table;
-        $this->type = $type;
+        $this->table      = $table;
+        $this->alias      = $alias ?: $table;
+        $this->type       = $type;
+        $this->conditions = $conditions;
     }
 
     /**
@@ -62,7 +68,7 @@ class JoinClause
 
         foreach ($lCols as $i => $lCol)
         {
-            $this->ons[] = array($lAlias, $lCol, $rAlias, $rCols[$i], $op);
+            $this->ons[] = array($lAlias, $lCol, $rAlias, $rCols[$i], $op, $this->conditions);
         }
 
         return $this;
