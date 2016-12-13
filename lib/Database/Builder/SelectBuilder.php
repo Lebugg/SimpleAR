@@ -41,6 +41,7 @@ class SelectBuilder extends WhereBuilder
             $this->_selectColumn($attributes, ''); return;
         }
 
+
         if ($attributes !== array('*'))
         {
             // We add primary key if not present.
@@ -203,13 +204,17 @@ class SelectBuilder extends WhereBuilder
 
     public function groupBy($attribute)
     {
-        foreach ((array) $attribute as $attr)
-        {
-            list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
-
-            foreach ($columns as $column)
+        if ($attribute instanceof Expression) {
+            $this->_components['groupBy'][] = $attribute;
+        } else {
+            foreach ((array) $attribute as $attr)
             {
-                $this->_components['groupBy'][] = compact('tAlias', 'column');
+                list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
+
+                foreach ($columns as $column)
+                {
+                    $this->_components['groupBy'][] = compact('tAlias', 'column');
+                }
             }
         }
     }

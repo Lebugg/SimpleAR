@@ -353,8 +353,12 @@ class BaseCompiler extends Compiler
     {
         foreach ($groups as $g)
         {
-            $tAlias = $this->useTableAlias ? $g['tAlias'] : '';
-            $sql[] = $this->column($g['column'], $tAlias);
+            if (is_object($g)) {
+                $sql[] = $this->column($g, NULL);
+            } else {
+                $tAlias = $this->useTableAlias ? $g['tAlias'] : '';
+                $sql[]  = $this->column($g['column'], $tAlias);
+            }
         }
 
         return 'GROUP BY ' . implode(',', $sql);

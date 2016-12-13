@@ -44,7 +44,7 @@ class Table
 
         if ($primaryKey === null)
         {
-            $primaryKey = array('id');
+            //$primaryKey = array('id');
         }
 
         // @deprecated
@@ -54,7 +54,7 @@ class Table
             $primaryKey = array('id');
         }
         // Right way.
-        else
+        elseif (is_array($primaryKey))
         {
             foreach ($primaryKey as $attr)
             {

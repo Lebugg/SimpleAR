@@ -238,6 +238,11 @@ abstract class Compiler
             return $this->columnDistinct($column->val(), $tPrefix);
         }
 
+        if ($column instanceof Expression)
+        {
+            return $column->val();
+        }
+
         $tPrefix = $tPrefix ? $this->wrap($tPrefix) . '.' : '';
         $wrapper = is_string($column) ? 'wrap' : 'wrapArrayToString';
 
