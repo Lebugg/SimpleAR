@@ -438,6 +438,8 @@ class Builder
 
         $q      = $q ?: $this->getQuery();
         $rows[] = $q->getConnection()->getNextRow();
+
+
         $object = $this->_fetchModelInstance($rows);
 
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -821,12 +823,18 @@ class Builder
     protected function _cleanConditionRelation($array)
     {
         $return = array();
+
         foreach ($array as $key => $value) {
-            if (isset($value[0])
-                && is_string($value[0])
-                && strpos($value[0], '/') === FALSE
-            ) {
-                $return[$key] = $value;
+
+            if (is_array($value)) {
+                if (isset($value[0])
+                    && is_string($value[0])
+                    && strpos($value[0], '/') === FALSE
+                ) {
+                    $return[$key] = $value;
+                }
+            } else if (get_class($value) == 'Closure') {
+                $return[] = $value;
             }
         }
 
@@ -890,6 +898,7 @@ class Builder
 
     protected function _fetchModelInstanceData(&$rows, $eagerLoad = false, $next = true)
     {
+
         // If there is no eager load, we are sure that one row equals one model
         // instance.
         if (! $eagerLoad)

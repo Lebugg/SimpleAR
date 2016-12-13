@@ -135,9 +135,14 @@ class SelectBuilder extends WhereBuilder
 
     public function addAggregate($fn, $attribute = '*', $resAlias = '')
     {
-        list($tAlias, $cols) = $attribute === '*'
-            ? array('', array('*'))
-            : $this->_processAttribute($attribute, 'aggregate');
+        if ($attribute instanceof Expression)
+        {
+            list($tAlias, $cols) = array('', [$attribute]);
+        } else {
+            list($tAlias, $cols) = $attribute === '*'
+                ? array('', array('*'))
+                : $this->_processAttribute($attribute, 'aggregate');
+        }
 
         $this->_components['aggregates'][] = compact('cols', 'fn', 'tAlias', 'resAlias');
     }
@@ -207,7 +212,7 @@ class SelectBuilder extends WhereBuilder
         if ($attribute instanceof Expression) {
             $this->_components['groupBy'][] = $attribute;
         } else {
-            foreach ((array) $attribute as $attr)
+            foreach ((array) $attribute as $attr) 
             {
                 list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
 
@@ -217,6 +222,7 @@ class SelectBuilder extends WhereBuilder
                 }
             }
         }
+
     }
 
     /**
@@ -254,11 +260,11 @@ class SelectBuilder extends WhereBuilder
      *
      * @return $this
      */
-    public function join($relation, $joinType = JoinClause::INNER)
+    public function join($relation, $joinType = JoinClause::INNER, $conditions = NULL)
     {
         $tAlias = $this->relationsToTableAlias($relation);
-        $this->addInvolvedTable($tAlias, $joinType);
-
+        $this->addInvolvedTable($tAlias, $joinType, $conditions);
+        
         return $this;
     }
 

@@ -508,7 +508,13 @@ class BaseCompiler extends Compiler
         $ra = $this->wrap($on[3]);
         $op = $on[4];
 
-        return "ON $lt.$la $op $rt.$ra";
+        if (isset($on[5])) {
+            $condition = $on[5];
+        } else {
+            $condition = NULL;
+        }
+
+        return "ON $lt.$la $op $rt.$ra $condition";
     }
 
     /**

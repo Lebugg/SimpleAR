@@ -115,7 +115,7 @@ class Connection
     {
         $config->dsn && $this->connect($config->dsn);
 
-        $this->_debug    = $config->debug;
+        $this->_debug = $config->debug;
     }
 
     /**
@@ -196,7 +196,7 @@ class Connection
      *
      * @return PDOStatement
      */
-    public function query($query, $params = array())
+    public function query($query, $params = array(), $keepStatement = TRUE)
     {
         if ($this->_debug)
         {
@@ -208,10 +208,12 @@ class Connection
             if (! $this->_pdo) { throw new \Exception; }
             $sth = $this->getPDO()->prepare($query);
             $sth->execute((array) $params);
-            $this->_sth = $sth;
+
+            if ($keepStatement) {
+                $this->_sth = $sth;
+            }
 
             $this->_debug && $this->logQuery($query, $params, (microtime(TRUE) - $time));
-
         }
         catch (\PDOException $ex)
         {
@@ -234,24 +236,28 @@ class Connection
 
     public function select($query, $params = array())
     {
+        $this->_sth = NULL;
         $sth = $this->query($query, $params);
         return $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function insert($query, $params = array())
     {
+        $this->_sth = NULL;
         $sth = $this->query($query, $params);
         return $this->getPDO()->lastInsertId();
     }
 
     public function delete($query, $params = array())
     {
+        $this->_sth = NULL;
         $sth = $this->query($query, $params);
         return $sth->rowCount();
     }
 
     public function update($query, $params = array())
     {
+        $this->_sth = NULL;
         $sth = $this->query($query, $params);
         return $sth->rowCount();
     }
@@ -350,7 +356,10 @@ class Connection
     {
         $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
         if (! $this->_sth) { throw new \Exception; }
-        return $this->_sth->fetch(\PDO::FETCH_ASSOC, $ori);
+
+        $row = $this->_sth->fetch(\PDO::FETCH_ASSOC, $ori);
+
+        return $row;
     }
 
     public function fetchAll()
