@@ -948,12 +948,12 @@ class WhereBuilder extends Builder
     {
         if ($attribute instanceof Expression)
         {
-            return array('', (array) $attribute->val());
+            return array('', [$attribute]);
         }
 
         if ($attribute instanceof FuncExpr)
         {
-            return array('', (array) $attribute->val());
+            return array('', [$attribute]);
         }
 
         // We don't use model? Can't do nothing for you.

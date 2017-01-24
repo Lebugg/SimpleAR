@@ -209,20 +209,16 @@ class SelectBuilder extends WhereBuilder
 
     public function groupBy($attribute)
     {
-        if ($attribute instanceof Expression) {
-            $this->_components['groupBy'][] = $attribute;
-        } else {
-            foreach ((array) $attribute as $attr) 
-            {
-                list($tAlias, $columns) = $this->_processExtendedAttribute($attr);
-
-                foreach ($columns as $column)
-                {
-                    $this->_components['groupBy'][] = compact('tAlias', 'column');
-                }
+        if (is_array($attribute)) {
+            foreach ($attribute as $attr) {
+                $this->groupBy($attr);
             }
-        }
+        } else {
+            list($tAlias, $columns) = $this->_processAttribute($attribute, 'groupBy');
+            $column = $columns[0];
 
+            $this->_components['groupBy'][] = compact('tAlias', 'column');
+        }
     }
 
     /**
@@ -264,7 +260,7 @@ class SelectBuilder extends WhereBuilder
     {
         $tAlias = $this->relationsToTableAlias($relation);
         $this->addInvolvedTable($tAlias, $joinType, $conditions);
-        
+
         return $this;
     }
 
