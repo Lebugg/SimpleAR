@@ -303,11 +303,11 @@ class Query
      * @param  bool $redo If true, run it even if it already did.
      * @return $this
      */
-    public function run($fecthAll = TRUE)
+    public function run($fecthAll = TRUE, $keepStatement = TRUE)
     {
         $this->build();
         $this->compile();
-        $res = $this->execute($this->isCriticalQuery(), $fecthAll);
+        $res = $this->execute($this->isCriticalQuery(), $fecthAll, $keepStatement);
 
         return $res;
     }
@@ -351,7 +351,7 @@ class Query
         $this->_compiled = true;
     }
 
-    public function execute($checkSafety = false, $fecthAll = TRUE)
+    public function execute($checkSafety = false, $fetchAll = TRUE, $keepStatement = TRUE)
     {
         $sql = $this->getSql();
 
@@ -363,7 +363,7 @@ class Query
 
         // At last, execute the query.
         $values = $this->prepareValuesForExecution($this->getValues());
-        $res    = $this->executeQuery($sql, $values, $fecthAll);
+        $res    = $this->executeQuery($sql, $values, $fetchAll, $keepStatement);
         $this->_executed = true;
 
         return $res;
@@ -382,16 +382,16 @@ class Query
      *
      * @see \SimpleAR\Database\Connection::query()
      */
-    public function executeQuery($sql, array $values, $fecthAll = TRUE)
+    public function executeQuery($sql, array $values, $fetchAll = TRUE, $keepStatement = TRUE)
     {
         $c  = $this->getConnection();
         $fn = $this->_type ?: 'query'; // 'select', 'delete'...
 
-        if (! $fecthAll) {
+        if (! $fetchAll) {
             $fn = 'query';
         }
 
-        return $c->$fn($sql, $values);
+        return $c->$fn($sql, $values, $keepStatement);
     }
 
     public function clearResult()

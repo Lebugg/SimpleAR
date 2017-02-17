@@ -354,9 +354,9 @@ class Builder
      *
      * @return SimpleAR\Model
      */
-    public function one(array $columns = array('*'))
+    public function one(array $columns = array('*'), $keepStatement = TRUE)
     {
-        $rows = $this->getQueryOrNewSelect()->get($columns)->run();
+        $rows = $this->getQueryOrNewSelect()->get($columns)->run(TRUE, $keepStatement);
 
         $object = $this->_fetchModelInstance($rows);
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -372,9 +372,9 @@ class Builder
      *
      * @see one()
      */
-    public function first(array $columns = array('*'))
+    public function first(array $columns = array('*'), $keepStatement = TRUE)
     {
-        return $this->one($columns);
+        return $this->one($columns, $keepStatement);
     }
 
     /**
@@ -383,9 +383,9 @@ class Builder
      * @param  array $columns The columns to select.
      * @return SimpleAR\Orm\Model
      */
-    public function last(array $columns = array('*'))
+    public function last(array $columns = array('*'), $keepStatement = TRUE)
     {
-        $rows = $this->getQueryOrNewSelect()->get($columns)->run();
+        $rows = $this->getQueryOrNewSelect()->get($columns)->run(TRUE, $keepStatement);
 
         $object = $this->_fetchModelInstance($rows, false);
         $this->_relationsToPreload && $this->preloadRelations(array($object));
@@ -400,10 +400,10 @@ class Builder
      * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      */
-    public function all(array $columns = array('*'), Query $q = null)
+    public function all(array $columns = array('*'), Query $q = null, $keepStatement = TRUE)
     {
         $q = $q ?: $this->getQueryOrNewSelect();
-        $rows = $q->get($columns)->run();
+        $rows = $q->get($columns)->run(TRUE, $keepStatement);
 
         $all = $this->_fetchModelInstances($rows);
 
@@ -453,10 +453,10 @@ class Builder
      * @param  array $options The options to pass to the query.
      * @return SimpleAR\Orm\Model
      */
-    public function findOne(array $options)
+    public function findOne(array $options, $keepStatement = TRUE)
     {
         $this->setOptions($options);
-        return $this->one();
+        return $this->one(['*'], $keepStatement);
     }
 
     /**
@@ -465,10 +465,10 @@ class Builder
      * @param  array $options The options to pass to the query.
      * @return array
      */
-    public function findMany(array $options)
+    public function findMany(array $options, $keepStatement = TRUE)
     {
         $this->setOptions($options);
-        return $this->all();
+        return $this->all(['*'], NULL, TRUE);
     }
 
     /**

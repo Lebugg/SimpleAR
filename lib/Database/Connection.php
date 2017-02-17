@@ -234,31 +234,39 @@ class Connection
         return $sth;
     }
 
-    public function select($query, $params = array())
+    public function select($query, $params = array(), $keepStatement = TRUE)
     {
-        $this->_sth = NULL;
-        $sth = $this->query($query, $params);
+        if ($keepStatement) {
+            $this->_sth = NULL;
+        }
+        $sth = $this->query($query, $params, $keepStatement);
         return $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public function insert($query, $params = array())
+    public function insert($query, $params = array(), $keepStatement = TRUE)
     {
-        $this->_sth = NULL;
-        $sth = $this->query($query, $params);
+        if ($keepStatement) {
+            $this->_sth = NULL;
+        }
+        $sth = $this->query($query, $params, $keepStatement);
         return $this->getPDO()->lastInsertId();
     }
 
-    public function delete($query, $params = array())
+    public function delete($query, $params = array(), $keepStatement = TRUE)
     {
-        $this->_sth = NULL;
-        $sth = $this->query($query, $params);
+        if ($keepStatement) {
+            $this->_sth = NULL;
+        }
+        $sth = $this->query($query, $params, $keepStatement);
         return $sth->rowCount();
     }
 
-    public function update($query, $params = array())
+    public function update($query, $params = array(), $keepStatement = TRUE)
     {
-        $this->_sth = NULL;
-        $sth = $this->query($query, $params);
+        if ($keepStatement) {
+            $this->_sth = NULL;
+        }
+        $sth = $this->query($query, $params, $keepStatement);
         return $sth->rowCount();
     }
 

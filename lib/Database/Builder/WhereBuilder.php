@@ -785,7 +785,7 @@ class WhereBuilder extends Builder
         $mdAlias = $rel->getMiddleTableAlias();
         $mdAlias = $cmAlias === self::DEFAULT_ROOT_ALIAS ? $mdAlias : $cmAlias . '.' . $mdAlias;
 
-        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType, $conditions);
+        $jcMiddle = new JoinClause($mdTable, $mdAlias, $joinType);
         $jcMiddle->on($cmAlias, $rel->cm->column, $mdAlias, $rel->jm->from);
 
         $this->setJoinClause($mdAlias, $jcMiddle);
