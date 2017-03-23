@@ -221,6 +221,19 @@ class SelectBuilder extends WhereBuilder
         }
     }
 
+    public function having($attribute, $op = null, $val = null)
+    {
+        // It allows short form: `$builder->where('attribute', 'myVal');`
+        if (func_num_args() === 2)
+        {
+            list($val, $op) = array($op, '=');
+        }
+
+        if ($op === null) { $op = '='; }
+
+        $this->_components['having'][] = compact('attribute', 'op', 'val');
+    }
+
     /**
      * Set the limit number of objects to return.
      *

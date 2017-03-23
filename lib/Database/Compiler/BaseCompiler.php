@@ -29,6 +29,7 @@ class BaseCompiler extends Compiler
             'from',
             'where',
             'groupBy',
+            'having',
             'orderBy',
             'limit',
             'offset',
@@ -362,6 +363,26 @@ class BaseCompiler extends Compiler
         }
 
         return 'GROUP BY ' . implode(',', $sql);
+    }
+
+    /**
+     * Compile the GROUP BY clause of a SELECT statement.
+     *
+     * @param array $groups A list of columns to group on.
+     * @return string SQL
+     */
+    protected function _compileHaving(array $groups)
+    {
+        foreach ($groups as $g)
+        {
+            if (is_object($g)) {
+                $sql[] = $this->column($g, NULL);
+            } else {
+                $sql[] = $this->column($g['attribute']) . ' ' . $g['op'] . ' ' . $g['val'];
+            }
+        }
+
+        return 'HAVING ' . implode(',', $sql);
     }
 
     /**
