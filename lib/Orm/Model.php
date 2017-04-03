@@ -2095,7 +2095,7 @@ abstract class Model
                 // If it is linked by a BelongsTo instance, update local field.
                 if ($relation instanceof Relation\BelongsTo)
                 {
-                    if ($value) {
+                    if ($value && is_object($value)) {
                         // Save in cascade.
                         $value->save();
 
