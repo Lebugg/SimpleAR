@@ -1240,9 +1240,7 @@ abstract class Model
      */
     public static function remove(array $conditions = null)
     {
-        return self::query()->delete()
-                ->conditions($conditions)
-                ->rowCount();
+        return self::query()->delete();
     }
 
     /**
