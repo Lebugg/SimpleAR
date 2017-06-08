@@ -360,12 +360,17 @@ class Connection
      *
      * @return array
      */
-    public function getNextRow($next = true)
+    public function getNextRow($next = TRUE, $sth = NULL)
     {
         $ori = $next ? \PDO::FETCH_ORI_NEXT : \PDO::FETCH_ORI_PRIOR;
-        if (! $this->_sth) { throw new \Exception; }
 
-        $row = $this->_sth->fetch(\PDO::FETCH_ASSOC, $ori);
+        if (! $this->_sth && ! $sth) { throw new \Exception; }
+
+        if ($sth) {
+            $row = $sth->fetch(\PDO::FETCH_ASSOC, $ori);
+        } else {
+            $row = $this->_sth->fetch(\PDO::FETCH_ASSOC, $ori);
+        }
 
         return $row;
     }

@@ -418,12 +418,16 @@ class Builder
      * @param Query $q A query to set options on. If not given, builder will use
      * getQueryOrNewSelect() to get one.
      */
-    public function result(array $columns = array('*'), Query $q = null)
+    public function result(array $columns = array('*'), Query $q = null, $keepStatement = TRUE)
     {
         $q = $q ?: $this->getQueryOrNewSelect();
 
-        // execute query and store statement in connection object
-        $q->get($columns)->run(FALSE);
+        // Execute query and store statement in connection object
+        if ($keepStatement) {
+            $q->get($columns)->run(FALSE);
+        } else {
+            return $q->get($columns)->run(FALSE, FALSE);
+        }
 
         return $this;
     }
@@ -431,14 +435,13 @@ class Builder
     /**
     * browse line by line of statement will be returned by result()
     */
-    public function browse(Query $q = null)
+    public function browse(Query $q = null, $sth = NULL)
     {
         // becouse we want to use connection each time
         $this->_noRowToFetch = false;
 
         $q      = $q ?: $this->getQuery();
-        $rows[] = $q->getConnection()->getNextRow();
-
+        $rows[] = $q->getConnection()->getNextRow(TRUE, $sth);
 
         $object = $this->_fetchModelInstance($rows);
 
