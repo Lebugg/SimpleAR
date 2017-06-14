@@ -97,8 +97,17 @@ class SimpleAR
         $this->localize($cfg->dateFormat);
     }
 
-    public function connect(Connection $conn)
+    public function isConnected()
     {
+        return ($this->db ? TRUE : FALSE);
+    }
+
+    public function connect(Connection $conn = NULL)
+    {
+        if (! $conn) {
+            $conn = new Connection($this->cfg);
+        }
+
         $this->db = new Database($conn);
     }
 
