@@ -123,6 +123,15 @@ class SimpleAR
         Model::boot();
     }
 
+    public function getDataBase()
+    {
+        if (! $this->isConnected()) {
+            $this->connect();
+        }
+
+        return $this->db;
+    }
+
     public function localize($df)
     {
         DateTime::setFormat($df);
