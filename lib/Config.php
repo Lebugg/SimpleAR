@@ -282,6 +282,10 @@ class Config
      */
     private $_primaryKey = 'id';
 
+
+
+    private $_connectOnDemand = TRUE;
+
     /**
      * Constructor.
      *

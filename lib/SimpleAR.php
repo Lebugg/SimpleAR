@@ -83,7 +83,9 @@ class SimpleAR
     public function initialize(Config $cfg)
     {
         $this->configure($cfg);
-        $this->connect(new Connection($cfg));
+        if (! $cfg->connectOnDemand) {
+            $this->connect(new Connection($cfg));
+        }
         $this->coat($this);
         $this->registerAutoload($cfg->modelDirectory);
     }
@@ -135,6 +137,10 @@ class SimpleAR
                     //  abstract class.
                     if (is_valid_model_class($class))
                     {
+                        if (! $this->db) {
+                            $this->connect(new Connection($this->cfg));
+                        }
+
                         $class::wakeup();
                     }
 
