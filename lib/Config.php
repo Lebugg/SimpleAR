@@ -386,6 +386,7 @@ class Config
             'user'         => $dsn['user'],
             'password'     => $dsn['password'],
             'charset'      => isset($dsn['charset']) ? $dsn['charset'] : $this->_charset,
+            'persistant'   => $dsn['persistant'],
         );
     }
 

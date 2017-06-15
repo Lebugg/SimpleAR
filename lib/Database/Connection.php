@@ -129,8 +129,8 @@ class Connection
         $dsn = $a['databaseType'] . ':host='.$a['host'] .';dbname='.$a['name'] .';charset='.$a['charset'].';';
 
         $options = array();
-        $options[\PDO::ATTR_ERRMODE]            = \PDO::ERRMODE_EXCEPTION;
-        //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
+        $options[\PDO::ATTR_ERRMODE]    = \PDO::ERRMODE_EXCEPTION;
+        $options[\PDO::ATTR_PERSISTENT] = $a['persistant'] ?? FALSE;
 
         try
         {
