@@ -1459,7 +1459,7 @@ abstract class Model
         $modelBaseName = $suffix ? strstr($className, $suffix, true) : $className;
 
         $tableName  = static::$_tableName  ?: call_user_func(Cfg::get('classToTable'), $modelBaseName);
-        $primaryKey = static::$_primaryKey ?: Cfg::get('primaryKey');
+        $primaryKey = static::$_primaryKey;
 
         // Columns are defined in model, perfect!
         if (static::$_columns)
