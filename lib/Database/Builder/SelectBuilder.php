@@ -231,7 +231,11 @@ class SelectBuilder extends WhereBuilder
 
         if ($op === null) { $op = '='; }
 
-        $this->_components['having'][] = compact('attribute', 'op', 'val');
+        if (is_object($attribute)) {
+            $this->_components['having'][] = $attribute;
+        } else {
+            $this->_components['having'][] = compact('attribute', 'op', 'val');
+        }
     }
 
     /**
